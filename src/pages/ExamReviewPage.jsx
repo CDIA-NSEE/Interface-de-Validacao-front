@@ -160,10 +160,6 @@ export default function ExamReviewPage() {
                 <dd>{formatDate(exam.exam_date)}</dd>
               </div>
               <div>
-                <dt>Categoria</dt>
-                <dd>{exam.category}</dd>
-              </div>
-              <div>
                 <dt>Tipo</dt>
                 <dd>{exam.exam_type}</dd>
               </div>

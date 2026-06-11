@@ -1,3 +1,4 @@
+import { PlayCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,10 +13,8 @@ import { getStats } from "../services/dashboardService.js";
 import { getExams } from "../services/examsService.js";
 
 const initialFilters = {
-  category: "",
-  exam_type: "",
   status: "",
-  source: "all",
+  source: "pending",
   review_result: "",
   search: "",
 };
@@ -36,18 +35,6 @@ const quickFilterConfig = {
     label: "Revisados",
     filters: { status: "valido", review_result: "" },
   },
-  reviewed_today: {
-    key: "reviewed_today",
-    label: "Revisados hoje",
-    // TODO: aplicar filtro temporal diário quando o endpoint /exams suportar data de revisão.
-    filters: { status: "valido", review_result: "" },
-  },
-  reviewed_week: {
-    key: "reviewed_week",
-    label: "Revisões na semana",
-    // TODO: aplicar filtro temporal semanal quando o endpoint /exams suportar data de revisão.
-    filters: { status: "valido", review_result: "" },
-  },
   without_change: {
     key: "without_change",
     label: "Sem alteração",
@@ -60,10 +47,37 @@ const quickFilterConfig = {
   },
 };
 
-function uniqueOptions(exams, key) {
-  return [...new Set(exams.map((exam) => exam[key]).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, "pt-BR"),
-  );
+const actionQueuePriority = {
+  em_validacao: 0,
+  nao_validado: 1,
+};
+
+function actionQueueSort(firstExam, secondExam) {
+  const statusDifference =
+    (actionQueuePriority[firstExam.status_validation] ?? 2) -
+    (actionQueuePriority[secondExam.status_validation] ?? 2);
+
+  if (statusDifference) return statusDifference;
+  return new Date(firstExam.created_at) - new Date(secondExam.created_at);
+}
+
+function getEmptyStateCopy(quickFilter, hasSearch) {
+  if (quickFilter) {
+    return {
+      title: "Nenhum exame encontrado",
+      message: "Limpe o filtro rápido ou ajuste a busca.",
+    };
+  }
+  if (hasSearch) {
+    return {
+      title: "Nenhum exame encontrado",
+      message: "Ajuste ou limpe a busca para voltar à fila de revisão.",
+    };
+  }
+  return {
+    title: "Nenhum exame aguardando revisão",
+    message: "Use os filtros rápidos do resumo para visualizar exames revisados.",
+  };
 }
 
 export default function DashboardPage() {
@@ -73,10 +87,6 @@ export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [exams, setExams] = useState([]);
   const [allExams, setAllExams] = useState([]);
-  const [filterOptions, setFilterOptions] = useState({
-    categories: [],
-    examTypes: [],
-  });
   const [summaryCollapsed, setSummaryCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     const saved = window.localStorage.getItem("summaryPanelCollapsed");
@@ -85,20 +95,20 @@ export default function DashboardPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [overviewError, setOverviewError] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem("summaryPanelCollapsed", String(summaryCollapsed));
   }, [summaryCollapsed]);
 
-  const loadDashboard = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
+  const loadOverview = useCallback(async () => {
+    setOverviewError("");
     try {
       const statsData = await getStats();
       setStats(statsData);
     } catch (requestError) {
       setStats(null);
-      setError(
+      setOverviewError(
         requestError?.response?.data?.detail ||
           "A API não respondeu em http://localhost:8000. Inicie o back para carregar métricas e exames.",
       );
@@ -107,21 +117,17 @@ export default function DashboardPage() {
     try {
       const allExamsData = await getExams();
       setAllExams(allExamsData);
-      setFilterOptions({
-        categories: uniqueOptions(allExamsData, "category"),
-        examTypes: uniqueOptions(allExamsData, "exam_type"),
-      });
     } catch {
       setAllExams([]);
-      setFilterOptions({
-        categories: [],
-        examTypes: [],
-      });
     }
+  }, []);
 
+  const loadExams = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
     try {
       const examsData = await getExams(filters);
-      setExams(examsData);
+      setExams(quickFilter ? examsData : [...examsData].sort(actionQueueSort));
     } catch (requestError) {
       setExams([]);
       setError(
@@ -131,22 +137,17 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, quickFilter]);
 
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+    loadOverview();
+  }, [loadOverview]);
+
+  useEffect(() => {
+    loadExams();
+  }, [loadExams]);
 
   function handleFiltersChange(nextFilters) {
-    const quickFieldsChanged =
-      nextFilters.status !== filters.status ||
-      nextFilters.review_result !== filters.review_result ||
-      nextFilters.source !== filters.source;
-
-    if (quickFieldsChanged) {
-      setQuickFilter(null);
-    }
-
     setFilters(nextFilters);
   }
 
@@ -173,7 +174,7 @@ export default function DashboardPage() {
     setFilters((currentFilters) => ({
       ...currentFilters,
       status: "",
-      source: "all",
+      source: "pending",
       review_result: "",
     }));
   }
@@ -185,8 +186,11 @@ export default function DashboardPage() {
 
   async function handleOpenNextExam() {
     setError("");
-    const inValidationExam = allExams.find((exam) => exam.status_validation === "em_validacao");
-    const pendingExam = allExams.find((exam) => exam.status_validation === "nao_validado");
+    const orderedExams = [...allExams].sort(actionQueueSort);
+    const inValidationExam = orderedExams.find(
+      (exam) => exam.status_validation === "em_validacao",
+    );
+    const pendingExam = orderedExams.find((exam) => exam.status_validation === "nao_validado");
     let nextExam = inValidationExam || pendingExam;
 
     if (!nextExam) {
@@ -194,7 +198,9 @@ export default function DashboardPage() {
         getExams({ status: "em_validacao" }),
         getExams({ status: "nao_validado" }),
       ]);
-      nextExam = inValidationExams[0] || pendingExams[0];
+      nextExam =
+        [...inValidationExams].sort(actionQueueSort)[0] ||
+        [...pendingExams].sort(actionQueueSort)[0];
     }
 
     if (nextExam) {
@@ -202,30 +208,44 @@ export default function DashboardPage() {
       return;
     }
 
-    setError("Nenhum exame aguardando finalização.");
+    setError("Nenhum exame aguardando revisão.");
   }
 
-  const hasAnyFilter = Boolean(
-    filters.search ||
-      filters.category ||
-      filters.exam_type ||
-      filters.status ||
-      filters.review_result ||
-      (filters.source && filters.source !== "all"),
-  );
+  const hasSearch = Boolean(filters.search.trim());
+  const hasAnyFilter = Boolean(hasSearch || quickFilter);
+  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch);
+  const openQueue =
+    stats != null
+      ? Number(stats.pending_total || 0) + Number(stats.in_validation_total || 0)
+      : allExams.filter((exam) => exam.status_validation !== "valido").length;
 
   return (
     <div className="dashboard-page">
       <div className="page-shell">
         <AppHeader />
+        <section className="dashboard-action-header" aria-label="Iniciar revisão">
+          <div>
+            <span className="eyebrow">Fila de trabalho</span>
+            <h2>Exames aguardando revisão</h2>
+            <p>
+              {openQueue > 0
+                ? `${openQueue} exames disponíveis. Exames já iniciados têm prioridade.`
+                : "Nenhum exame aguardando revisão."}
+            </p>
+          </div>
+          <button
+            className="button primary-action"
+            type="button"
+            onClick={handleOpenNextExam}
+            disabled={!openQueue}
+          >
+            <PlayCircle size={19} aria-hidden="true" />
+            Iniciar revisão
+          </button>
+        </section>
         <div className={`dashboard-workspace${summaryCollapsed ? " summary-collapsed" : ""}`}>
           <main className="dashboard-main">
-            <ExamFilters
-              filters={filters}
-              onChange={handleFiltersChange}
-              categoryOptions={filterOptions.categories}
-              examTypeOptions={filterOptions.examTypes}
-            />
+            <ExamFilters filters={filters} onChange={handleFiltersChange} />
             <ActiveFiltersBar
               quickFilter={quickFilter}
               hasAnyFilter={hasAnyFilter}
@@ -233,8 +253,18 @@ export default function DashboardPage() {
               onClearAll={clearAllFilters}
             />
 
-            {error ? <EmptyState title="Erro ao carregar" message={error} /> : null}
-            {isLoading ? <LoadingState message="Buscando exames..." /> : <ExamList exams={exams} />}
+            {error || overviewError ? (
+              <EmptyState title="Erro ao carregar" message={error || overviewError} />
+            ) : null}
+            {isLoading ? (
+              <LoadingState message="Buscando exames..." />
+            ) : (
+              <ExamList
+                exams={exams}
+                emptyTitle={emptyStateCopy.title}
+                emptyMessage={emptyStateCopy.message}
+              />
+            )}
           </main>
 
           <aside className="summary-sidebar">
@@ -244,7 +274,6 @@ export default function DashboardPage() {
               quickFilter={quickFilter}
               onToggleCollapsed={() => setSummaryCollapsed((current) => !current)}
               onQuickFilter={applyQuickFilter}
-              onOpenNextExam={handleOpenNextExam}
             />
           </aside>
         </div>

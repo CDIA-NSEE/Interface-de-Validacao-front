@@ -1,4 +1,4 @@
-import { Eye, EyeOff, PlayCircle } from "lucide-react";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 
 import ClinicalResultBar from "./ClinicalResultBar.jsx";
 import ProgressSummary from "./ProgressSummary.jsx";
@@ -20,7 +20,6 @@ export default function ValidationSummaryPanel({
   quickFilter,
   onToggleCollapsed,
   onQuickFilter,
-  onOpenNextExam,
 }) {
   if (collapsed) {
     return (
@@ -28,11 +27,11 @@ export default function ValidationSummaryPanel({
         className="summary-collapsed-button"
         type="button"
         onClick={onToggleCollapsed}
+        aria-label="Mostrar resumo"
         aria-expanded="false"
         aria-controls="validation-summary-panel"
       >
-        <Eye size={16} aria-hidden="true" />
-        Mostrar resumo
+        <PanelRightOpen size={18} aria-hidden="true" />
       </button>
     );
   }
@@ -55,43 +54,33 @@ export default function ValidationSummaryPanel({
           <p>Base dos indicadores: todos os exames</p>
         </div>
         <button
-          className="button ghost compact-button"
+          className="summary-toggle-button"
           type="button"
           onClick={onToggleCollapsed}
+          aria-label="Ocultar resumo"
           aria-expanded="true"
           aria-controls="validation-summary-panel"
         >
-          <EyeOff size={16} aria-hidden="true" />
-          Ocultar resumo
+          <PanelRightClose size={18} aria-hidden="true" />
         </button>
       </header>
 
-      <ProgressSummary
-        stats={stats}
-        activeKey={quickFilter?.key}
-        onQuickFilter={onQuickFilter}
-        compact
-      />
-
-      <section className="summary-block">
+      <section className="summary-action-block">
         <div className="summary-block-heading">
           <h3>Fila de trabalho</h3>
           <span className="summary-pending">
             {openQueue > 0
-              ? `${openQueue} exames aguardam finalização`
-              : "Nenhum exame aguardando finalização"}
+              ? `${openQueue} exames aguardam revisão`
+              : "Nenhum exame aguardando revisão"}
           </span>
         </div>
-        <button
-          className="button secondary full-width-button"
-          type="button"
-          onClick={onOpenNextExam}
-          disabled={!openQueue}
-        >
-          <PlayCircle size={17} aria-hidden="true" />
-          Abrir próximo exame
-        </button>
-        <div className="quick-metric-list">
+      </section>
+
+      <section className="summary-block">
+        <div className="summary-block-heading">
+          <h3>Filtros rápidos</h3>
+        </div>
+        <div className="quick-metric-grid">
           <QuickMetricItem
             label="Pendentes"
             value={pending}
@@ -106,54 +95,13 @@ export default function ValidationSummaryPanel({
             active={quickFilter?.key === "in_validation"}
             onClick={() => onQuickFilter("in_validation")}
           />
-        </div>
-      </section>
-
-      <section className="summary-block">
-        <div className="summary-block-heading">
-          <h3>Produtividade</h3>
-          <p>Hoje e semana atual</p>
-        </div>
-        <div className="quick-metric-list">
           <QuickMetricItem
-            label="Hoje"
-            value={reviewedToday}
-            tone="productivity"
-            active={quickFilter?.key === "reviewed_today"}
-            onClick={() => onQuickFilter("reviewed_today")}
-          />
-          <QuickMetricItem
-            label="Semana"
-            value={reviewedWeek}
-            tone="productivity"
-            active={quickFilter?.key === "reviewed_week"}
-            onClick={() => onQuickFilter("reviewed_week")}
-          />
-          <QuickMetricItem
-            label="Total"
+            label="Revisados"
             value={reviewed}
             tone="productivity"
             active={quickFilter?.key === "reviewed_total"}
             onClick={() => onQuickFilter("reviewed_total")}
           />
-        </div>
-      </section>
-
-      <section className="summary-block">
-        <div className="summary-block-heading">
-          <h3>Resultado dos revisados</h3>
-          <p>
-            {reviewed > 0
-              ? `${withChange}/${reviewed} alterados — ${alteredPercent}%`
-              : "Sem exames revisados para análise"}
-          </p>
-        </div>
-        <ClinicalResultBar
-          withoutChange={withoutChange}
-          withChange={withChange}
-          reviewedTotal={reviewed}
-        />
-        <div className="quick-metric-list">
           <QuickMetricItem
             label="Sem alteração"
             value={withoutChange}
@@ -170,7 +118,29 @@ export default function ValidationSummaryPanel({
           />
         </div>
       </section>
+
+      <ProgressSummary stats={stats} compact />
+
+      <section className="summary-block">
+        <div className="summary-block-heading">
+          <h3>Resultado clínico</h3>
+          <p>
+            {reviewed > 0
+              ? `${withChange}/${reviewed} alterados — ${alteredPercent}%`
+              : "Sem exames revisados para análise"}
+          </p>
+        </div>
+        <ClinicalResultBar
+          withoutChange={withoutChange}
+          withChange={withChange}
+          reviewedTotal={reviewed}
+        />
+      </section>
+
+      <section className="productivity-summary" aria-label="Produtividade">
+        <strong>Produtividade</strong>
+        <span>Hoje {reviewedToday} · Semana {reviewedWeek} · Total {reviewed}</span>
+      </section>
     </aside>
   );
 }
-
