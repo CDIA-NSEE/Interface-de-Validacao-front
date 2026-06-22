@@ -1,27 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-label="ECG de exemplo">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1125 645" role="img" aria-label="ECG de exemplo">
   <defs>
-    <pattern id="smallGrid" width="12" height="12" patternUnits="userSpaceOnUse">
-      <path d="M 12 0 L 0 0 0 12" fill="none" stroke="#f3b6bc" stroke-width="0.7" />
+    <pattern id="smallGrid" width="9" height="9" patternUnits="userSpaceOnUse">
+      <path d="M 9 0 L 0 0 0 9" fill="none" stroke="#f3b6bc" stroke-width="0.55" />
     </pattern>
-    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-      <rect width="60" height="60" fill="url(#smallGrid)" />
-      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#e47e8a" stroke-width="1.3" />
+    <pattern id="grid" width="45" height="45" patternUnits="userSpaceOnUse">
+      <rect width="45" height="45" fill="url(#smallGrid)" />
+      <path d="M 45 0 L 0 0 0 45" fill="none" stroke="#e47e8a" stroke-width="1.05" />
     </pattern>
     <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
       <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#1b365d" flood-opacity="0.12" />
     </filter>
   </defs>
-  <rect width="1400" height="760" fill="#fff7f8" />
-  <rect x="0" y="0" width="1400" height="760" fill="url(#grid)" />
-  <g fill="#2f5f9f" font-family="Arial, sans-serif" font-size="24" font-weight="700">
-    <text x="44" y="58">ECG SIMULADO</text>
-    <text x="1180" y="58">25 mm/s</text>
+  <rect width="1125" height="645" fill="#fff7f8" />
+  <rect x="0" y="0" width="1125" height="645" fill="url(#grid)" />
+  <g fill="#2f5f9f" font-family="Arial, sans-serif" font-size="21" font-weight="700">
+    <text x="34" y="50">ECG SIMULADO</text>
+    <text x="948" y="50">25 mm/s</text>
   </g>
-  <g fill="none" stroke="#26384f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#softShadow)">
-    <path d="M 35 165 L 90 165 L 104 154 L 119 181 L 136 165 L 188 165 L 203 165 L 220 120 L 240 238 L 264 165 L 330 165 L 348 154 L 365 178 L 384 165 L 452 165 L 472 118 L 493 240 L 518 165 L 590 165 L 610 153 L 628 180 L 649 165 L 720 165 L 742 122 L 763 236 L 788 165 L 865 165 L 882 154 L 900 180 L 920 165 L 990 165 L 1010 120 L 1032 240 L 1058 165 L 1132 165 L 1150 154 L 1168 179 L 1189 165 L 1262 165 L 1282 122 L 1303 235 L 1328 165 L 1372 165" />
-    <path d="M 35 335 L 95 335 L 111 326 L 126 350 L 144 335 L 210 335 L 226 335 L 242 285 L 263 405 L 290 335 L 365 335 L 382 326 L 398 350 L 418 335 L 492 335 L 512 288 L 533 404 L 558 335 L 632 335 L 650 326 L 667 350 L 688 335 L 760 335 L 782 289 L 805 402 L 830 335 L 902 335 L 920 326 L 938 350 L 958 335 L 1032 335 L 1052 287 L 1073 403 L 1098 335 L 1170 335 L 1188 326 L 1206 350 L 1228 335 L 1295 335 L 1314 286 L 1335 402 L 1360 335 L 1380 335" />
-    <path d="M 35 505 L 92 505 L 108 492 L 124 527 L 142 505 L 196 505 L 214 505 L 230 454 L 252 594 L 278 505 L 345 505 L 362 492 L 379 529 L 398 505 L 465 505 L 482 455 L 504 593 L 530 505 L 596 505 L 614 492 L 632 528 L 652 505 L 720 505 L 738 455 L 760 594 L 786 505 L 856 505 L 874 492 L 892 528 L 912 505 L 982 505 L 1000 454 L 1022 594 L 1048 505 L 1118 505 L 1136 492 L 1154 528 L 1174 505 L 1244 505 L 1262 456 L 1284 593 L 1310 505 L 1378 505" />
-    <path d="M 35 650 L 160 650 L 177 641 L 194 660 L 210 650 L 316 650 L 336 612 L 357 700 L 382 650 L 500 650 L 516 640 L 533 662 L 552 650 L 670 650 L 690 612 L 712 701 L 738 650 L 860 650 L 876 640 L 894 662 L 914 650 L 1034 650 L 1054 612 L 1076 700 L 1102 650 L 1230 650 L 1248 640 L 1266 662 L 1286 650 L 1378 650" />
+  <g fill="none" stroke="#26384f" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#softShadow)">
+    <path d="M 28 142 L 78 142 L 92 132 L 106 156 L 122 142 L 178 142 L 194 142 L 211 103 L 232 204 L 257 142 L 324 142 L 341 132 L 358 154 L 376 142 L 442 142 L 461 103 L 483 205 L 508 142 L 578 142 L 597 132 L 615 155 L 634 142 L 704 142 L 724 104 L 746 203 L 772 142 L 842 142 L 859 132 L 878 155 L 897 142 L 963 142 L 983 104 L 1005 203 L 1030 142 L 1098 142" />
+    <path d="M 28 286 L 82 286 L 98 277 L 113 303 L 130 286 L 190 286 L 207 286 L 224 244 L 246 346 L 272 286 L 341 286 L 359 277 L 376 303 L 395 286 L 464 286 L 484 245 L 506 346 L 532 286 L 603 286 L 621 277 L 639 303 L 659 286 L 730 286 L 750 245 L 772 346 L 798 286 L 869 286 L 887 277 L 905 303 L 925 286 L 994 286 L 1014 245 L 1036 346 L 1062 286 L 1098 286" />
+    <path d="M 28 430 L 80 430 L 95 419 L 111 449 L 128 430 L 180 430 L 197 430 L 215 387 L 237 506 L 263 430 L 326 430 L 343 419 L 361 450 L 380 430 L 443 430 L 462 388 L 484 506 L 510 430 L 575 430 L 593 419 L 611 449 L 631 430 L 696 430 L 715 388 L 737 506 L 763 430 L 830 430 L 848 419 L 866 449 L 886 430 L 953 430 L 972 389 L 994 506 L 1020 430 L 1098 430" />
+    <path d="M 28 554 L 132 554 L 149 545 L 166 564 L 184 554 L 286 554 L 306 521 L 328 596 L 354 554 L 470 554 L 487 545 L 504 565 L 523 554 L 640 554 L 660 521 L 682 596 L 708 554 L 826 554 L 844 545 L 862 565 L 882 554 L 1000 554 L 1020 521 L 1042 596 L 1068 554 L 1098 554" />
   </g>
 </svg>
-

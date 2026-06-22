@@ -159,10 +159,35 @@ export default function ExamReviewPage() {
   return (
     <div className="review-page">
       <header className="review-topbar">
-        <div>
+        <div className="review-title-block">
           <span className="eyebrow">Revisão médica</span>
           <h1>Exame {exam.exam_code}</h1>
         </div>
+        <dl className="review-context-strip">
+          <div>
+            <dt>Data e hora</dt>
+            <dd>
+              {formatDate(exam.exam_date)}
+              {exam.exam_time ? ` às ${exam.exam_time}` : ""}
+            </dd>
+          </div>
+          <div>
+            <dt>Tipo</dt>
+            <dd>{exam.exam_type}</dd>
+          </div>
+          {exam.patient?.age ? (
+            <div>
+              <dt>Idade</dt>
+              <dd>{exam.patient.age} anos</dd>
+            </div>
+          ) : null}
+          {exam.patient?.sex ? (
+            <div>
+              <dt>Sexo</dt>
+              <dd>{exam.patient.sex}</dd>
+            </div>
+          ) : null}
+        </dl>
         <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
       </header>
 
@@ -172,34 +197,9 @@ export default function ExamReviewPage() {
             {message ? <div className="feedback success-feedback">{message}</div> : null}
             {error ? <div className="feedback error-feedback">{error}</div> : null}
 
-          <section className="sidebar-section">
-            <h2>Dados do exame</h2>
-            <dl className="info-list">
-              <div>
-                <dt>Exame</dt>
-                <dd>{exam.exam_code}</dd>
-              </div>
-              <div>
-                <dt>Data e hora</dt>
-                <dd>
-                  {formatDate(exam.exam_date)}
-                  {exam.exam_time ? ` às ${exam.exam_time}` : ""}
-                </dd>
-              </div>
-              <div>
-                <dt>Tipo</dt>
-                <dd>{exam.exam_type}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <section className="sidebar-section">
-            <h2>Dados clínicos</h2>
-            <PatientInfo patient={exam.patient} />
-          </section>
-
-          <section className="sidebar-section">
-            <h2>Diagnósticos</h2>
+          <section className="sidebar-section review-decision-section">
+            <span className="eyebrow">Etapa principal</span>
+            <h2>Decisão da revisão</h2>
             <DiagnosisPanel
               diagnoses={exam.diagnoses}
               options={diagnosisOptions}
@@ -212,9 +212,14 @@ export default function ExamReviewPage() {
             />
           </section>
 
+          <details className="review-details">
+            <summary>Dados clínicos completos</summary>
+            <PatientInfo patient={exam.patient} />
+          </details>
+
           {exam.comments || exam.source_notes ? (
-            <section className="sidebar-section">
-              <h2>Informações do laudo original</h2>
+            <details className="review-details">
+              <summary>Informações do laudo original</summary>
               {exam.comments ? (
                 <div className="source-text-block">
                   <strong>Comentários</strong>
@@ -227,11 +232,11 @@ export default function ExamReviewPage() {
                   <p>{exam.source_notes}</p>
                 </div>
               ) : null}
-            </section>
+            </details>
           ) : null}
 
-          <section className="sidebar-section">
-            <h2>Observações</h2>
+          <details className="review-details" open>
+            <summary>Observações da revisão</summary>
             <textarea
               className="notes-field"
               value={notes}
@@ -239,7 +244,7 @@ export default function ExamReviewPage() {
               placeholder="Registre observações da revisão"
               rows={3}
             />
-          </section>
+          </details>
 
           </div>
 

@@ -1109,17 +1109,65 @@ textarea:focus {
 }
 
 .review-topbar {
+  display: grid;
+  grid-template-columns: minmax(190px, auto) minmax(0, 1fr) auto;
   position: relative;
   z-index: 2;
   flex: 0 0 auto;
-  padding-block: 12px;
+  align-items: center;
+  padding-block: 10px;
   border-width: 0 0 1px;
   border-radius: 0;
 }
 
+.review-title-block {
+  min-width: 0;
+}
+
+.review-context-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.review-context-strip div {
+  display: grid;
+  min-height: 42px;
+  min-width: 112px;
+  align-content: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid #d9e6f5;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.review-context-strip dt {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.review-context-strip dd {
+  min-width: 0;
+  margin: 0;
+  color: #20324a;
+  font-size: 0.86rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.review-topbar > .badge-row {
+  justify-self: end;
+}
+
 .review-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -1138,7 +1186,8 @@ textarea:focus {
 
 .review-sidebar-scroll {
   display: grid;
-  gap: 12px;
+  align-content: start;
+  gap: 10px;
   min-height: 0;
   padding-right: 2px;
   overflow-y: auto;
@@ -1167,6 +1216,10 @@ textarea:focus {
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.review-decision-section {
+  gap: 10px;
 }
 
 .info-list {
@@ -1230,6 +1283,49 @@ textarea:focus {
   font-size: 0.8rem;
   line-height: 1.45;
   white-space: pre-line;
+}
+
+.review-details {
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.review-details summary {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #20324a;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 800;
+  list-style: none;
+}
+
+.review-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.review-details summary::after {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-primary);
+  background: #ffffff;
+  content: "+";
+}
+
+.review-details[open] summary::after {
+  content: "-";
+}
+
+.review-details > :not(summary) {
+  margin-top: 8px;
 }
 
 .diagnosis-panel,
@@ -1493,7 +1589,28 @@ textarea:focus {
   .review-topbar,
   .exam-card-main {
     align-items: flex-start;
+  }
+
+  .app-header,
+  .exam-card-main {
     flex-direction: column;
+  }
+
+  .review-topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .review-context-strip {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .review-context-strip div {
+    flex: 1 1 150px;
+  }
+
+  .review-topbar > .badge-row {
+    justify-self: start;
   }
 
   .doctor-greeting {

@@ -1,6 +1,8 @@
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
+const DEFAULT_ECG_WIDTH = 1125;
+
 function clamp(value) {
   return Math.min(100, Math.max(0, value));
 }
@@ -132,7 +134,7 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
-          style={{ width: `min(${zoom * 100}%, ${1400 * zoom}px)` }}
+          style={{ width: `min(${zoom * 100}%, ${DEFAULT_ECG_WIDTH * zoom}px)` }}
         >
           <img src={source} alt="Traçado do ECG" draggable="false" />
           {activeRegion ? (
