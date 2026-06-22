@@ -18,6 +18,11 @@ export async function getExamById(id) {
   return data;
 }
 
+export async function getDiagnosisOptions() {
+  const { data } = await api.get("/diagnosis-options");
+  return data;
+}
+
 export async function updateExamStatus(id, status) {
   const { data } = await api.patch(`/exams/${id}/status`, {
     status_validation: status,
@@ -35,8 +40,14 @@ export async function removeDiagnosis(examId, diagnosisId) {
   return data;
 }
 
+export async function reviewDiagnosis(examId, diagnosisId, reviewStatus) {
+  const { data } = await api.patch(`/exams/${examId}/diagnoses/${diagnosisId}/review`, {
+    review_status: reviewStatus,
+  });
+  return data;
+}
+
 export async function validateExam(examId, payload) {
   const { data } = await api.post(`/exams/${examId}/validate`, payload);
   return data;
 }
-

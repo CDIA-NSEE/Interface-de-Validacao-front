@@ -11,8 +11,10 @@ import ReviewActions from "../components/ReviewActions.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import {
   addDiagnosis,
+  getDiagnosisOptions,
   getExamById,
   removeDiagnosis,
+  reviewDiagnosis,
   updateExamStatus,
   validateExam,
 } from "../services/examsService.js";
@@ -26,6 +28,7 @@ export default function ExamReviewPage() {
   const [exam, setExam] = useState(null);
   const [notes, setNotes] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(null);
+  const [diagnosisOptions, setDiagnosisOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,7 +38,8 @@ export default function ExamReviewPage() {
     setIsLoading(true);
     setError("");
     try {
-      const examData = await getExamById(id);
+      const [examData, options] = await Promise.all([getExamById(id), getDiagnosisOptions()]);
+      setDiagnosisOptions(options);
       setSelectedRegion(null);
       if (examData.status_validation === "nao_validado") {
         const updatedExam = await updateExamStatus(id, "em_validacao");
@@ -96,6 +100,20 @@ export default function ExamReviewPage() {
     }, "Diagnóstico removido.");
   }
 
+  async function handleReviewDiagnosis(diagnosisId, reviewStatus) {
+    await runAction(async () => {
+      const updatedDiagnosis = await reviewDiagnosis(id, diagnosisId, reviewStatus);
+      return {
+        ...exam,
+        diagnoses: exam.diagnoses.map((diagnosis) =>
+          diagnosis.id === diagnosisId ? updatedDiagnosis : diagnosis,
+        ),
+      };
+    }, reviewStatus === "confirmed"
+      ? "Diagnóstico original confirmado."
+      : "Divergência registrada.");
+  }
+
   function handleSaveInValidation() {
     runAction(
       () => updateExamStatus(id, "em_validacao"),
@@ -116,6 +134,11 @@ export default function ExamReviewPage() {
         : "Exame validado sem alteração.",
     );
   }
+
+  const hasDiagnosisDivergence = exam?.diagnoses?.some(
+    (diagnosis) =>
+      diagnosis.review_status === "rejected" || diagnosis.source === "doctor_added",
+  );
 
   if (isLoading) {
     return <LoadingState message="Abrindo exame..." />;
@@ -145,8 +168,9 @@ export default function ExamReviewPage() {
 
       <main className="review-layout">
         <aside className="review-sidebar">
-          {message ? <div className="feedback success-feedback">{message}</div> : null}
-          {error ? <div className="feedback error-feedback">{error}</div> : null}
+          <div className="review-sidebar-scroll">
+            {message ? <div className="feedback success-feedback">{message}</div> : null}
+            {error ? <div className="feedback error-feedback">{error}</div> : null}
 
           <section className="sidebar-section">
             <h2>Dados do exame</h2>
@@ -156,8 +180,11 @@ export default function ExamReviewPage() {
                 <dd>{exam.exam_code}</dd>
               </div>
               <div>
-                <dt>Data</dt>
-                <dd>{formatDate(exam.exam_date)}</dd>
+                <dt>Data e hora</dt>
+                <dd>
+                  {formatDate(exam.exam_date)}
+                  {exam.exam_time ? ` às ${exam.exam_time}` : ""}
+                </dd>
               </div>
               <div>
                 <dt>Tipo</dt>
@@ -167,7 +194,7 @@ export default function ExamReviewPage() {
           </section>
 
           <section className="sidebar-section">
-            <h2>Dados do paciente</h2>
+            <h2>Dados clínicos</h2>
             <PatientInfo patient={exam.patient} />
           </section>
 
@@ -175,13 +202,33 @@ export default function ExamReviewPage() {
             <h2>Diagnósticos</h2>
             <DiagnosisPanel
               diagnoses={exam.diagnoses}
+              options={diagnosisOptions}
               onAdd={handleAddDiagnosis}
               onRemove={handleRemoveDiagnosis}
+              onReview={handleReviewDiagnosis}
               isBusy={isBusy}
               selectedRegion={selectedRegion}
               onRegionConsumed={() => setSelectedRegion(null)}
             />
           </section>
+
+          {exam.comments || exam.source_notes ? (
+            <section className="sidebar-section">
+              <h2>Informações do laudo original</h2>
+              {exam.comments ? (
+                <div className="source-text-block">
+                  <strong>Comentários</strong>
+                  <p>{exam.comments}</p>
+                </div>
+              ) : null}
+              {exam.source_notes ? (
+                <div className="source-text-block">
+                  <strong>Notas</strong>
+                  <p>{exam.source_notes}</p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className="sidebar-section">
             <h2>Observações</h2>
@@ -190,23 +237,34 @@ export default function ExamReviewPage() {
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="Registre observações da revisão"
-              rows={5}
+              rows={3}
             />
           </section>
 
-          <section className="sidebar-section">
-            <h2>Status atual</h2>
-            <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
-          </section>
+          </div>
 
-          <ReviewActions
-            onBack={() => navigate("/")}
-            onSave={handleSaveInValidation}
-            onValidateWithoutChange={() => handleValidate("sem_alteracao")}
-            onValidateChanged={() => handleValidate("alterado")}
-            isBusy={isBusy}
-            isValid={exam.status_validation === "valido"}
-          />
+          <div className="review-sidebar-actions">
+            {hasDiagnosisDivergence ? (
+              <div className="diagnosis-divergence-alert">
+                Você discordou do diagnóstico original ou adicionou um diagnóstico médico. O exame
+                provavelmente deve ser validado como alterado.
+              </div>
+            ) : null}
+
+            <section className="sidebar-section review-status-section">
+              <h2>Status atual</h2>
+              <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
+            </section>
+
+            <ReviewActions
+              onBack={() => navigate("/")}
+              onSave={handleSaveInValidation}
+              onValidateWithoutChange={() => handleValidate("sem_alteracao")}
+              onValidateChanged={() => handleValidate("alterado")}
+              isBusy={isBusy}
+              isValid={exam.status_validation === "valido"}
+            />
+          </div>
         </aside>
 
         <section className="review-viewer" aria-label="Visualizador de ECG">

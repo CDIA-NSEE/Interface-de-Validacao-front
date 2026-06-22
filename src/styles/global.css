@@ -1041,6 +1041,11 @@ textarea:focus {
   background: var(--color-success);
 }
 
+.danger {
+  color: #ffffff;
+  background: var(--color-danger);
+}
+
 .warning {
   color: #20324a;
   background: #ffd56a;
@@ -1096,43 +1101,77 @@ textarea:focus {
 }
 
 .review-page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 .review-topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 2;
+  flex: 0 0 auto;
+  padding-block: 12px;
   border-width: 0 0 1px;
   border-radius: 0;
 }
 
 .review-layout {
   display: grid;
-  grid-template-columns: minmax(340px, 30%) minmax(0, 1fr);
-  min-height: calc(100vh - 89px);
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .review-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 20px;
+  gap: 12px;
+  min-height: 0;
+  padding: 14px 14px 0;
   border-right: 1px solid var(--color-border);
   background: #ffffff;
+  overflow: hidden;
+}
+
+.review-sidebar-scroll {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  padding-right: 2px;
   overflow-y: auto;
+}
+
+.review-sidebar-actions {
+  flex: 0 0 auto;
+  margin-inline: -14px;
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--color-border);
+  background: #ffffff;
+  box-shadow: 0 -8px 18px rgba(32, 50, 74, 0.06);
+}
+
+.review-status-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 0;
 }
 
 .sidebar-section {
   display: grid;
-  gap: 12px;
-  padding-bottom: 18px;
+  gap: 8px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .info-list {
   display: grid;
-  gap: 10px;
+  gap: 7px;
   margin: 0;
 }
 
@@ -1155,11 +1194,65 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
+.clinical-info-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.clinical-info-list div {
+  grid-template-columns: 1fr;
+  gap: 2px;
+  padding: 7px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #fbfdff;
+}
+
+.clinical-info-list dt {
+  font-size: 0.78rem;
+}
+
+.source-text-block {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: #fbfdff;
+}
+
+.source-text-block strong {
+  font-size: 0.82rem;
+}
+
+.source-text-block p {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
 .diagnosis-panel,
 .diagnosis-form,
-.diagnosis-list {
+.diagnosis-list,
+.diagnosis-group {
   display: grid;
   gap: 10px;
+}
+
+.diagnosis-group + .diagnosis-group {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.diagnosis-group-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.diagnosis-group-heading span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
 }
 
 .diagnosis-item {
@@ -1173,10 +1266,51 @@ textarea:focus {
   background: #fbfdff;
 }
 
+.diagnosis-item.original-diagnosis {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.original-diagnosis.confirmed {
+  border-color: #a7dec0;
+  background: #eef9f2;
+}
+
+.original-diagnosis.rejected {
+  border-color: #efb3ba;
+  background: #fff4f5;
+}
+
+.doctor-diagnosis {
+  border-color: #bfd5ee;
+  background: var(--color-primary-light);
+}
+
 .diagnosis-item div {
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.diagnosis-review-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.diagnosis-review-actions .button {
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.diagnosis-review-label {
+  font-weight: 800;
+}
+
+.confirmed .diagnosis-review-label {
+  color: var(--color-success);
+}
+
+.rejected .diagnosis-review-label {
+  color: var(--color-danger);
 }
 
 .diagnosis-item strong {
@@ -1225,27 +1359,45 @@ textarea:focus {
 }
 
 .notes-field {
-  min-height: 120px;
+  min-height: 76px;
+}
+
+.diagnosis-divergence-alert {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid #f7d38b;
+  border-radius: 7px;
+  color: #754900;
+  background: #fff8e7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .review-actions {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  padding-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.review-actions .button {
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
 }
 
 .review-viewer {
   min-width: 0;
-  min-height: 560px;
-  padding: 20px;
+  min-height: 0;
+  padding: 12px;
+  overflow: hidden;
 }
 
 .ecg-viewer {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100%;
-  min-height: calc(100vh - 129px);
+  min-height: 0;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #ffffff;
@@ -1255,8 +1407,8 @@ textarea:focus {
 .viewer-toolbar {
   justify-content: flex-end;
   gap: 8px;
-  min-height: 58px;
-  padding: 8px 12px;
+  min-height: 48px;
+  padding: 5px 9px;
   border-bottom: 1px solid var(--color-border);
   background: #fbfdff;
 }
@@ -1269,14 +1421,17 @@ textarea:focus {
 }
 
 .ecg-canvas {
-  display: grid;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   min-height: 0;
-  place-items: center;
+  padding-top: 4px;
   overflow: auto;
   background: #fffefe;
 }
 
 .ecg-image-stage {
+  flex: 0 0 auto;
   position: relative;
   max-width: none;
   cursor: crosshair;
@@ -1370,17 +1525,37 @@ textarea:focus {
   }
 
   .review-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .review-page {
+    height: auto;
+    overflow: visible;
   }
 
   .review-sidebar {
+    order: 2;
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+
+  .review-sidebar-scroll {
+    overflow: visible;
+  }
+
+  .review-sidebar-actions {
+    margin-inline: -14px;
   }
 
   .review-viewer {
+    order: 1;
     min-height: 520px;
     padding: 12px;
+    overflow: visible;
   }
 
   .ecg-viewer {
@@ -1436,6 +1611,15 @@ textarea:focus {
 
   .review-sidebar {
     padding: 16px;
+  }
+
+  .review-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .review-sidebar-actions {
+    margin-inline: -16px;
+    margin-bottom: -16px;
   }
 
   .info-list div {
