@@ -1110,12 +1110,13 @@ textarea:focus {
 
 .review-topbar {
   display: grid;
-  grid-template-columns: minmax(190px, auto) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(170px, auto) minmax(0, 1fr) auto;
   position: relative;
   z-index: 2;
   flex: 0 0 auto;
   align-items: center;
-  padding-block: 10px;
+  gap: 14px;
+  padding: 8px 20px;
   border-width: 0 0 1px;
   border-radius: 0;
 }
@@ -1129,18 +1130,18 @@ textarea:focus {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   margin: 0;
 }
 
 .review-context-strip div {
   display: grid;
-  min-height: 42px;
-  min-width: 112px;
+  min-height: 38px;
+  min-width: 104px;
   align-content: center;
   gap: 2px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border: 1px solid #d9e6f5;
   border-radius: 8px;
   background: #fbfdff;
@@ -1165,9 +1166,30 @@ textarea:focus {
   justify-self: end;
 }
 
+.review-topbar-meta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.review-session-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid #d9e6f5;
+  border-radius: 999px;
+  color: #34506f;
+  background: #fbfdff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .review-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+  grid-template-columns: minmax(330px, 400px) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -1176,9 +1198,9 @@ textarea:focus {
 .review-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-height: 0;
-  padding: 14px 14px 0;
+  padding: 10px 10px 0;
   border-right: 1px solid var(--color-border);
   background: #ffffff;
   overflow: hidden;
@@ -1187,16 +1209,17 @@ textarea:focus {
 .review-sidebar-scroll {
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
-  padding-right: 2px;
+  padding-right: 4px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .review-sidebar-actions {
   flex: 0 0 auto;
-  margin-inline: -14px;
-  padding: 8px 14px 12px;
+  margin-inline: -10px;
+  padding: 7px 10px 10px;
   border-top: 1px solid var(--color-border);
   background: #ffffff;
   box-shadow: 0 -8px 18px rgba(32, 50, 74, 0.06);
@@ -1207,14 +1230,14 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 0;
 }
 
 .sidebar-section {
   display: grid;
-  gap: 8px;
-  padding-bottom: 12px;
+  gap: 7px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -1286,13 +1309,13 @@ textarea:focus {
 }
 
 .review-details {
-  padding: 0 0 10px;
+  padding: 0 0 7px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .review-details summary {
   display: flex;
-  min-height: 38px;
+  min-height: 32px;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -1310,8 +1333,8 @@ textarea:focus {
 .review-details summary::after {
   display: inline-grid;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   place-items: center;
   border: 1px solid var(--color-border);
   border-radius: 999px;
@@ -1333,11 +1356,11 @@ textarea:focus {
 .diagnosis-list,
 .diagnosis-group {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .diagnosis-group + .diagnosis-group {
-  padding-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -1355,16 +1378,17 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #fbfdff;
 }
 
 .diagnosis-item.original-diagnosis {
-  align-items: stretch;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(126px, 0.75fr);
+  align-items: center;
 }
 
 .original-diagnosis.confirmed {
@@ -1389,12 +1413,16 @@ textarea:focus {
 }
 
 .diagnosis-review-actions {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .diagnosis-review-actions .button {
   width: 100%;
-  font-size: 0.8rem;
+  min-height: 32px;
+  padding: 6px 7px;
+  font-size: 0.75rem;
 }
 
 .diagnosis-review-label {
@@ -1416,7 +1444,7 @@ textarea:focus {
 
 .diagnosis-item span {
   color: var(--color-muted);
-  font-size: 0.86rem;
+  font-size: 0.8rem;
 }
 
 .diagnosis-region,
@@ -1455,11 +1483,11 @@ textarea:focus {
 }
 
 .notes-field {
-  min-height: 76px;
+  min-height: 58px;
 }
 
 .diagnosis-divergence-alert {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   padding: 8px 10px;
   border: 1px solid #f7d38b;
   border-radius: 7px;
@@ -1473,19 +1501,19 @@ textarea:focus {
 .review-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 .review-actions .button {
-  min-height: 38px;
-  padding: 8px 10px;
-  font-size: 0.82rem;
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 0.8rem;
 }
 
 .review-viewer {
   min-width: 0;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
   overflow: hidden;
 }
 
@@ -1502,9 +1530,9 @@ textarea:focus {
 
 .viewer-toolbar {
   justify-content: flex-end;
-  gap: 8px;
-  min-height: 48px;
-  padding: 5px 9px;
+  gap: 7px;
+  min-height: 44px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--color-border);
   background: #fbfdff;
 }
@@ -1518,12 +1546,13 @@ textarea:focus {
 
 .ecg-canvas {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   min-height: 0;
-  padding-top: 4px;
+  padding: 8px;
   overflow: auto;
   background: #fffefe;
+  scrollbar-width: thin;
 }
 
 .ecg-image-stage {
@@ -1531,12 +1560,14 @@ textarea:focus {
   position: relative;
   max-width: none;
   cursor: crosshair;
-  transition: width 0.18s ease;
+  transition: width 0.18s ease, height 0.18s ease;
 }
 
 .ecg-image-stage img {
   display: block;
   width: 100%;
+  height: 100%;
+  object-fit: contain;
   user-select: none;
   pointer-events: none;
 }
@@ -1586,7 +1617,6 @@ textarea:focus {
   }
 
   .app-header,
-  .review-topbar,
   .exam-card-main {
     align-items: flex-start;
   }
@@ -1597,20 +1627,22 @@ textarea:focus {
   }
 
   .review-topbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(145px, auto) minmax(220px, 1fr) auto;
+    gap: 10px;
+    padding-inline: 12px;
   }
 
   .review-context-strip {
-    justify-content: flex-start;
+    justify-content: center;
     width: 100%;
   }
 
   .review-context-strip div {
-    flex: 1 1 150px;
+    flex: 1 1 118px;
   }
 
-  .review-topbar > .badge-row {
-    justify-self: start;
+  .review-topbar-meta {
+    justify-items: end;
   }
 
   .doctor-greeting {
@@ -1642,41 +1674,33 @@ textarea:focus {
   }
 
   .review-layout {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: visible;
+    grid-template-columns: minmax(300px, 36vw) minmax(0, 1fr);
   }
 
   .review-page {
-    height: auto;
-    overflow: visible;
+    height: 100dvh;
+    min-height: 100vh;
+    overflow: hidden;
   }
 
   .review-sidebar {
-    order: 2;
-    border-right: 0;
-    border-bottom: 1px solid var(--color-border);
-    overflow: visible;
+    border-right: 1px solid var(--color-border);
+    border-bottom: 0;
+    overflow: hidden;
   }
 
   .review-sidebar-scroll {
-    overflow: visible;
+    overflow-y: auto;
   }
 
   .review-sidebar-actions {
-    margin-inline: -14px;
+    margin-inline: -10px;
   }
 
   .review-viewer {
-    order: 1;
-    min-height: 520px;
-    padding: 12px;
-    overflow: visible;
-  }
-
-  .ecg-viewer {
-    min-height: 520px;
+    min-height: 0;
+    padding: 10px;
+    overflow: hidden;
   }
 
   .validation-summary-panel {
@@ -1723,20 +1747,41 @@ textarea:focus {
   }
 
   .review-topbar {
-    padding: 16px;
+    grid-template-columns: minmax(118px, auto) minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .review-title-block h1 {
+    font-size: 1rem;
+  }
+
+  .review-context-strip {
+    display: none;
   }
 
   .review-sidebar {
-    padding: 16px;
+    padding: 8px 8px 0;
+  }
+
+  .review-layout {
+    grid-template-columns: minmax(250px, 42vw) minmax(0, 1fr);
   }
 
   .review-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .review-sidebar-actions {
-    margin-inline: -16px;
-    margin-bottom: -16px;
+    margin-inline: -8px;
+    margin-bottom: 0;
+    padding-inline: 8px;
+  }
+
+  .review-session-chip span {
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .info-list div {

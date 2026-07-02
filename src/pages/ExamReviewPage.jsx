@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -188,7 +188,13 @@ export default function ExamReviewPage() {
             </div>
           ) : null}
         </dl>
-        <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
+        <div className="review-topbar-meta">
+          <div className="review-session-chip" title={`Sessao ativa: ${DOCTOR_NAME}`}>
+            <UserRound size={15} aria-hidden="true" />
+            <span>Sessao: {DOCTOR_NAME}</span>
+          </div>
+          <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
+        </div>
       </header>
 
       <main className="review-layout">

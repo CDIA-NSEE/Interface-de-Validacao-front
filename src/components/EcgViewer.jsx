@@ -1,7 +1,12 @@
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const DEFAULT_ECG_WIDTH = 1125;
+const ECG_SIZE = {
+  width: 1125,
+  height: 645,
+};
+
+const ECG_ASPECT_RATIO = ECG_SIZE.width / ECG_SIZE.height;
 
 function clamp(value) {
   return Math.min(100, Math.max(0, value));
@@ -29,8 +34,55 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
   const [zoom, setZoom] = useState(1);
   const [selectionStart, setSelectionStart] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const canvasRef = useRef(null);
   const source = useMemo(() => imageUrl || "/sample-ecg.svg", [imageUrl]);
   const activeRegion = draftRegion || selectedRegion;
+  const fittedSize = useMemo(() => {
+    if (!canvasSize.width || !canvasSize.height) return null;
+
+    const widthByHeight = canvasSize.height * ECG_ASPECT_RATIO;
+    const width = Math.min(canvasSize.width, widthByHeight);
+    return {
+      width,
+      height: width / ECG_ASPECT_RATIO,
+    };
+  }, [canvasSize]);
+  const stageStyle = fittedSize
+    ? {
+        width: `${fittedSize.width * zoom}px`,
+        height: `${fittedSize.height * zoom}px`,
+      }
+    : { width: `${zoom * 100}%` };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    function updateCanvasSize() {
+      const canvasStyles = window.getComputedStyle(canvas);
+      const horizontalPadding =
+        Number.parseFloat(canvasStyles.paddingLeft) + Number.parseFloat(canvasStyles.paddingRight);
+      const verticalPadding =
+        Number.parseFloat(canvasStyles.paddingTop) + Number.parseFloat(canvasStyles.paddingBottom);
+
+      setCanvasSize({
+        width: Math.max(0, canvas.clientWidth - horizontalPadding),
+        height: Math.max(0, canvas.clientHeight - verticalPadding),
+      });
+    }
+
+    updateCanvasSize();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateCanvasSize);
+      return () => window.removeEventListener("resize", updateCanvasSize);
+    }
+
+    const observer = new ResizeObserver(updateCanvasSize);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   function changeZoom(amount) {
     setZoom((current) => Math.min(2.4, Math.max(0.6, Number((current + amount).toFixed(2)))));
@@ -127,14 +179,14 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
         <span className="zoom-value">{Math.round(zoom * 100)}%</span>
       </div>
 
-      <div className="ecg-canvas">
+      <div className="ecg-canvas" ref={canvasRef}>
         <div
           className="ecg-image-stage"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
-          style={{ width: `min(${zoom * 100}%, ${DEFAULT_ECG_WIDTH * zoom}px)` }}
+          style={stageStyle}
         >
           <img src={source} alt="Traçado do ECG" draggable="false" />
           {activeRegion ? (
