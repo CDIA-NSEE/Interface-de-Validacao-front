@@ -22,6 +22,15 @@ import { formatDate } from "../utils/dateUtils.js";
 
 const DOCTOR_NAME = "Dr. João";
 
+function getAutomaticReviewResult(exam) {
+  const hasDivergence = exam?.diagnoses?.some(
+    (diagnosis) =>
+      diagnosis.review_status === "rejected" || diagnosis.source === "doctor_added",
+  );
+
+  return hasDivergence ? "alterado" : "sem_alteracao";
+}
+
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -70,7 +79,9 @@ export default function ExamReviewPage() {
       if (updatedExam) {
         setExam(updatedExam);
       }
-      setMessage(successMessage);
+      if (successMessage) {
+        setMessage(successMessage);
+      }
       return true;
     } catch (requestError) {
       setError(requestError?.response?.data?.detail || "Não foi possível concluir a ação.");
@@ -87,7 +98,7 @@ export default function ExamReviewPage() {
         ...exam,
         diagnoses: [...(exam?.diagnoses || []), diagnosis],
       };
-    }, "Diagnóstico adicionado.");
+    });
   }
 
   async function handleRemoveDiagnosis(diagnosisId) {
@@ -97,7 +108,7 @@ export default function ExamReviewPage() {
         ...exam,
         diagnoses: exam.diagnoses.filter((diagnosis) => diagnosis.id !== diagnosisId),
       };
-    }, "Diagnóstico removido.");
+    });
   }
 
   async function handleReviewDiagnosis(diagnosisId, reviewStatus) {
@@ -109,19 +120,12 @@ export default function ExamReviewPage() {
           diagnosis.id === diagnosisId ? updatedDiagnosis : diagnosis,
         ),
       };
-    }, reviewStatus === "confirmed"
-      ? "Diagnóstico original confirmado."
-      : "Divergência registrada.");
+    });
   }
 
-  function handleSaveInValidation() {
-    runAction(
-      () => updateExamStatus(id, "em_validacao"),
-      "Exame salvo como em validação.",
-    );
-  }
+  function handleValidate() {
+    const reviewResult = getAutomaticReviewResult(exam);
 
-  function handleValidate(reviewResult) {
     runAction(
       () =>
         validateExam(id, {
@@ -135,10 +139,7 @@ export default function ExamReviewPage() {
     );
   }
 
-  const hasDiagnosisDivergence = exam?.diagnoses?.some(
-    (diagnosis) =>
-      diagnosis.review_status === "rejected" || diagnosis.source === "doctor_added",
-  );
+  const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
 
   if (isLoading) {
     return <LoadingState message="Abrindo exame..." />;
@@ -193,7 +194,6 @@ export default function ExamReviewPage() {
             <UserRound size={15} aria-hidden="true" />
             <span>Sessao: {DOCTOR_NAME}</span>
           </div>
-          <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
         </div>
       </header>
 
@@ -204,8 +204,6 @@ export default function ExamReviewPage() {
             {error ? <div className="feedback error-feedback">{error}</div> : null}
 
           <section className="sidebar-section review-decision-section">
-            <span className="eyebrow">Etapa principal</span>
-            <h2>Decisão da revisão</h2>
             <DiagnosisPanel
               diagnoses={exam.diagnoses}
               options={diagnosisOptions}
@@ -241,8 +239,8 @@ export default function ExamReviewPage() {
             </details>
           ) : null}
 
-          <details className="review-details" open>
-            <summary>Observações da revisão</summary>
+          <section className="review-notes-section">
+            <h2>Observações da revisão</h2>
             <textarea
               className="notes-field"
               value={notes}
@@ -250,15 +248,15 @@ export default function ExamReviewPage() {
               placeholder="Registre observações da revisão"
               rows={3}
             />
-          </details>
+          </section>
 
           </div>
 
           <div className="review-sidebar-actions">
             {hasDiagnosisDivergence ? (
               <div className="diagnosis-divergence-alert">
-                Você discordou do diagnóstico original ou adicionou um diagnóstico médico. O exame
-                provavelmente deve ser validado como alterado.
+                Há divergência ou diagnóstico médico adicionado. Ao validar, o exame será
+                classificado como alterado.
               </div>
             ) : null}
 
@@ -269,9 +267,7 @@ export default function ExamReviewPage() {
 
             <ReviewActions
               onBack={() => navigate("/")}
-              onSave={handleSaveInValidation}
-              onValidateWithoutChange={() => handleValidate("sem_alteracao")}
-              onValidateChanged={() => handleValidate("alterado")}
+              onValidate={handleValidate}
               isBusy={isBusy}
               isValid={exam.status_validation === "valido"}
             />
