@@ -89,8 +89,6 @@ export default function DashboardPage() {
   const [allExams, setAllExams] = useState([]);
   const [summaryCollapsed, setSummaryCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
-    const saved = window.localStorage.getItem("summaryPanelCollapsed");
-    if (saved !== null) return saved === "true";
     return window.matchMedia("(max-width: 920px)").matches;
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -98,8 +96,8 @@ export default function DashboardPage() {
   const [overviewError, setOverviewError] = useState("");
 
   useEffect(() => {
-    window.localStorage.setItem("summaryPanelCollapsed", String(summaryCollapsed));
-  }, [summaryCollapsed]);
+    window.localStorage.removeItem("summaryPanelCollapsed");
+  }, []);
 
   const loadOverview = useCallback(async () => {
     setOverviewError("");
