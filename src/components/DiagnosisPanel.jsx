@@ -74,9 +74,10 @@ export default function DiagnosisPanel({
                     onClick={() => onReview(diagnosis.id, "confirmed")}
                     disabled={isBusy}
                     aria-pressed={diagnosis.review_status === "confirmed"}
+                    aria-label="Concordar com diagnóstico"
+                    title="Concordar com diagnóstico"
                   >
-                    <Check size={15} aria-hidden="true" />
-                    Concordo
+                    <Check size={21} aria-hidden="true" />
                   </button>
                   <button
                     className="button compact-button danger"
@@ -84,9 +85,10 @@ export default function DiagnosisPanel({
                     onClick={() => onReview(diagnosis.id, "rejected")}
                     disabled={isBusy}
                     aria-pressed={diagnosis.review_status === "rejected"}
+                    aria-label="Discordar do diagnóstico"
+                    title="Discordar do diagnóstico"
                   >
-                    <X size={15} aria-hidden="true" />
-                    Discordo
+                    <X size={21} aria-hidden="true" />
                   </button>
                 </div>
               </article>

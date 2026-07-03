@@ -27,6 +27,7 @@ body {
   margin: 0;
   color: var(--color-text);
   background: var(--color-bg);
+  font-size: 1.0625rem;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -112,12 +113,12 @@ a {
 }
 
 .dashboard-action-header h2 {
-  font-size: 1.15rem;
+  font-size: 1.2125rem;
 }
 
 .dashboard-action-header p {
   color: var(--color-muted);
-  font-size: 0.9rem;
+  font-size: 0.9625rem;
 }
 
 .summary-sidebar {
@@ -176,13 +177,13 @@ p {
 
 h1 {
   color: var(--color-text);
-  font-size: 1.45rem;
+  font-size: 1.5125rem;
   line-height: 1.2;
 }
 
 h2 {
   color: var(--color-text);
-  font-size: 1rem;
+  font-size: 1.0625rem;
   line-height: 1.2;
 }
 
@@ -215,7 +216,7 @@ h2 {
 }
 
 .section-heading h2 {
-  font-size: 1.12rem;
+  font-size: 1.1825rem;
 }
 
 .section-heading p {
@@ -224,7 +225,7 @@ h2 {
 
 .section-heading span {
   color: var(--color-muted);
-  font-size: 0.84rem;
+  font-size: 0.9025rem;
   font-weight: 700;
 }
 
@@ -248,12 +249,12 @@ h2 {
 }
 
 .summary-panel-header h2 {
-  font-size: 1.05rem;
+  font-size: 1.1125rem;
 }
 
 .summary-panel-header p {
   color: var(--color-muted);
-  font-size: 0.84rem;
+  font-size: 0.9025rem;
   font-weight: 700;
 }
 
@@ -308,13 +309,13 @@ h2 {
 .summary-block-heading h3 {
   margin: 0;
   color: #20324a;
-  font-size: 0.9rem;
+  font-size: 0.9625rem;
 }
 
 .summary-block-heading p {
   margin: 0;
   color: var(--color-muted);
-  font-size: 0.84rem;
+  font-size: 0.9025rem;
   font-weight: 700;
 }
 
@@ -338,7 +339,7 @@ h2 {
 
 .progress-summary-copy strong {
   color: #20324a;
-  font-size: 1rem;
+  font-size: 1.0625rem;
 }
 
 .segmented-progress {
@@ -372,7 +373,7 @@ h2 {
   flex-wrap: wrap;
   gap: 5px 10px;
   color: var(--color-muted);
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 700;
 }
 
@@ -432,14 +433,14 @@ h2 {
 .stats-group-header h3 {
   margin: 0;
   color: #20324a;
-  font-size: 0.9rem;
+  font-size: 0.9625rem;
   line-height: 1.2;
 }
 
 .stats-group-header p {
   margin: 0;
   color: var(--color-muted);
-  font-size: 0.84rem;
+  font-size: 0.9025rem;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -502,13 +503,13 @@ h2 {
 
 .quick-metric span {
   color: var(--color-muted);
-  font-size: 0.78rem;
+  font-size: 0.8425rem;
   font-weight: 800;
 }
 
 .quick-metric strong {
   color: #20324a;
-  font-size: 1rem;
+  font-size: 1.0625rem;
   line-height: 1;
 }
 
@@ -569,7 +570,7 @@ h2 {
   flex-wrap: wrap;
   gap: 10px;
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.8625rem;
   font-weight: 700;
 }
 
@@ -581,12 +582,12 @@ h2 {
   gap: 4px 10px;
   padding: 2px 1px 0;
   color: var(--color-muted);
-  font-size: 0.78rem;
+  font-size: 0.8425rem;
 }
 
 .productivity-summary strong {
   color: var(--color-text);
-  font-size: 0.8rem;
+  font-size: 0.8625rem;
 }
 
 .clinical-legend span {
@@ -627,12 +628,12 @@ h2 {
 
 .stat-card span {
   color: var(--color-muted);
-  font-size: 0.9rem;
+  font-size: 0.9625rem;
 }
 
 .stat-card strong {
   color: #20324a;
-  font-size: 1.75rem;
+  font-size: 1.8125rem;
   line-height: 1;
 }
 
@@ -719,7 +720,7 @@ h2 {
   border-radius: 999px;
   color: var(--color-primary);
   background: var(--color-primary-light);
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 800;
 }
 
@@ -742,7 +743,7 @@ label {
   display: grid;
   gap: 7px;
   color: #20324a;
-  font-size: 0.88rem;
+  font-size: 0.9425rem;
   font-weight: 700;
 }
 
@@ -804,7 +805,6 @@ textarea:focus {
   gap: 14px;
 }
 
-.exam-list-summary,
 .exam-group-header {
   display: flex;
   align-items: center;
@@ -812,38 +812,22 @@ textarea:focus {
   gap: 16px;
 }
 
-.exam-list-summary {
-  padding: 14px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-soft);
-}
-
-.exam-list-summary div,
 .exam-group-header div {
   display: grid;
   gap: 3px;
 }
 
-.exam-list-summary h2,
 .exam-group-header h3 {
   margin: 0;
   color: var(--color-text);
 }
 
-.exam-list-summary h2 {
-  font-size: 1rem;
-}
-
-.exam-list-summary p,
 .exam-group-header p {
   margin: 0;
   color: var(--color-muted);
-  font-size: 0.82rem;
+  font-size: 0.8825rem;
 }
 
-.exam-list-summary > strong,
 .exam-group-header > span {
   display: inline-grid;
   flex: 0 0 auto;
@@ -854,7 +838,7 @@ textarea:focus {
   border-radius: 999px;
   color: var(--color-primary);
   background: var(--color-primary-light);
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 800;
 }
 
@@ -866,7 +850,7 @@ textarea:focus {
 }
 
 .exam-group-header h3 {
-  font-size: 0.95rem;
+  font-size: 1.0125rem;
 }
 
 .load-more-button {
@@ -895,14 +879,14 @@ textarea:focus {
 .exam-card-main strong {
   display: block;
   color: #20324a;
-  font-size: 1.2rem;
+  font-size: 1.2625rem;
 }
 
 .eyebrow {
   display: block;
   margin-bottom: 5px;
   color: var(--color-muted);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -936,7 +920,7 @@ textarea:focus {
   border-radius: 999px;
   color: var(--color-primary);
   background: var(--color-primary-light);
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 700;
 }
 
@@ -947,9 +931,10 @@ textarea:focus {
   padding: 0 10px;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 0.82rem;
+  font-size: 0.8825rem;
   font-weight: 800;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
 }
 
 .badge-row {
@@ -1161,7 +1146,7 @@ textarea:focus {
 
 .review-context-strip dt {
   color: var(--color-muted);
-  font-size: 0.72rem;
+  font-size: 0.7825rem;
   font-weight: 800;
 }
 
@@ -1169,7 +1154,7 @@ textarea:focus {
   min-width: 0;
   margin: 0;
   color: #20324a;
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
@@ -1194,9 +1179,13 @@ textarea:focus {
   border-radius: 999px;
   color: #34506f;
   background: #fbfdff;
-  font-size: 0.78rem;
+  font-size: 0.8425rem;
   font-weight: 800;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.review-session-chip span {
+  overflow-wrap: anywhere;
 }
 
 .review-layout {
@@ -1250,7 +1239,7 @@ textarea:focus {
 
 .review-status-section h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.9625rem;
   white-space: nowrap;
 }
 
@@ -1307,7 +1296,7 @@ textarea:focus {
 }
 
 .clinical-info-list dt {
-  font-size: 0.78rem;
+  font-size: 0.8425rem;
 }
 
 .source-text-block {
@@ -1320,12 +1309,12 @@ textarea:focus {
 }
 
 .source-text-block strong {
-  font-size: 0.82rem;
+  font-size: 0.8825rem;
 }
 
 .source-text-block p {
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.8625rem;
   line-height: 1.45;
   white-space: pre-line;
 }
@@ -1343,7 +1332,7 @@ textarea:focus {
   gap: 10px;
   color: #20324a;
   cursor: pointer;
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 800;
   list-style: none;
 }
@@ -1386,7 +1375,7 @@ textarea:focus {
   min-height: 26px;
   margin: 0;
   color: #20324a;
-  font-size: 0.86rem;
+  font-size: 0.9225rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -1413,12 +1402,12 @@ textarea:focus {
   gap: 0;
   padding-bottom: 1px;
   color: #0f2745;
-  font-size: 0.92rem;
+  font-size: 0.9825rem;
 }
 
 .diagnosis-group-heading span {
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.8625rem;
 }
 
 .diagnosis-item {
@@ -1435,7 +1424,7 @@ textarea:focus {
 
 .diagnosis-item.original-diagnosis {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
 
@@ -1471,7 +1460,8 @@ textarea:focus {
 
 .diagnosis-review-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, 44px);
+  justify-content: end;
   gap: 6px;
 }
 
@@ -1479,18 +1469,17 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  width: 100%;
-  min-height: 32px;
-  padding: 0 8px;
-  font-size: 0.76rem;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
   line-height: 1;
-  text-align: center;
-  white-space: nowrap;
+  box-shadow: 0 8px 16px rgba(15, 39, 69, 0.16);
 }
 
 .diagnosis-review-actions .button svg {
   flex: 0 0 auto;
+  stroke-width: 2.8;
 }
 
 .diagnosis-review-label {
@@ -1508,14 +1497,14 @@ textarea:focus {
 
 .diagnosis-item strong {
   color: #20324a;
-  font-size: 0.84rem;
+  font-size: 0.9025rem;
   line-height: 1.12;
   overflow-wrap: anywhere;
 }
 
 .diagnosis-item span {
   color: var(--color-muted);
-  font-size: 0.74rem;
+  font-size: 0.8025rem;
 }
 
 .diagnosis-region,
@@ -1536,7 +1525,7 @@ textarea:focus {
   border-radius: 8px;
   color: var(--color-primary);
   background: var(--color-primary-light);
-  font-size: 0.74rem;
+  font-size: 0.8025rem;
   font-weight: 800;
 }
 
@@ -1565,7 +1554,7 @@ textarea:focus {
   border-radius: 7px;
   color: #754900;
   background: #fff8e7;
-  font-size: 0.74rem;
+  font-size: 0.8025rem;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -1579,7 +1568,7 @@ textarea:focus {
 .review-actions .button {
   min-height: 34px;
   padding: 6px 8px;
-  font-size: 0.78rem;
+  font-size: 0.8425rem;
 }
 
 .review-viewer {
@@ -1826,7 +1815,7 @@ textarea:focus {
   }
 
   .review-title-block h1 {
-    font-size: 1rem;
+    font-size: 1.0625rem;
   }
 
   .review-context-strip {
@@ -1852,9 +1841,9 @@ textarea:focus {
   }
 
   .review-session-chip span {
-    max-width: 88px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .info-list div {
@@ -1876,7 +1865,6 @@ textarea:focus {
     width: 100%;
   }
 
-  .exam-list-summary,
   .exam-group-header {
     align-items: flex-start;
   }
