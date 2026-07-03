@@ -9,6 +9,7 @@ import LoadingState from "../components/LoadingState.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import {
   addDiagnosis,
   getDiagnosisOptions,
@@ -19,8 +20,6 @@ import {
   validateExam,
 } from "../services/examsService.js";
 import { formatDate } from "../utils/dateUtils.js";
-
-const DOCTOR_NAME = "Dr. João";
 
 function getAutomaticReviewResult(exam) {
   const hasDivergence = exam?.diagnoses?.some(
@@ -34,6 +33,7 @@ function getAutomaticReviewResult(exam) {
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [exam, setExam] = useState(null);
   const [notes, setNotes] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(null);
@@ -131,7 +131,6 @@ export default function ExamReviewPage() {
         validateExam(id, {
           review_result: reviewResult,
           notes,
-          doctor_name: DOCTOR_NAME,
         }),
       reviewResult === "alterado"
         ? "Exame validado como alterado."
@@ -140,6 +139,7 @@ export default function ExamReviewPage() {
   }
 
   const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
+  const doctorName = user?.full_name || "Usuário";
 
   if (isLoading) {
     return <LoadingState message="Abrindo exame..." />;
@@ -190,9 +190,9 @@ export default function ExamReviewPage() {
           ) : null}
         </dl>
         <div className="review-topbar-meta">
-          <div className="review-session-chip" title={`Sessao ativa: ${DOCTOR_NAME}`}>
+          <div className="review-session-chip" title={`Sessão ativa: ${doctorName}`}>
             <UserRound size={15} aria-hidden="true" />
-            <span>Sessao: {DOCTOR_NAME}</span>
+            <span>Sessão: {doctorName}</span>
           </div>
         </div>
       </header>

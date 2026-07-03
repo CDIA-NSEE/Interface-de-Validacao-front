@@ -1,0 +1,127 @@
+import { Activity, KeyRound, LockKeyhole, UserRound } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext.jsx";
+
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [credentials, setCredentials] = useState({ username: "", password: "" });
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  function handleChange(field, value) {
+    setCredentials((currentCredentials) => ({
+      ...currentCredentials,
+      [field]: value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setIsRecoveringPassword(false);
+
+    const username = credentials.username.trim();
+    if (!username || !credentials.password) {
+      setError("Informe usuário e senha para acessar o sistema.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await login({ username, password: credentials.password });
+      navigate("/", { replace: true });
+    } catch (requestError) {
+      setError(requestError?.response?.data?.detail || "Não foi possível entrar.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="login-page">
+      <section className="login-shell" aria-labelledby="login-title">
+        <div className="login-brand">
+          <span className="brand-icon" aria-hidden="true">
+            <Activity size={28} />
+          </span>
+          <div>
+            <span className="eyebrow">Acesso médico</span>
+            <h1 id="login-title">Revisão de ECG</h1>
+            <p>Validação médica de exames</p>
+          </div>
+        </div>
+
+        <form className="login-panel" onSubmit={handleSubmit}>
+          <div className="login-heading">
+            <h2>Entrar no sistema</h2>
+            <p>Use suas credenciais previamente cadastradas.</p>
+          </div>
+
+          {error ? <div className="feedback error-feedback">{error}</div> : null}
+          {isRecoveringPassword ? (
+            <div className="feedback login-info-feedback">
+              Para recuperar sua senha, contate o administrador responsável pelo cadastro de
+              usuários. Novos usuários não são criados por esta tela.
+            </div>
+          ) : null}
+
+          <label>
+            Usuário
+            <span className="input-with-icon">
+              <UserRound size={19} aria-hidden="true" />
+              <input
+                autoComplete="username"
+                autoFocus
+                disabled={isSubmitting}
+                onChange={(event) => handleChange("username", event.target.value)}
+                placeholder="ex.: dr.joao"
+                type="text"
+                value={credentials.username}
+              />
+            </span>
+          </label>
+
+          <label>
+            Senha
+            <span className="input-with-icon">
+              <LockKeyhole size={19} aria-hidden="true" />
+              <input
+                autoComplete="current-password"
+                disabled={isSubmitting}
+                onChange={(event) => handleChange("password", event.target.value)}
+                placeholder="Digite sua senha"
+                type="password"
+                value={credentials.password}
+              />
+            </span>
+          </label>
+
+          <button
+            className="button primary-action full-width-button"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            <KeyRound size={18} aria-hidden="true" />
+            {isSubmitting ? "Entrando..." : "Entrar"}
+          </button>
+
+          <button
+            className="login-recovery-button"
+            disabled={isSubmitting}
+            onClick={() => {
+              setError("");
+              setIsRecoveringPassword((currentValue) => !currentValue);
+            }}
+            type="button"
+          >
+            Recuperar senha
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}

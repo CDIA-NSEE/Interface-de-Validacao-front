@@ -1,12 +1,13 @@
-import { Activity, Clock } from "lucide-react";
+import { Activity, Clock, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { useAuth } from "../context/AuthContext.jsx";
 import { formatNow } from "../utils/dateUtils.js";
 
-const DOCTOR_NAME = "Dr. João";
-
 export default function AppHeader() {
+  const { logout, user } = useAuth();
   const [now, setNow] = useState(new Date());
+  const doctorName = user?.full_name || "Usuário";
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60000);
@@ -24,11 +25,16 @@ export default function AppHeader() {
           <p>Validação médica de exames</p>
         </div>
       </div>
-      <div className="doctor-greeting">
-        <Clock size={18} aria-hidden="true" />
-        <span>{formatNow(now)} — Bem-vindo, {DOCTOR_NAME}</span>
+      <div className="header-session">
+        <div className="doctor-greeting">
+          <Clock size={18} aria-hidden="true" />
+          <span>{formatNow(now)} — Bem-vindo, {doctorName}</span>
+        </div>
+        <button className="button secondary compact-button" type="button" onClick={logout}>
+          <LogOut size={16} aria-hidden="true" />
+          Sair
+        </button>
       </div>
     </header>
   );
 }
-

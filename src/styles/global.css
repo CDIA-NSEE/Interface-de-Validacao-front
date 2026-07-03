@@ -71,6 +71,77 @@ a {
   gap: 16px;
 }
 
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(238, 244, 251, 0.92)),
+    var(--color-bg);
+}
+
+.login-shell {
+  display: grid;
+  width: min(100%, 460px);
+  gap: 18px;
+}
+
+.login-brand,
+.login-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border-top: 4px solid var(--color-primary);
+}
+
+.login-brand p,
+.login-heading p {
+  color: var(--color-muted);
+}
+
+.login-panel {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.login-heading {
+  display: grid;
+  gap: 5px;
+}
+
+.login-heading h2 {
+  font-size: 1.2125rem;
+}
+
+.login-info-feedback {
+  color: #24528d;
+  border: 1px solid #bfd5ee;
+  background: var(--color-primary-light);
+}
+
+.login-recovery-button {
+  justify-self: center;
+  border: 0;
+  color: var(--color-primary);
+  background: transparent;
+  font-size: 0.9425rem;
+  font-weight: 800;
+}
+
+.login-recovery-button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
 .dashboard-page {
   min-height: 100vh;
   padding: 24px 0 40px;
@@ -197,6 +268,12 @@ h2 {
 .doctor-greeting {
   gap: 8px;
   white-space: nowrap;
+}
+
+.header-session {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .stats-section {
@@ -1452,17 +1529,17 @@ textarea:focus {
   height: 32px;
 }
 
-.diagnosis-item div {
+.diagnosis-item .diagnosis-content {
   display: grid;
   gap: 1px;
   min-width: 0;
 }
 
 .diagnosis-review-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 44px);
+  display: flex;
+  align-items: center;
   justify-content: end;
-  gap: 6px;
+  gap: 10px;
 }
 
 .diagnosis-review-actions .button {
@@ -1710,6 +1787,12 @@ textarea:focus {
     white-space: normal;
   }
 
+  .header-session {
+    align-items: flex-start;
+    flex-direction: column;
+    width: 100%;
+  }
+
   .stats-grid,
   .stats-groups-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1787,6 +1870,15 @@ textarea:focus {
 @media (max-width: 620px) {
   .dashboard-page {
     padding-top: 12px;
+  }
+
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-brand,
+  .login-panel {
+    padding: 18px;
   }
 
   .stats-grid,
