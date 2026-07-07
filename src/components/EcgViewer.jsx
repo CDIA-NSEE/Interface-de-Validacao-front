@@ -1,6 +1,8 @@
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import api from "../services/api.js";
+
 const ECG_SIZE = {
   width: 1125,
   height: 645,
@@ -35,6 +37,7 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
   const [selectionStart, setSelectionStart] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [resolvedSource, setResolvedSource] = useState("/sample-ecg.svg");
   const canvasRef = useRef(null);
   const source = useMemo(() => imageUrl || "/sample-ecg.svg", [imageUrl]);
   const activeRegion = draftRegion || selectedRegion;
@@ -54,6 +57,34 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
         height: `${fittedSize.height * zoom}px`,
       }
     : { width: `${zoom * 100}%` };
+
+  useEffect(() => {
+    let objectUrl = null;
+    let isCurrent = true;
+
+    if (!source.startsWith("/exams/")) {
+      setResolvedSource(source);
+      return undefined;
+    }
+
+    api
+      .get(source, { responseType: "blob" })
+      .then((response) => {
+        if (!isCurrent) return;
+        objectUrl = URL.createObjectURL(response.data);
+        setResolvedSource(objectUrl);
+      })
+      .catch(() => {
+        if (isCurrent) setResolvedSource("/sample-ecg.svg");
+      });
+
+    return () => {
+      isCurrent = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [source]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -188,7 +219,7 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
           onPointerCancel={handlePointerCancel}
           style={stageStyle}
         >
-          <img src={source} alt="Traçado do ECG" draggable="false" />
+          <img src={resolvedSource} alt="Traçado do ECG" draggable="false" />
           {activeRegion ? (
             <span
               className="selection-box"

@@ -12,6 +12,20 @@
   --shadow-soft: 0 8px 24px rgba(30, 74, 120, 0.07);
 }
 
+:root[data-theme="dark"] {
+  --color-primary: #79aef0;
+  --color-primary-light: #183552;
+  --color-success: #4cc184;
+  --color-danger: #f26d7d;
+  --color-warning: #f2bd4f;
+  --color-text: #eef6ff;
+  --color-muted: #aec0d5;
+  --color-bg: #0e1622;
+  --color-surface: #172233;
+  --color-border: #30445d;
+  --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.26);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -326,7 +340,7 @@ h2 {
 }
 
 .summary-panel-header h2 {
-  font-size: 1.1125rem;
+  font-size: 1.3rem;
 }
 
 .summary-panel-header p {
@@ -1638,7 +1652,7 @@ textarea:focus {
 
 .review-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 6px;
 }
 
@@ -1737,6 +1751,331 @@ textarea:focus {
   background: #fff0f2;
 }
 
+.login-logo-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-logo-row img {
+  width: 74px;
+  height: 44px;
+  padding: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.compact-icon-button {
+  width: 36px;
+  height: 36px;
+}
+
+.daily-context-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 18px 22px;
+  border: 1px solid #b9d2ed;
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.daily-context-card h2 {
+  font-size: 1.35rem;
+}
+
+.daily-context-card p {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.daily-context-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(12, 29, 48, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+.daily-modal-backdrop {
+  background: rgba(12, 29, 48, 0.56);
+}
+
+.modal-panel {
+  display: grid;
+  width: min(100%, 520px);
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+}
+
+.daily-diagnosis-modal {
+  width: min(100%, 560px);
+}
+
+.modal-header,
+.daily-modal-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.daily-modal-title {
+  justify-content: flex-start;
+}
+
+.modal-header h2 {
+  font-size: 1.35rem;
+}
+
+.modal-copy,
+.daily-modal-body p {
+  color: var(--color-muted);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.support-channel-list,
+.tutorial-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.support-channel,
+.tutorial-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.support-channel svg,
+.tutorial-step-icon {
+  color: var(--color-primary);
+}
+
+.support-channel div,
+.tutorial-step div {
+  display: grid;
+  gap: 3px;
+}
+
+.support-channel span,
+.tutorial-step p {
+  color: var(--color-muted);
+  font-size: 0.9225rem;
+  font-weight: 700;
+}
+
+.floating-support-button {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  font-weight: 800;
+}
+
+.floating-support-button:hover {
+  border-color: var(--color-primary);
+}
+
+.ai-recommendation-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #bfd5ee;
+  border-radius: 8px;
+  color: #1d487d;
+  background: #eef6ff;
+}
+
+.ai-recommendation-box p {
+  margin-top: 2px;
+  color: #42607f;
+  font-size: 0.8425rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.required-diagnosis {
+  border-width: 2px;
+  border-color: var(--color-primary);
+  background: #f4f9ff;
+}
+
+.optional-diagnosis {
+  opacity: 0.96;
+}
+
+.diagnosis-kicker {
+  width: fit-content;
+  min-height: 24px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--color-primary) !important;
+  background: var(--color-primary-light);
+  font-size: 0.7425rem !important;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.diagnosis-text-pair {
+  display: grid;
+  gap: 2px;
+}
+
+.diagnosis-text-pair > span {
+  color: var(--color-muted) !important;
+  font-size: 0.7425rem !important;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.diagnosis-text-pair p {
+  color: var(--color-text);
+  font-size: 0.8625rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.review-toggle {
+  color: #5f6f82;
+  border-color: #d6e1ee;
+  background: #f4f7fb;
+  box-shadow: none !important;
+}
+
+.review-toggle.agree.is-active {
+  color: #ffffff;
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+
+.review-toggle.disagree.is-active {
+  color: #ffffff;
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+}
+
+.review-toggle.is-muted:not(.is-active) {
+  opacity: 1;
+}
+
+.compact-review-tools {
+  flex-wrap: nowrap;
+}
+
+:root[data-theme="dark"] .login-brand,
+:root[data-theme="dark"] .login-panel,
+:root[data-theme="dark"] .dashboard-action-header,
+:root[data-theme="dark"] .summary-block,
+:root[data-theme="dark"] .progress-summary,
+:root[data-theme="dark"] .stats-section,
+:root[data-theme="dark"] .stats-group,
+:root[data-theme="dark"] .filters-panel,
+:root[data-theme="dark"] .active-filters-bar,
+:root[data-theme="dark"] .exam-card,
+:root[data-theme="dark"] .exam-group,
+:root[data-theme="dark"] .review-sidebar,
+:root[data-theme="dark"] .review-sidebar-actions,
+:root[data-theme="dark"] .review-context-strip div,
+:root[data-theme="dark"] .review-session-chip,
+:root[data-theme="dark"] .source-text-block,
+:root[data-theme="dark"] .clinical-info-list div,
+:root[data-theme="dark"] .ecg-viewer,
+:root[data-theme="dark"] .viewer-toolbar,
+:root[data-theme="dark"] .ecg-canvas,
+:root[data-theme="dark"] .diagnosis-item,
+:root[data-theme="dark"] .support-channel,
+:root[data-theme="dark"] .tutorial-step {
+  background: var(--color-surface);
+}
+
+:root[data-theme="dark"] .summary-block,
+:root[data-theme="dark"] .progress-summary,
+:root[data-theme="dark"] .stats-group,
+:root[data-theme="dark"] .active-filters-bar,
+:root[data-theme="dark"] .exam-group,
+:root[data-theme="dark"] .support-channel,
+:root[data-theme="dark"] .tutorial-step {
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .icon-button,
+:root[data-theme="dark"] .ghost,
+:root[data-theme="dark"] .quick-metric {
+  color: var(--color-text);
+  border-color: var(--color-border);
+  background: #101b2a;
+}
+
+:root[data-theme="dark"] .ai-recommendation-box,
+:root[data-theme="dark"] .required-diagnosis {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  background: #13263b;
+}
+
+:root[data-theme="dark"] .ai-recommendation-box p,
+:root[data-theme="dark"] .diagnosis-text-pair p,
+:root[data-theme="dark"] .review-context-strip dd,
+:root[data-theme="dark"] .quick-metric strong,
+:root[data-theme="dark"] .diagnosis-item strong,
+:root[data-theme="dark"] .exam-card-main strong,
+:root[data-theme="dark"] .summary-block-heading h3,
+:root[data-theme="dark"] .progress-summary-copy strong {
+  color: var(--color-text);
+}
+
 @media (max-width: 1180px) {
   .stats-grid,
   .stats-groups-grid {
@@ -1791,6 +2130,10 @@ textarea:focus {
     align-items: flex-start;
     flex-direction: column;
     width: 100%;
+  }
+
+  .header-tools {
+    justify-content: flex-start;
   }
 
   .stats-grid,
@@ -1923,7 +2266,7 @@ textarea:focus {
   }
 
   .review-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   }
 
   .review-sidebar-actions {
@@ -1959,5 +2302,15 @@ textarea:focus {
 
   .exam-group-header {
     align-items: flex-start;
+  }
+
+  .floating-support-button span {
+    display: none;
+  }
+
+  .floating-support-button {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
   }
 }

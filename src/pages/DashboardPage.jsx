@@ -1,16 +1,26 @@
-import { PlayCircle } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { CalendarDays, PlayCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ActiveFiltersBar from "../components/ActiveFiltersBar.jsx";
 import AppHeader from "../components/AppHeader.jsx";
+import DailyDiagnosisModal from "../components/DailyDiagnosisModal.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import ExamFilters from "../components/ExamFilters.jsx";
 import ExamList from "../components/ExamList.jsx";
+import FloatingSupportButton from "../components/FloatingSupportButton.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import SupportContactModal from "../components/SupportContactModal.jsx";
+import TutorialModal from "../components/TutorialModal.jsx";
 import ValidationSummaryPanel from "../components/ValidationSummaryPanel.jsx";
 import { getStats } from "../services/dashboardService.js";
 import { getExams } from "../services/examsService.js";
+import { getSupportContact } from "../services/supportService.js";
+import {
+  getNextValidationExam,
+  getValidationContext,
+  getValidationQueue,
+} from "../services/validationService.js";
 
 const initialFilters = {
   status: "",
@@ -61,23 +71,47 @@ function actionQueueSort(firstExam, secondExam) {
   return new Date(firstExam.created_at) - new Date(secondExam.created_at);
 }
 
-function getEmptyStateCopy(quickFilter, hasSearch) {
+function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
+  if (isDailyQueue) {
+    return {
+      title: "Fila do dia concluida",
+      message: "Nao ha ECG pendente para o diagnostico ativo.",
+    };
+  }
   if (quickFilter) {
     return {
       title: "Nenhum exame encontrado",
-      message: "Limpe o filtro rápido ou ajuste a busca.",
+      message: "Limpe o filtro rapido ou ajuste a busca.",
     };
   }
   if (hasSearch) {
     return {
       title: "Nenhum exame encontrado",
-      message: "Ajuste ou limpe a busca para voltar à fila de revisão.",
+      message: "Ajuste ou limpe a busca para voltar a fila de revisao.",
     };
   }
   return {
-    title: "Nenhum exame aguardando revisão",
-    message: "Use os filtros rápidos do resumo para visualizar exames revisados.",
+    title: "Nenhum exame aguardando revisao",
+    message: "Use os filtros rapidos do resumo para visualizar exames revisados.",
   };
+}
+
+function contextTitle(context) {
+  if (!context) return "Carregando diagnostico do dia";
+  if (context.is_general_review_day) return "Dia 30: revalidacao geral";
+  if (context.active_standard_diagnosis) return context.active_standard_diagnosis;
+  return "Agenda de diagnostico nao configurada";
+}
+
+function contextCopy(context, openQueue) {
+  if (!context) return "Buscando configuracao do ciclo.";
+  if (!context.is_configured) {
+    return "A fila guiada sera ativada quando o calendario dia-diagnostico for configurado.";
+  }
+  if (context.is_general_review_day) {
+    return `${openQueue} exames na revalidacao geral do ciclo.`;
+  }
+  return `${openQueue} ECGs pendentes para este diagnostico padronizado.`;
 }
 
 export default function DashboardPage() {
@@ -87,6 +121,12 @@ export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [exams, setExams] = useState([]);
   const [allExams, setAllExams] = useState([]);
+  const [validationContext, setValidationContext] = useState(null);
+  const [validationQueue, setValidationQueue] = useState([]);
+  const [supportContact, setSupportContact] = useState(null);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isDailyModalOpen, setIsDailyModalOpen] = useState(true);
   const [summaryCollapsed, setSummaryCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 920px)").matches;
@@ -99,6 +139,25 @@ export default function DashboardPage() {
     window.localStorage.removeItem("summaryPanelCollapsed");
   }, []);
 
+  const loadValidation = useCallback(async () => {
+    try {
+      const [contextData, queueData] = await Promise.all([
+        getValidationContext(),
+        getValidationQueue(),
+      ]);
+      setValidationContext(contextData);
+      setValidationQueue(queueData.items || []);
+      setSupportContact(contextData.support_contact || null);
+    } catch (requestError) {
+      setValidationContext(null);
+      setValidationQueue([]);
+      setOverviewError(
+        requestError?.response?.data?.detail ||
+          "Nao foi possivel carregar o contexto de validacao diaria.",
+      );
+    }
+  }, []);
+
   const loadOverview = useCallback(async () => {
     setOverviewError("");
     try {
@@ -108,7 +167,7 @@ export default function DashboardPage() {
       setStats(null);
       setOverviewError(
         requestError?.response?.data?.detail ||
-          "A API não respondeu em http://localhost:8000. Inicie o back para carregar métricas e exames.",
+          "A API nao respondeu em http://localhost:8000. Inicie o back para carregar metricas e exames.",
       );
     }
 
@@ -130,7 +189,7 @@ export default function DashboardPage() {
       setExams([]);
       setError(
         requestError?.response?.data?.detail ||
-          "Não foi possível carregar os exames. Verifique se o back está rodando em http://localhost:8000.",
+          "Nao foi possivel carregar os exames. Verifique se o back esta rodando em http://localhost:8000.",
       );
     } finally {
       setIsLoading(false);
@@ -139,7 +198,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadOverview();
-  }, [loadOverview]);
+    loadValidation();
+  }, [loadOverview, loadValidation]);
 
   useEffect(() => {
     loadExams();
@@ -182,8 +242,18 @@ export default function DashboardPage() {
     setFilters(initialFilters);
   }
 
-  async function handleOpenNextExam() {
-    setError("");
+  async function openSupport() {
+    if (!supportContact) {
+      try {
+        setSupportContact(await getSupportContact());
+      } catch {
+        setSupportContact(null);
+      }
+    }
+    setIsSupportOpen(true);
+  }
+
+  async function openLegacyNextExam() {
     const orderedExams = [...allExams].sort(actionQueueSort);
     const inValidationExam = orderedExams.find(
       (exam) => exam.status_validation === "em_validacao",
@@ -201,46 +271,86 @@ export default function DashboardPage() {
         [...pendingExams].sort(actionQueueSort)[0];
     }
 
+    return nextExam;
+  }
+
+  async function handleOpenNextExam() {
+    setError("");
+
+    if (validationContext?.is_configured) {
+      const nextData = await getNextValidationExam();
+      if (nextData.exam) {
+        navigate(`/exams/${nextData.exam.id}`);
+        return;
+      }
+      setError("Nenhum ECG pendente na fila do dia.");
+      return;
+    }
+
+    const nextExam = await openLegacyNextExam();
     if (nextExam) {
       navigate(`/exams/${nextExam.id}`);
       return;
     }
 
-    setError("Nenhum exame aguardando revisão.");
+    setError("Nenhum exame aguardando revisao.");
   }
 
   const hasSearch = Boolean(filters.search.trim());
   const hasAnyFilter = Boolean(hasSearch || quickFilter);
-  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch);
-  const openQueue =
+  const useDailyQueue = Boolean(validationContext?.is_configured && !hasAnyFilter);
+  const displayedExams = useDailyQueue ? validationQueue : exams;
+  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch, useDailyQueue);
+  const legacyOpenQueue =
     stats != null
       ? Number(stats.pending_total || 0) + Number(stats.in_validation_total || 0)
       : allExams.filter((exam) => exam.status_validation !== "valido").length;
+  const openQueue = validationContext?.is_configured ? validationQueue.length : legacyOpenQueue;
+  const canStartQueue = validationContext?.is_configured ? openQueue > 0 : legacyOpenQueue > 0;
+
+  const dailyStatus = useMemo(() => {
+    if (!validationContext?.is_configured) return "Configuracao pendente";
+    if (validationContext.is_general_review_day) return "Revalidacao geral";
+    return `Dia ${validationContext.day_index || "-"}`;
+  }, [validationContext]);
 
   return (
     <div className="dashboard-page">
       <div className="page-shell">
-        <AppHeader />
-        <section className="dashboard-action-header" aria-label="Iniciar revisão">
+        <AppHeader onContact={openSupport} onTutorial={() => setIsTutorialOpen(true)} />
+
+        <section className="daily-context-card" aria-label="Diagnostico do dia">
+          <div className="daily-context-icon" aria-hidden="true">
+            <CalendarDays size={24} />
+          </div>
+          <div>
+            <span className="eyebrow">{dailyStatus}</span>
+            <h2>{contextTitle(validationContext)}</h2>
+            <p>{contextCopy(validationContext, openQueue)}</p>
+          </div>
+        </section>
+
+        <section className="dashboard-action-header" aria-label="Iniciar revisao">
           <div>
             <span className="eyebrow">Fila de trabalho</span>
-            <h2>Exames aguardando revisão</h2>
+            <h2>{validationContext?.is_configured ? "ECGs do diagnostico do dia" : "Fila legada"}</h2>
             <p>
-              {openQueue > 0
-                ? `${openQueue} exames disponíveis. Exames já iniciados têm prioridade.`
-                : "Nenhum exame aguardando revisão."}
+              {validationContext?.is_configured
+                ? contextCopy(validationContext, openQueue)
+                : `${legacyOpenQueue} exames disponiveis enquanto a agenda diaria nao esta configurada.`}
             </p>
           </div>
           <button
             className="button primary-action"
             type="button"
             onClick={handleOpenNextExam}
-            disabled={!openQueue}
+            disabled={!canStartQueue}
           >
             <PlayCircle size={19} aria-hidden="true" />
-            Iniciar revisão
+            {validationContext?.is_configured ? "Iniciar fila do dia" : "Abrir proximo exame"}
           </button>
         </section>
+
         <div className={`dashboard-workspace${summaryCollapsed ? " summary-collapsed" : ""}`}>
           <main className="dashboard-main">
             <ExamFilters filters={filters} onChange={handleFiltersChange} />
@@ -258,7 +368,7 @@ export default function DashboardPage() {
               <LoadingState message="Buscando exames..." />
             ) : (
               <ExamList
-                exams={exams}
+                exams={displayedExams}
                 emptyTitle={emptyStateCopy.title}
                 emptyMessage={emptyStateCopy.message}
               />
@@ -276,6 +386,19 @@ export default function DashboardPage() {
           </aside>
         </div>
       </div>
+
+      <DailyDiagnosisModal
+        context={validationContext}
+        isOpen={Boolean(validationContext) && isDailyModalOpen}
+        onClose={() => setIsDailyModalOpen(false)}
+      />
+      <SupportContactModal
+        contact={supportContact}
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+      />
+      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+      <FloatingSupportButton onClick={openSupport} />
     </div>
   );
 }

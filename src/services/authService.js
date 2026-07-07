@@ -1,7 +1,12 @@
 import api from "./api.js";
 
-export async function login(username, password) {
-  const { data } = await api.post("/auth/login", { username, password });
+export async function login(identifier, password) {
+  const cleanIdentifier = identifier.trim();
+  const { data } = await api.post("/auth/login", {
+    email: cleanIdentifier,
+    username: cleanIdentifier,
+    password,
+  });
   return data;
 }
 

@@ -62,8 +62,9 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, clearSession);
   }, [clearSession]);
 
-  const login = useCallback(async ({ username, password }) => {
-    const authData = await requestLogin(username, password);
+  const login = useCallback(async ({ email, username, password }) => {
+    const identifier = email || username;
+    const authData = await requestLogin(identifier, password);
     window.localStorage.setItem(AUTH_TOKEN_KEY, authData.access_token);
     window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(authData.user));
     setToken(authData.access_token);
