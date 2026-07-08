@@ -32,7 +32,14 @@ function regionFromPoints(start, end) {
   };
 }
 
-export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) {
+export default function EcgViewer({
+  imageUrl,
+  onRegionCancel,
+  onRegionChange,
+  regions = [],
+  selectedRegion,
+  selectionLabel,
+}) {
   const [zoom, setZoom] = useState(1);
   const [selectionStart, setSelectionStart] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
@@ -41,6 +48,10 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
   const canvasRef = useRef(null);
   const source = useMemo(() => imageUrl || "/sample-ecg.svg", [imageUrl]);
   const activeRegion = draftRegion || selectedRegion;
+  const visibleRegions = useMemo(
+    () => regions.filter((region) => !(activeRegion?.id && region.id === activeRegion.id)),
+    [activeRegion, regions],
+  );
   const fittedSize = useMemo(() => {
     if (!canvasSize.width || !canvasSize.height) return null;
 
@@ -157,6 +168,11 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
     setDraftRegion(null);
   }
 
+  function clearSelection() {
+    onRegionCancel?.();
+    onRegionChange?.(null);
+  }
+
   return (
     <div className="ecg-viewer">
       <div className="viewer-toolbar" aria-label="Controles do ECG">
@@ -196,11 +212,12 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
         >
           <Maximize2 size={18} aria-hidden="true" />
         </button>
-        {selectedRegion ? (
+        {selectionLabel ? <span className="region-mode-chip">{selectionLabel}</span> : null}
+        {selectedRegion || selectionLabel ? (
           <button
             className="icon-button"
             type="button"
-            onClick={() => onRegionChange?.(null)}
+            onClick={clearSelection}
             aria-label="Limpar seleção"
             title="Limpar seleção"
           >
@@ -220,9 +237,24 @@ export default function EcgViewer({ imageUrl, selectedRegion, onRegionChange }) 
           style={stageStyle}
         >
           <img src={resolvedSource} alt="Traçado do ECG" draggable="false" />
+          {visibleRegions.map((region, index) => (
+            <span
+              className={`saved-region-box ${region.isActive ? "is-active" : ""}`}
+              key={`${region.diagnosisId || "region"}-${region.id || `legacy-${index}`}`}
+              style={{
+                left: `${region.x}%`,
+                top: `${region.y}%`,
+                width: `${region.width}%`,
+                height: `${region.height}%`,
+              }}
+              title={region.label || `Area ${index + 1}`}
+            >
+              <span>{index + 1}</span>
+            </span>
+          ))}
           {activeRegion ? (
             <span
-              className="selection-box"
+              className="selection-box active-selection-box"
               style={{
                 left: `${activeRegion.x}%`,
                 top: `${activeRegion.y}%`,

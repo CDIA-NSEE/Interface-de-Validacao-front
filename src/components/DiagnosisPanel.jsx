@@ -1,5 +1,5 @@
-import { Check, MapPinned, Sparkles, Trash2, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Check, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 const REVIEW_LABELS = {
   pending: "Aguardando decisao",
@@ -24,10 +24,57 @@ function isDailyDiagnosis(diagnosis, dailyStandardDiagnosis) {
   return normalize(diagnosis.standard_text || diagnosis.name) === normalize(dailyStandardDiagnosis);
 }
 
-function DiagnosisCard({ diagnosis, isBusy, isRequired, onReview }) {
+function regionCountLabel(count) {
+  if (count === 1) return "1 area";
+  return `${count} areas`;
+}
+
+function DiagnosisCard({
+  activeRegionTarget,
+  diagnosis,
+  isBusy,
+  isRequired,
+  onEditRegion,
+  onRemove,
+  onRemoveRegion,
+  onReview,
+  onStartRegion,
+}) {
   const status = statusOf(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
   const originalText = diagnosis.original_text || diagnosis.name;
+  const regions = diagnosis.regions || [];
+  const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
+  const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
+  const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
+  const kickerLabel = isRequired
+    ? "Obrigatorio hoje"
+    : diagnosis.source === "doctor_added"
+      ? "Adicionado"
+      : "Opcional";
+
+  useEffect(() => {
+    setReviewNoteDraft(diagnosis.review_notes || "");
+  }, [diagnosis.review_notes]);
+
+  function openDisagreementPanel() {
+    setReviewNoteDraft(diagnosis.review_notes || "");
+    setIsDisagreementOpen(true);
+  }
+
+  async function submitDisagreement(note) {
+    const wasReviewed = await onReview(diagnosis.id, "rejected", note);
+    if (wasReviewed) {
+      setIsDisagreementOpen(false);
+    }
+  }
+
+  async function submitAgreement() {
+    const wasReviewed = await onReview(diagnosis.id, "confirmed");
+    if (wasReviewed) {
+      setIsDisagreementOpen(false);
+    }
+  }
 
   return (
     <article
@@ -37,8 +84,11 @@ function DiagnosisCard({ diagnosis, isBusy, isRequired, onReview }) {
     >
       <div className="diagnosis-content">
         <div className="diagnosis-chip-row">
-          <span className="diagnosis-kicker">{isRequired ? "Obrigatorio hoje" : "Opcional"}</span>
+          <span className="diagnosis-kicker">{kickerLabel}</span>
           {diagnosis.is_grouped ? <span className="grouped-diagnosis-chip">Agrupado</span> : null}
+          {diagnosis.region_required_missing ? (
+            <span className="region-required-chip">Area obrigatoria</span>
+          ) : null}
         </div>
         <div className="diagnosis-text-pair">
           <span>Texto Padrao</span>
@@ -49,21 +99,87 @@ function DiagnosisCard({ diagnosis, isBusy, isRequired, onReview }) {
           <p>{originalText}</p>
         </div>
         <span className="diagnosis-review-label">{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</span>
-        {diagnosis.region_width && diagnosis.region_height ? (
+        {status === "rejected" && diagnosis.review_notes ? (
+          <div className="diagnosis-note-preview">
+            <strong>Observação</strong>
+            <p>{diagnosis.review_notes}</p>
+            <button
+              className="button text-button"
+              type="button"
+              onClick={openDisagreementPanel}
+              disabled={isBusy}
+            >
+              Editar observação
+            </button>
+          </div>
+        ) : null}
+        {status === "rejected" && !diagnosis.review_notes && diagnosis.source !== "doctor_added" ? (
+          <button
+            className="button text-button add-note-button"
+            type="button"
+            onClick={openDisagreementPanel}
+            disabled={isBusy}
+          >
+            Adicionar observação
+          </button>
+        ) : null}
+        {regions.length ? (
           <span className="diagnosis-region" title="Regiao ECG vinculada">
             <MapPinned size={14} aria-hidden="true" />
-            Regiao vinculada
+            {regionCountLabel(regions.length)}
           </span>
+        ) : null}
+        {regions.length ? (
+          <div className="diagnosis-region-list">
+            {regions.map((region, index) => (
+              <div className="diagnosis-region-row" key={region.id || `legacy-${index}`}>
+                <span>Area {index + 1}</span>
+                <div className="region-row-actions">
+                  <button
+                    className="icon-button mini-icon-button"
+                    type="button"
+                    onClick={() => onEditRegion(diagnosis, region)}
+                    disabled={isBusy}
+                    aria-label={`Editar area ${index + 1}`}
+                    title="Editar area"
+                  >
+                    <Pencil size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    className="icon-button mini-icon-button danger-icon"
+                    type="button"
+                    onClick={() => onRemoveRegion(diagnosis.id, region.id)}
+                    disabled={isBusy || !region.id}
+                    aria-label={`Remover area ${index + 1}`}
+                    title={region.id ? "Remover area" : "Area legada sem id"}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : null}
       </div>
       <div className="diagnosis-review-actions">
+        <button
+          className={`button compact-button region-link-button ${isRegionTarget ? "is-active" : ""}`}
+          type="button"
+          onClick={() => onStartRegion(diagnosis)}
+          disabled={isBusy}
+          aria-pressed={isRegionTarget}
+          aria-label="Marcar area do ECG"
+          title="Marcar area"
+        >
+          <MapPinned size={20} aria-hidden="true" />
+        </button>
         <button
           className={`button compact-button review-toggle agree ${
             status === "confirmed" ? "is-active" : "is-muted"
           }`}
           type="button"
-          onClick={() => onReview(diagnosis.id, "confirmed")}
-          disabled={isBusy}
+          onClick={submitAgreement}
+          disabled={isBusy || diagnosis.source === "doctor_added"}
           aria-pressed={status === "confirmed"}
           aria-label="Concordar com diagnostico"
           title="Concordar"
@@ -75,28 +191,84 @@ function DiagnosisCard({ diagnosis, isBusy, isRequired, onReview }) {
             status === "rejected" ? "is-active" : "is-muted"
           }`}
           type="button"
-          onClick={() => onReview(diagnosis.id, "rejected")}
-          disabled={isBusy}
+          onClick={openDisagreementPanel}
+          disabled={isBusy || diagnosis.source === "doctor_added"}
           aria-pressed={status === "rejected"}
           aria-label="Discordar do diagnostico"
           title="Discordar"
         >
           <X size={21} aria-hidden="true" />
         </button>
+        {diagnosis.source === "doctor_added" ? (
+          <button
+            className="icon-button danger-icon"
+            type="button"
+            onClick={() => onRemove(diagnosis.id)}
+            disabled={isBusy}
+            aria-label={`Remover ${diagnosis.name}`}
+            title="Remover diagnostico medico"
+          >
+            <Trash2 size={17} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
+      {isDisagreementOpen ? (
+        <div className="diagnosis-disagreement-panel">
+          <label htmlFor={`disagreement-note-${diagnosis.id}`}>Observação da discordância</label>
+          <textarea
+            id={`disagreement-note-${diagnosis.id}`}
+            value={reviewNoteDraft}
+            onChange={(event) => setReviewNoteDraft(event.target.value)}
+            placeholder="Registre o motivo da discordância, se necessário"
+            rows={3}
+          />
+          <div className="disagreement-actions">
+            <button
+              className="button compact-button"
+              type="button"
+              onClick={() => submitDisagreement(reviewNoteDraft)}
+              disabled={isBusy}
+            >
+              Salvar discordância
+            </button>
+            <button
+              className="button ghost compact-button"
+              type="button"
+              onClick={() => submitDisagreement("")}
+              disabled={isBusy}
+            >
+              Discordar sem observação
+            </button>
+            <button
+              className="icon-button compact-icon-button"
+              type="button"
+              onClick={() => setIsDisagreementOpen(false)}
+              disabled={isBusy}
+              aria-label="Cancelar observação"
+              title="Cancelar"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
 
 export default function DiagnosisPanel({
+  activeRegionTarget,
   dailyStandardDiagnosis,
   diagnoses = [],
   isBusy,
   isGeneralReviewDay,
   onAdd,
+  onEditRegion,
   onRegionConsumed,
   onRemove,
+  onRemoveRegion,
   onReview,
+  onStartRegion,
   options = [],
   selectedRegion,
 }) {
@@ -160,10 +332,15 @@ export default function DiagnosisPanel({
             requiredDiagnoses.map((diagnosis) => (
               <DiagnosisCard
                 diagnosis={diagnosis}
+                activeRegionTarget={activeRegionTarget}
                 isBusy={isBusy}
                 isRequired
                 key={diagnosis.id}
+                onEditRegion={onEditRegion}
+                onRemove={onRemove}
+                onRemoveRegion={onRemoveRegion}
                 onReview={onReview}
+                onStartRegion={onStartRegion}
               />
             ))
           ) : (
@@ -181,10 +358,15 @@ export default function DiagnosisPanel({
             {optionalDiagnoses.map((diagnosis) => (
               <DiagnosisCard
                 diagnosis={diagnosis}
+                activeRegionTarget={activeRegionTarget}
                 isBusy={isBusy}
                 isRequired={false}
                 key={diagnosis.id}
+                onEditRegion={onEditRegion}
+                onRemove={onRemove}
+                onRemoveRegion={onRemoveRegion}
                 onReview={onReview}
+                onStartRegion={onStartRegion}
               />
             ))}
           </div>
@@ -225,28 +407,18 @@ export default function DiagnosisPanel({
         {doctorDiagnoses.length ? (
           <div className="diagnosis-list doctor-diagnosis-list">
             {doctorDiagnoses.map((diagnosis) => (
-              <article className="diagnosis-item doctor-diagnosis" key={diagnosis.id}>
-                <div className="diagnosis-content">
-                  <strong>{diagnosis.name}</strong>
-                  <span>Adicionado pelo medico</span>
-                  {diagnosis.region_width && diagnosis.region_height ? (
-                    <span className="diagnosis-region">
-                      <MapPinned size={14} aria-hidden="true" />
-                      Regiao vinculada
-                    </span>
-                  ) : null}
-                </div>
-                <button
-                  className="icon-button danger-icon"
-                  type="button"
-                  onClick={() => onRemove(diagnosis.id)}
-                  disabled={isBusy}
-                  aria-label={`Remover ${diagnosis.name}`}
-                  title="Remover diagnostico medico"
-                >
-                  <Trash2 size={17} aria-hidden="true" />
-                </button>
-              </article>
+              <DiagnosisCard
+                activeRegionTarget={activeRegionTarget}
+                diagnosis={diagnosis}
+                isBusy={isBusy}
+                isRequired={false}
+                key={diagnosis.id}
+                onEditRegion={onEditRegion}
+                onRemove={onRemove}
+                onRemoveRegion={onRemoveRegion}
+                onReview={onReview}
+                onStartRegion={onStartRegion}
+              />
             ))}
           </div>
         ) : null}

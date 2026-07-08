@@ -16,10 +16,13 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import {
   addDiagnosis,
+  addDiagnosisRegion,
   getDiagnosisOptions,
   getExamById,
   removeDiagnosis,
+  removeDiagnosisRegion,
   updateExamStatus,
+  updateDiagnosisRegion,
   validateExam,
 } from "../services/examsService.js";
 import { getSupportContact } from "../services/supportService.js";
@@ -62,6 +65,19 @@ function requiredDiagnosesFor(exam, context) {
   });
 }
 
+function replaceDiagnosis(exam, updatedDiagnosis) {
+  return {
+    ...exam,
+    diagnoses: (exam?.diagnoses || []).map((diagnosis) =>
+      diagnosis.id === updatedDiagnosis.id ? updatedDiagnosis : diagnosis,
+    ),
+  };
+}
+
+function regionLabelFor(diagnosis) {
+  return diagnosis?.standard_text || diagnosis?.name || "diagnostico";
+}
+
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -69,6 +85,7 @@ export default function ExamReviewPage() {
   const { isDark, toggleTheme } = useTheme();
   const [exam, setExam] = useState(null);
   const [notes, setNotes] = useState("");
+  const [activeRegionTarget, setActiveRegionTarget] = useState(null);
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [diagnosisOptions, setDiagnosisOptions] = useState([]);
   const [validationContext, setValidationContext] = useState(null);
@@ -92,6 +109,7 @@ export default function ExamReviewPage() {
       setDiagnosisOptions(options);
       setValidationContext(contextData);
       setSupportContact(contextData.support_contact || null);
+      setActiveRegionTarget(null);
       setSelectedRegion(null);
       if (examData.status_validation === "nao_validado") {
         const updatedExam = await updateExamStatus(id, "em_validacao");
@@ -146,13 +164,20 @@ export default function ExamReviewPage() {
   }
 
   async function handleAddDiagnosis(payload) {
-    return runAction(async () => {
-      const diagnosis = await addDiagnosis(id, payload);
+    let addedDiagnosis = null;
+    const wasAdded = await runAction(async () => {
+      addedDiagnosis = await addDiagnosis(id, payload);
       return {
         ...exam,
-        diagnoses: [...(exam?.diagnoses || []), diagnosis],
+        diagnoses: [...(exam?.diagnoses || []), addedDiagnosis],
       };
     });
+
+    if (wasAdded && addedDiagnosis?.region_required_missing) {
+      handleStartRegion(addedDiagnosis);
+    }
+
+    return wasAdded;
   }
 
   async function handleRemoveDiagnosis(diagnosisId) {
@@ -165,9 +190,73 @@ export default function ExamReviewPage() {
     });
   }
 
-  async function handleReviewDiagnosis(diagnosisId, reviewStatus) {
+  function handleStartRegion(diagnosis, region = null) {
+    setError("");
+    setMessage(region ? "Redesenhe a area deste diagnostico no ECG." : "Desenhe a area deste diagnostico no ECG.");
+    setActiveRegionTarget({
+      diagnosisId: diagnosis.id,
+      regionId: region?.id || null,
+      label: regionLabelFor(diagnosis),
+      region,
+    });
+    setSelectedRegion(region || null);
+  }
+
+  function handleCancelRegionSelection() {
+    setActiveRegionTarget(null);
+    setSelectedRegion(null);
+  }
+
+  async function handleRegionChange(region) {
+    if (!region) {
+      setSelectedRegion(null);
+      return;
+    }
+
+    if (!activeRegionTarget) {
+      setSelectedRegion(region);
+      return;
+    }
+
+    const target = activeRegionTarget;
+    const wasSaved = await runAction(
+      async () => {
+        const updatedDiagnosis = target.regionId
+          ? await updateDiagnosisRegion(target.diagnosisId, target.regionId, region)
+          : await addDiagnosisRegion(target.diagnosisId, region);
+        return replaceDiagnosis(exam, updatedDiagnosis);
+      },
+      target.regionId ? "Area atualizada." : "Area vinculada ao diagnostico.",
+    );
+
+    if (wasSaved) {
+      setActiveRegionTarget(null);
+      setSelectedRegion(null);
+    }
+  }
+
+  async function handleRemoveRegion(diagnosisId, regionId) {
+    if (!regionId) return;
+
     await runAction(
-      () => reviewDailyDiagnosis(diagnosisId, reviewStatus, notes),
+      async () => {
+        const updatedDiagnosis = await removeDiagnosisRegion(diagnosisId, regionId);
+        return replaceDiagnosis(exam, updatedDiagnosis);
+      },
+      "Area removida.",
+    );
+  }
+
+  async function handleReviewDiagnosis(diagnosisId, reviewStatus, reviewNotes = "") {
+    const diagnosis = exam?.diagnoses?.find((item) => item.id === diagnosisId);
+    if (reviewStatus === "confirmed" && diagnosis?.region_required_missing) {
+      setError("Marque ao menos uma area do ECG antes de confirmar este diagnostico.");
+      handleStartRegion(diagnosis);
+      return false;
+    }
+
+    return runAction(
+      () => reviewDailyDiagnosis(diagnosisId, reviewStatus, reviewNotes),
       reviewStatus === "confirmed" ? "Diagnostico confirmado." : "Diagnostico discordado.",
     );
   }
@@ -219,9 +308,26 @@ export default function ExamReviewPage() {
     () => requiredDiagnosesFor(exam, validationContext),
     [exam, validationContext],
   );
+  const viewerRegions = useMemo(
+    () =>
+      (exam?.diagnoses || []).flatMap((diagnosis) =>
+        (diagnosis.regions || []).map((region) => ({
+          ...region,
+          diagnosisId: diagnosis.id,
+          isActive: activeRegionTarget?.diagnosisId === diagnosis.id,
+          label: regionLabelFor(diagnosis),
+        })),
+      ),
+    [activeRegionTarget, exam],
+  );
+  const activeSelectionLabel = activeRegionTarget
+    ? `Marcando area: ${activeRegionTarget.label}`
+    : "";
   const requiredDecisionComplete =
     !validationContext?.is_configured ||
-    requiredDiagnoses.some((diagnosis) => getDiagnosisStatus(diagnosis) !== "pending");
+    requiredDiagnoses.some(
+      (diagnosis) => getDiagnosisStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
+    );
   const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
   const doctorName = user?.full_name || "Usuario";
   const dailyLabel = validationContext?.is_general_review_day
@@ -326,12 +432,16 @@ export default function ExamReviewPage() {
 
             <section className="sidebar-section review-decision-section">
               <DiagnosisPanel
+                activeRegionTarget={activeRegionTarget}
                 dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
                 diagnoses={exam.diagnoses}
                 options={diagnosisOptions}
                 onAdd={handleAddDiagnosis}
+                onEditRegion={handleStartRegion}
                 onRemove={handleRemoveDiagnosis}
+                onRemoveRegion={handleRemoveRegion}
                 onReview={handleReviewDiagnosis}
+                onStartRegion={handleStartRegion}
                 isBusy={isBusy}
                 isGeneralReviewDay={validationContext?.is_general_review_day}
                 selectedRegion={selectedRegion}
@@ -363,12 +473,12 @@ export default function ExamReviewPage() {
             ) : null}
 
             <section className="review-notes-section">
-              <h2>Observacoes da revisao</h2>
+              <h2>Observacoes gerais da revisao</h2>
               <textarea
                 className="notes-field"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="Registre observacoes da revisao"
+                placeholder="Registre comentarios gerais sobre o exame"
                 rows={3}
               />
             </section>
@@ -403,8 +513,11 @@ export default function ExamReviewPage() {
         <section className="review-viewer" aria-label="Visualizador de ECG">
           <EcgViewer
             imageUrl={exam.image_endpoint || exam.image_url}
+            onRegionCancel={handleCancelRegionSelection}
             selectedRegion={selectedRegion}
-            onRegionChange={setSelectedRegion}
+            onRegionChange={handleRegionChange}
+            regions={viewerRegions}
+            selectionLabel={activeSelectionLabel}
           />
         </section>
       </main>

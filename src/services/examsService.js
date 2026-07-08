@@ -40,6 +40,21 @@ export async function removeDiagnosis(examId, diagnosisId) {
   return data;
 }
 
+export async function addDiagnosisRegion(diagnosisId, region) {
+  const { data } = await api.post(`/diagnoses/${diagnosisId}/regions`, region);
+  return data;
+}
+
+export async function updateDiagnosisRegion(diagnosisId, regionId, region) {
+  const { data } = await api.patch(`/diagnoses/${diagnosisId}/regions/${regionId}`, region);
+  return data;
+}
+
+export async function removeDiagnosisRegion(diagnosisId, regionId) {
+  const { data } = await api.delete(`/diagnoses/${diagnosisId}/regions/${regionId}`);
+  return data;
+}
+
 export async function reviewDiagnosis(examId, diagnosisId, reviewStatus) {
   const { data } = await api.patch(`/exams/${examId}/diagnoses/${diagnosisId}/review`, {
     review_status: reviewStatus,
