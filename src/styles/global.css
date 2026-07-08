@@ -1952,6 +1952,13 @@ textarea:focus {
   opacity: 0.96;
 }
 
+.diagnosis-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .diagnosis-kicker {
   width: fit-content;
   min-height: 24px;
@@ -1959,6 +1966,21 @@ textarea:focus {
   border-radius: 999px;
   color: var(--color-primary) !important;
   background: var(--color-primary-light);
+  font-size: 0.7425rem !important;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.grouped-diagnosis-chip {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  padding: 3px 7px;
+  border: 1px solid #bfd5ee;
+  border-radius: 999px;
+  color: #24528d !important;
+  background: #eef6ff;
   font-size: 0.7425rem !important;
   font-weight: 900;
   text-transform: uppercase;
@@ -2061,6 +2083,12 @@ textarea:focus {
 :root[data-theme="dark"] .ai-recommendation-box,
 :root[data-theme="dark"] .required-diagnosis {
   color: var(--color-text);
+  border-color: var(--color-primary);
+  background: #13263b;
+}
+
+:root[data-theme="dark"] .grouped-diagnosis-chip {
+  color: var(--color-primary) !important;
   border-color: var(--color-primary);
   background: #13263b;
 }

@@ -36,7 +36,10 @@ function DiagnosisCard({ diagnosis, isBusy, isRequired, onReview }) {
       }`}
     >
       <div className="diagnosis-content">
-        <span className="diagnosis-kicker">{isRequired ? "Obrigatorio hoje" : "Opcional"}</span>
+        <div className="diagnosis-chip-row">
+          <span className="diagnosis-kicker">{isRequired ? "Obrigatorio hoje" : "Opcional"}</span>
+          {diagnosis.is_grouped ? <span className="grouped-diagnosis-chip">Agrupado</span> : null}
+        </div>
         <div className="diagnosis-text-pair">
           <span>Texto Padrao</span>
           <strong>{standardText}</strong>
