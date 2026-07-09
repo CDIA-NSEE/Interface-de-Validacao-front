@@ -9,7 +9,7 @@ export default function ExamFilters({ filters, onChange }) {
   return (
     <section className="filters-panel" aria-label="Filtros de exames">
       <label className="search-field">
-        Busca
+        Buscar exame
         <div className="input-with-icon">
           <Search size={18} aria-hidden="true" />
           <input

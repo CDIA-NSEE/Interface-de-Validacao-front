@@ -20,52 +20,56 @@ export default function AppHeader({ onContact, onTutorial, title = "Revisao de E
     <header className="app-header">
       <div className="brand-lockup">
         <span className="brand-icon" aria-hidden="true">
-          <Activity size={24} />
+          <Activity size={21} />
         </span>
         <div>
           <h1>{title}</h1>
-          <p>Validacao medica de ECG</p>
         </div>
       </div>
       <div className="header-session">
         <div className="header-tools" aria-label="Acoes globais">
           <button
-            className="button secondary compact-button"
+            className="icon-button compact-icon-button header-action-button"
             type="button"
             onClick={onTutorial}
+            aria-label="Abrir tutorial"
             title="Tutorial"
           >
-            <HelpCircle size={16} aria-hidden="true" />
-            Tutorial
+            <HelpCircle size={18} aria-hidden="true" />
           </button>
           <button
-            className="button secondary compact-button"
+            className="icon-button compact-icon-button header-action-button"
             type="button"
             onClick={onContact}
+            aria-label="Entrar em contato"
             title="Entrar em contato"
           >
-            <LifeBuoy size={16} aria-hidden="true" />
-            Contato
+            <LifeBuoy size={18} aria-hidden="true" />
           </button>
           <button
-            className="icon-button compact-icon-button"
+            className="icon-button compact-icon-button header-action-button"
             type="button"
             onClick={toggleTheme}
             aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
             title={isDark ? "Modo claro" : "Modo escuro"}
           >
-            {isDark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
+            {isDark ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
           </button>
         </div>
         <div className="doctor-greeting">
-          <Clock size={18} aria-hidden="true" />
+          <Clock size={19} aria-hidden="true" />
           <span>
-            {formatNow(now)} - Bem-vindo, {doctorName}
+            {formatNow(now)} - {doctorName}
           </span>
         </div>
-        <button className="button secondary compact-button" type="button" onClick={logout}>
-          <LogOut size={16} aria-hidden="true" />
-          Sair
+        <button
+          className="icon-button compact-icon-button header-action-button"
+          type="button"
+          onClick={logout}
+          aria-label="Sair"
+          title="Sair"
+        >
+          <LogOut size={18} aria-hidden="true" />
         </button>
       </div>
     </header>

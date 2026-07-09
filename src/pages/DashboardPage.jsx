@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 
 import ActiveFiltersBar from "../components/ActiveFiltersBar.jsx";
 import AppHeader from "../components/AppHeader.jsx";
-import DailyDiagnosisModal from "../components/DailyDiagnosisModal.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import ExamFilters from "../components/ExamFilters.jsx";
 import ExamList from "../components/ExamList.jsx";
@@ -44,16 +43,6 @@ const quickFilterConfig = {
     key: "reviewed_total",
     label: "Revisados",
     filters: { status: "valido", review_result: "" },
-  },
-  without_change: {
-    key: "without_change",
-    label: "Sem alteração",
-    filters: { status: "valido", review_result: "sem_alteracao" },
-  },
-  altered: {
-    key: "altered",
-    label: "Alterados",
-    filters: { status: "valido", review_result: "alterado" },
   },
 };
 
@@ -103,15 +92,39 @@ function contextTitle(context) {
   return "Agenda de diagnostico nao configurada";
 }
 
-function contextCopy(context, openQueue) {
+function getQueueMetric(context, openQueue, legacyOpenQueue) {
+  if (!context) {
+    return {
+      value: "--",
+      label: "Carregando fila",
+      ariaLabel: "Carregando fila",
+    };
+  }
+
+  if (context.is_configured) {
+    const label = `ECG${openQueue === 1 ? "" : "s"} pendente${openQueue === 1 ? "" : "s"}`;
+    return {
+      value: openQueue,
+      label,
+      ariaLabel: `${openQueue} ${label}`,
+    };
+  }
+
+  const examLabel = legacyOpenQueue === 1 ? "exame" : "exames";
+  const availabilityLabel = legacyOpenQueue === 1 ? "disponivel" : "disponiveis";
+  const label = `${examLabel} ${availabilityLabel}`;
+  return {
+    value: legacyOpenQueue,
+    label,
+    ariaLabel: `${legacyOpenQueue} ${label}`,
+  };
+}
+
+function getHeroCopy(context) {
   if (!context) return "Buscando configuracao do ciclo.";
-  if (!context.is_configured) {
-    return "A fila guiada sera ativada quando o calendario dia-diagnostico for configurado.";
-  }
-  if (context.is_general_review_day) {
-    return `${openQueue} exames na revalidacao geral do ciclo.`;
-  }
-  return `${openQueue} ECGs pendentes para este diagnostico padronizado.`;
+  if (!context.is_configured) return "Agenda diaria nao configurada; usando a fila disponivel.";
+  if (context.is_general_review_day) return "Revalidacao geral do ciclo.";
+  return "Diagnostico padronizado do dia.";
 }
 
 export default function DashboardPage() {
@@ -126,11 +139,7 @@ export default function DashboardPage() {
   const [supportContact, setSupportContact] = useState(null);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  const [isDailyModalOpen, setIsDailyModalOpen] = useState(true);
-  const [summaryCollapsed, setSummaryCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 920px)").matches;
-  });
+  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [overviewError, setOverviewError] = useState("");
@@ -301,78 +310,96 @@ export default function DashboardPage() {
   const useDailyQueue = Boolean(validationContext?.is_configured && !hasAnyFilter);
   const displayedExams = useDailyQueue ? validationQueue : exams;
   const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch, useDailyQueue);
+  const workQueueTitle = quickFilter?.label || (useDailyQueue ? "Pendentes" : "Fila de trabalho");
+  const workQueueDescription =
+    useDailyQueue || quickFilter?.key === "pending"
+      ? "Exames ainda nao iniciados."
+      : "Exames filtrados para consulta rapida.";
   const legacyOpenQueue =
     stats != null
       ? Number(stats.pending_total || 0) + Number(stats.in_validation_total || 0)
       : allExams.filter((exam) => exam.status_validation !== "valido").length;
   const openQueue = validationContext?.is_configured ? validationQueue.length : legacyOpenQueue;
-  const canStartQueue = validationContext?.is_configured ? openQueue > 0 : legacyOpenQueue > 0;
+  const queueStartCount = validationContext?.is_configured ? openQueue : legacyOpenQueue;
+  const canStartQueue = Boolean(validationContext && queueStartCount > 0);
 
   const dailyStatus = useMemo(() => {
-    if (!validationContext?.is_configured) return "Configuracao pendente";
+    if (!validationContext) return "Carregando";
+    if (!validationContext.is_configured) return "Configuracao pendente";
     if (validationContext.is_general_review_day) return "Revalidacao geral";
     return `Dia ${validationContext.day_index || "-"}`;
   }, [validationContext]);
+  const queueMetric = getQueueMetric(validationContext, openQueue, legacyOpenQueue);
+  const heroCopy = getHeroCopy(validationContext);
 
   return (
     <div className="dashboard-page">
       <div className="page-shell">
         <AppHeader onContact={openSupport} onTutorial={() => setIsTutorialOpen(true)} />
 
-        <section className="daily-context-card" aria-label="Diagnostico do dia">
-          <div className="daily-context-icon" aria-hidden="true">
-            <CalendarDays size={24} />
+        <section className="dashboard-queue-hero" aria-label="Fila de validacao">
+          <div className="queue-hero-main">
+            <span className="daily-context-icon" aria-hidden="true">
+              <CalendarDays size={24} />
+            </span>
+            <div className="queue-hero-copy">
+              <span className="eyebrow">{dailyStatus}</span>
+              <h2>{contextTitle(validationContext)}</h2>
+              <p>{heroCopy}</p>
+            </div>
           </div>
-          <div>
-            <span className="eyebrow">{dailyStatus}</span>
-            <h2>{contextTitle(validationContext)}</h2>
-            <p>{contextCopy(validationContext, openQueue)}</p>
+          <div className="queue-hero-actions">
+            <div className="queue-metric" role="group" aria-label={queueMetric.ariaLabel}>
+              <strong>{queueMetric.value}</strong>
+              <span>{queueMetric.label}</span>
+            </div>
+            <button
+              className="button primary-action"
+              type="button"
+              onClick={handleOpenNextExam}
+              disabled={!canStartQueue}
+            >
+              <PlayCircle size={19} aria-hidden="true" />
+              Iniciar validacao
+            </button>
           </div>
-        </section>
-
-        <section className="dashboard-action-header" aria-label="Iniciar revisao">
-          <div>
-            <span className="eyebrow">Fila de trabalho</span>
-            <h2>{validationContext?.is_configured ? "ECGs do diagnostico do dia" : "Fila legada"}</h2>
-            <p>
-              {validationContext?.is_configured
-                ? contextCopy(validationContext, openQueue)
-                : `${legacyOpenQueue} exames disponiveis enquanto a agenda diaria nao esta configurada.`}
-            </p>
-          </div>
-          <button
-            className="button primary-action"
-            type="button"
-            onClick={handleOpenNextExam}
-            disabled={!canStartQueue}
-          >
-            <PlayCircle size={19} aria-hidden="true" />
-            {validationContext?.is_configured ? "Iniciar fila do dia" : "Abrir proximo exame"}
-          </button>
         </section>
 
         <div className={`dashboard-workspace${summaryCollapsed ? " summary-collapsed" : ""}`}>
           <main className="dashboard-main">
-            <ExamFilters filters={filters} onChange={handleFiltersChange} />
-            <ActiveFiltersBar
-              quickFilter={quickFilter}
-              hasAnyFilter={hasAnyFilter}
-              onClearQuickFilter={clearQuickFilter}
-              onClearAll={clearAllFilters}
-            />
-
-            {error || overviewError ? (
-              <EmptyState title="Erro ao carregar" message={error || overviewError} />
-            ) : null}
-            {isLoading ? (
-              <LoadingState message="Buscando exames..." />
-            ) : (
-              <ExamList
-                exams={displayedExams}
-                emptyTitle={emptyStateCopy.title}
-                emptyMessage={emptyStateCopy.message}
+            <section className="work-queue-panel" aria-label="Fila de trabalho">
+              <div className="work-queue-toolbar">
+                <ExamFilters filters={filters} onChange={handleFiltersChange} />
+                <header className="work-queue-header">
+                  <div>
+                    <h2>{workQueueTitle}</h2>
+                    <p>{workQueueDescription}</p>
+                  </div>
+                  <span className="work-queue-count" aria-label={`${displayedExams.length} exames na fila`}>
+                    {displayedExams.length}
+                  </span>
+                </header>
+              </div>
+              <ActiveFiltersBar
+                quickFilter={quickFilter}
+                hasAnyFilter={hasAnyFilter}
+                onClearQuickFilter={clearQuickFilter}
+                onClearAll={clearAllFilters}
               />
-            )}
+
+              {error || overviewError ? (
+                <EmptyState title="Erro ao carregar" message={error || overviewError} />
+              ) : null}
+              {isLoading ? (
+                <LoadingState message="Buscando exames..." />
+              ) : (
+                <ExamList
+                  exams={displayedExams}
+                  emptyTitle={emptyStateCopy.title}
+                  emptyMessage={emptyStateCopy.message}
+                />
+              )}
+            </section>
           </main>
 
           <aside className="summary-sidebar">
@@ -387,11 +414,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <DailyDiagnosisModal
-        context={validationContext}
-        isOpen={Boolean(validationContext) && isDailyModalOpen}
-        onClose={() => setIsDailyModalOpen(false)}
-      />
       <SupportContactModal
         contact={supportContact}
         isOpen={isSupportOpen}

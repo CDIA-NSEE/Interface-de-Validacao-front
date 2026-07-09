@@ -58,7 +58,11 @@ export default function ExamList({
     <section className="exam-list-shell" aria-label="Lista de exames">
       <div className="exam-groups">
         {groups.map((group) => (
-          <section className="exam-group" key={group.status} aria-labelledby={`group-${group.status}`}>
+          <section
+            className={`exam-group${groups.length === 1 ? " single-group" : ""}`}
+            key={group.status}
+            aria-labelledby={`group-${group.status}`}
+          >
             <header className="exam-group-header">
               <div>
                 <h3 id={`group-${group.status}`}>{group.label}</h3>
