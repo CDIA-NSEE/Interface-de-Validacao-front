@@ -18,58 +18,59 @@ function LegendItem({ label, value, dotClass }) {
 }
 
 export default function ProgressSummary({ stats, compact = false }) {
-  const reviewedTotal = safeNumber(stats?.reviewed_total);
-  const pendingTotal = safeNumber(stats?.pending_total);
-  const inValidationTotal = safeNumber(stats?.in_validation_total);
-  const totalFlow = reviewedTotal + pendingTotal + inValidationTotal;
+  const stateCounts = stats?.queue_state_counts || {};
+  const startTotal = safeNumber(stateCounts.start ?? safeNumber(stats?.pending_total) + safeNumber(stats?.in_validation_total));
+  const validatedTotal = safeNumber(stateCounts.validated);
+  const completedTotal = safeNumber(stateCounts.completed ?? stats?.reviewed_total);
+  const totalFlow = safeNumber(stateCounts.all ?? startTotal + validatedTotal + completedTotal);
 
-  const reviewedPercent = percent(reviewedTotal, totalFlow);
-  const inValidationPercent = percent(inValidationTotal, totalFlow);
-  const pendingPercent = percent(pendingTotal, totalFlow);
+  const startPercent = percent(startTotal, totalFlow);
+  const validatedPercent = percent(validatedTotal, totalFlow);
+  const completedPercent = percent(completedTotal, totalFlow);
 
   return (
-    <section className={`progress-summary${compact ? " compact-progress-summary" : ""}`} aria-label="Fluxo de revisão">
+    <section className={`progress-summary${compact ? " compact-progress-summary" : ""}`} aria-label="Fluxo de validacao">
       <div className="progress-summary-copy">
-        <span className="eyebrow">Fluxo de revisão</span>
+        <span className="eyebrow">Fluxo de validacao</span>
         <strong>
-          {reviewedTotal}/{totalFlow} revisados — {reviewedPercent}%
+          {completedTotal}/{totalFlow} concluidos - {completedPercent}%
         </strong>
       </div>
 
       <div
         className="segmented-progress"
         role="img"
-        aria-label={`${pendingPercent}% pendentes, ${inValidationPercent}% em validação e ${reviewedPercent}% revisados`}
+        aria-label={`${startPercent}% iniciar, ${validatedPercent}% validados e ${completedPercent}% concluidos`}
       >
         <span
-          className="progress-segment progress-pending"
-          style={{ width: `${pendingPercent}%` }}
+          className="progress-segment progress-start"
+          style={{ width: `${startPercent}%` }}
         />
         <span
-          className="progress-segment progress-in-validation"
-          style={{ width: `${inValidationPercent}%` }}
+          className="progress-segment progress-validated"
+          style={{ width: `${validatedPercent}%` }}
         />
         <span
-          className="progress-segment progress-reviewed"
-          style={{ width: `${reviewedPercent}%` }}
+          className="progress-segment progress-completed"
+          style={{ width: `${completedPercent}%` }}
         />
       </div>
 
       <div className="progress-legend" aria-label="Legenda do progresso">
         <LegendItem
-          label="Pendentes"
-          value={pendingTotal}
-          dotClass="pending-dot"
+          label="Iniciar"
+          value={startTotal}
+          dotClass="start-dot"
         />
         <LegendItem
-          label="Em validação"
-          value={inValidationTotal}
-          dotClass="in-validation-dot"
+          label="Validados"
+          value={validatedTotal}
+          dotClass="validated-dot"
         />
         <LegendItem
-          label="Revisados"
-          value={reviewedTotal}
-          dotClass="reviewed-dot"
+          label="Concluidos"
+          value={completedTotal}
+          dotClass="completed-dot"
         />
       </div>
     </section>

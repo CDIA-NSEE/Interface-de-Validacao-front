@@ -5,8 +5,8 @@ export default function StatsSection({ stats }) {
   return (
     <section className="stats-section" aria-labelledby="stats-section-title">
       <div className="section-heading">
-        <h2 id="stats-section-title">Resumo da validação</h2>
-        <p>Acompanhe o andamento dos exames no fluxo de revisão.</p>
+        <h2 id="stats-section-title">Resumo da validacao</h2>
+        <p>Acompanhe o andamento dos exames no fluxo.</p>
         <span>Base dos indicadores: todos os exames</span>
       </div>
 

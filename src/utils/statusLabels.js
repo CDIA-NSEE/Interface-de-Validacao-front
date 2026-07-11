@@ -1,32 +1,32 @@
 export const STATUS_OPTIONS = [
-  { value: "nao_validado", label: "Não validado" },
-  { value: "em_validacao", label: "Em validação" },
-  { value: "valido", label: "Válido" },
+  { value: "nao_validado", label: "Iniciar" },
+  { value: "em_validacao", label: "Iniciar" },
+  { value: "valido", label: "Concluidos" },
 ];
 
 export const REVIEW_RESULT_OPTIONS = [
-  { value: "sem_alteracao", label: "Sem alteração" },
+  { value: "sem_alteracao", label: "Sem alteracao" },
   { value: "alterado", label: "Alterado" },
 ];
 
 export const STATUS_META = {
   nao_validado: {
-    label: "Não validado",
-    className: "status-neutral",
+    label: "Iniciar",
+    className: "status-state-start",
   },
   em_validacao: {
-    label: "Em validação",
-    className: "status-info",
+    label: "Iniciar",
+    className: "status-state-start",
   },
   valido: {
-    label: "Válido",
-    className: "status-success",
+    label: "Concluidos",
+    className: "status-state-completed",
   },
 };
 
 export const REVIEW_RESULT_META = {
   sem_alteracao: {
-    label: "Sem alteração",
+    label: "Sem alteracao",
     className: "status-success",
   },
   alterado: {
@@ -45,4 +45,3 @@ export function getStatusMeta(status) {
 export function getReviewResultMeta(reviewResult) {
   return REVIEW_RESULT_META[reviewResult] ?? null;
 }
-

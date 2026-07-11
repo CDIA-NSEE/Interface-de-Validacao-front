@@ -7,7 +7,6 @@ import AppHeader from "../components/AppHeader.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import ExamFilters from "../components/ExamFilters.jsx";
 import ExamList from "../components/ExamList.jsx";
-import FloatingSupportButton from "../components/FloatingSupportButton.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
@@ -20,29 +19,57 @@ import {
   getValidationContext,
   getValidationQueue,
 } from "../services/validationService.js";
+import { QUEUE_STATE_META, REFINEMENT_META } from "../utils/queueSemantics.js";
 
 const initialFilters = {
-  status: "",
-  source: "pending",
-  review_result: "",
+  queue_state: "start",
+  decision: "",
+  region: "",
   search: "",
 };
 
+const emptyQueueProgress = {
+  total: 0,
+  remaining: 0,
+  completed: 0,
+  percent: 0,
+};
+
 const quickFilterConfig = {
-  pending: {
-    key: "pending",
-    label: "Pendentes",
-    filters: { status: "nao_validado", review_result: "" },
+  all: {
+    key: "all",
+    label: QUEUE_STATE_META.all.label,
+    tone: QUEUE_STATE_META.all.tone,
+    filters: { queue_state: "all" },
   },
-  in_validation: {
-    key: "in_validation",
-    label: "Em validação",
-    filters: { status: "em_validacao", review_result: "" },
+  start: {
+    key: "start",
+    label: QUEUE_STATE_META.start.label,
+    tone: QUEUE_STATE_META.start.tone,
+    filters: { queue_state: "start" },
   },
-  reviewed_total: {
-    key: "reviewed_total",
-    label: "Revisados",
-    filters: { status: "valido", review_result: "" },
+  validated: {
+    key: "validated",
+    label: QUEUE_STATE_META.validated.label,
+    tone: QUEUE_STATE_META.validated.tone,
+    filters: { queue_state: "validated" },
+  },
+  completed: {
+    key: "completed",
+    label: QUEUE_STATE_META.completed.label,
+    tone: QUEUE_STATE_META.completed.tone,
+    filters: { queue_state: "completed" },
+  },
+};
+
+const refinementFilterConfig = {
+  decision: {
+    confirmed: { ...REFINEMENT_META.confirmed, filters: { decision: "confirmed" } },
+    rejected: { ...REFINEMENT_META.rejected, filters: { decision: "rejected" } },
+  },
+  region: {
+    with_region: { ...REFINEMENT_META.with_region, filters: { region: "with_region" } },
+    without_region: { ...REFINEMENT_META.without_region, filters: { region: "without_region" } },
   },
 };
 
@@ -64,7 +91,7 @@ function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
   if (isDailyQueue) {
     return {
       title: "Fila do dia concluida",
-      message: "Nao ha ECG pendente para o diagnostico ativo.",
+      message: "Nao ha ECG para iniciar no diagnostico ativo.",
     };
   }
   if (quickFilter) {
@@ -80,8 +107,8 @@ function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
     };
   }
   return {
-    title: "Nenhum exame aguardando revisao",
-    message: "Use os filtros rapidos do resumo para visualizar exames revisados.",
+    title: "Nenhum exame encontrado",
+    message: "Use os filtros do resumo para ajustar a visualizacao.",
   };
 }
 
@@ -92,34 +119,6 @@ function contextTitle(context) {
   return "Agenda de diagnostico nao configurada";
 }
 
-function getQueueMetric(context, openQueue, legacyOpenQueue) {
-  if (!context) {
-    return {
-      value: "--",
-      label: "Carregando fila",
-      ariaLabel: "Carregando fila",
-    };
-  }
-
-  if (context.is_configured) {
-    const label = `ECG${openQueue === 1 ? "" : "s"} pendente${openQueue === 1 ? "" : "s"}`;
-    return {
-      value: openQueue,
-      label,
-      ariaLabel: `${openQueue} ${label}`,
-    };
-  }
-
-  const examLabel = legacyOpenQueue === 1 ? "exame" : "exames";
-  const availabilityLabel = legacyOpenQueue === 1 ? "disponivel" : "disponiveis";
-  const label = `${examLabel} ${availabilityLabel}`;
-  return {
-    value: legacyOpenQueue,
-    label,
-    ariaLabel: `${legacyOpenQueue} ${label}`,
-  };
-}
-
 function getHeroCopy(context) {
   if (!context) return "Buscando configuracao do ciclo.";
   if (!context.is_configured) return "Agenda diaria nao configurada; usando a fila disponivel.";
@@ -127,15 +126,34 @@ function getHeroCopy(context) {
   return "Diagnostico padronizado do dia.";
 }
 
+function normalizeQueueProgress(progress, fallbackRemaining = 0) {
+  const total = Number(progress?.total ?? fallbackRemaining ?? 0);
+  const remaining = Number(progress?.remaining ?? fallbackRemaining ?? 0);
+  const completed = Number(progress?.completed ?? Math.max(total - remaining, 0));
+  const rawPercent = Number(progress?.percent ?? (total ? (completed / total) * 100 : 0));
+
+  return {
+    total: Math.max(total, 0),
+    remaining: Math.max(remaining, 0),
+    completed: Math.max(completed, 0),
+    percent: Math.min(Math.max(Math.round(rawPercent), 0), 100),
+  };
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState(initialFilters);
-  const [quickFilter, setQuickFilter] = useState(null);
+  const [quickFilter, setQuickFilter] = useState(quickFilterConfig.start);
+  const [refinementFilters, setRefinementFilters] = useState({
+    decision: null,
+    region: null,
+  });
   const [stats, setStats] = useState(null);
   const [exams, setExams] = useState([]);
   const [allExams, setAllExams] = useState([]);
   const [validationContext, setValidationContext] = useState(null);
   const [validationQueue, setValidationQueue] = useState([]);
+  const [queueProgress, setQueueProgress] = useState(emptyQueueProgress);
   const [supportContact, setSupportContact] = useState(null);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -156,10 +174,12 @@ export default function DashboardPage() {
       ]);
       setValidationContext(contextData);
       setValidationQueue(queueData.items || []);
+      setQueueProgress(normalizeQueueProgress(queueData.progress, queueData.items?.length || 0));
       setSupportContact(contextData.support_contact || null);
     } catch (requestError) {
       setValidationContext(null);
       setValidationQueue([]);
+      setQueueProgress(emptyQueueProgress);
       setOverviewError(
         requestError?.response?.data?.detail ||
           "Nao foi possivel carregar o contexto de validacao diaria.",
@@ -193,7 +213,7 @@ export default function DashboardPage() {
     setError("");
     try {
       const examsData = await getExams(filters);
-      setExams(quickFilter ? examsData : [...examsData].sort(actionQueueSort));
+      setExams([...examsData].sort(actionQueueSort));
     } catch (requestError) {
       setExams([]);
       setError(
@@ -203,7 +223,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, quickFilter]);
+  }, [filters]);
 
   useEffect(() => {
     loadOverview();
@@ -222,32 +242,52 @@ export default function DashboardPage() {
     const nextQuickFilter = quickFilterConfig[key];
     if (!nextQuickFilter) return;
 
-    if (quickFilter?.key === key) {
-      clearQuickFilter();
-      return;
-    }
-
     setQuickFilter(nextQuickFilter);
     setFilters((currentFilters) => ({
       ...currentFilters,
-      source: "all",
-      status: nextQuickFilter.filters.status,
-      review_result: nextQuickFilter.filters.review_result,
+      queue_state: nextQuickFilter.filters.queue_state,
+    }));
+  }
+
+  function applyRefinementFilter(type, key) {
+    const config = refinementFilterConfig[type]?.[key];
+    if (!config) return;
+
+    const isActive = refinementFilters[type]?.key === key;
+    const nextValue = isActive ? null : config;
+
+    setRefinementFilters((currentFilters) => ({
+      ...currentFilters,
+      [type]: nextValue,
+    }));
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [type]: nextValue ? config.filters[type] : "",
     }));
   }
 
   function clearQuickFilter() {
-    setQuickFilter(null);
+    setQuickFilter(quickFilterConfig.start);
     setFilters((currentFilters) => ({
       ...currentFilters,
-      status: "",
-      source: "pending",
-      review_result: "",
+      queue_state: quickFilterConfig.start.filters.queue_state,
+    }));
+  }
+
+  function clearRefinementFilter(type) {
+    setRefinementFilters((currentFilters) => ({
+      ...currentFilters,
+      [type]: null,
+    }));
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [type]: "",
     }));
   }
 
   function clearAllFilters() {
-    setQuickFilter(null);
+    setQuickFilter(quickFilterConfig.start);
+    setRefinementFilters({ decision: null, region: null });
     setFilters(initialFilters);
   }
 
@@ -292,7 +332,7 @@ export default function DashboardPage() {
         navigate(`/exams/${nextData.exam.id}`);
         return;
       }
-      setError("Nenhum ECG pendente na fila do dia.");
+      setError("Nenhum ECG para iniciar na fila do dia.");
       return;
     }
 
@@ -302,26 +342,29 @@ export default function DashboardPage() {
       return;
     }
 
-    setError("Nenhum exame aguardando revisao.");
+    setError("Nenhum exame para iniciar.");
   }
 
   const hasSearch = Boolean(filters.search.trim());
-  const hasAnyFilter = Boolean(hasSearch || quickFilter);
+  const hasRefinementFilter = Boolean(refinementFilters.decision || refinementFilters.region);
+  const hasNonDefaultState = quickFilter?.key !== quickFilterConfig.start.key;
+  const hasAnyFilter = Boolean(hasSearch || hasNonDefaultState || hasRefinementFilter);
   const useDailyQueue = Boolean(validationContext?.is_configured && !hasAnyFilter);
   const displayedExams = useDailyQueue ? validationQueue : exams;
   const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch, useDailyQueue);
-  const workQueueTitle = quickFilter?.label || (useDailyQueue ? "Pendentes" : "Fila de trabalho");
-  const workQueueDescription =
-    useDailyQueue || quickFilter?.key === "pending"
-      ? "Exames ainda nao iniciados."
-      : "Exames filtrados para consulta rapida.";
   const legacyOpenQueue =
     stats != null
       ? Number(stats.pending_total || 0) + Number(stats.in_validation_total || 0)
       : allExams.filter((exam) => exam.status_validation !== "valido").length;
-  const openQueue = validationContext?.is_configured ? validationQueue.length : legacyOpenQueue;
+  const activeQueueProgress = normalizeQueueProgress(queueProgress, validationQueue.length);
+  const openQueue = validationContext?.is_configured ? activeQueueProgress.remaining : legacyOpenQueue;
   const queueStartCount = validationContext?.is_configured ? openQueue : legacyOpenQueue;
   const canStartQueue = Boolean(validationContext && queueStartCount > 0);
+  const showQueueProgress = Boolean(validationContext?.is_configured);
+  const queueProgressText =
+    activeQueueProgress.total > 0
+      ? `${activeQueueProgress.remaining} restantes de ${activeQueueProgress.total}`
+      : "Sem exames nesta fila";
 
   const dailyStatus = useMemo(() => {
     if (!validationContext) return "Carregando";
@@ -329,7 +372,6 @@ export default function DashboardPage() {
     if (validationContext.is_general_review_day) return "Revalidacao geral";
     return `Dia ${validationContext.day_index || "-"}`;
   }, [validationContext]);
-  const queueMetric = getQueueMetric(validationContext, openQueue, legacyOpenQueue);
   const heroCopy = getHeroCopy(validationContext);
 
   return (
@@ -349,10 +391,25 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="queue-hero-actions">
-            <div className="queue-metric" role="group" aria-label={queueMetric.ariaLabel}>
-              <strong>{queueMetric.value}</strong>
-              <span>{queueMetric.label}</span>
-            </div>
+            {showQueueProgress ? (
+              <div className="queue-progress" aria-label={`Progresso da fila: ${queueProgressText}`}>
+                <div className="queue-progress-copy">
+                  <span>Progresso da fila</span>
+                  <strong>{queueProgressText}</strong>
+                </div>
+                {activeQueueProgress.total > 0 ? (
+                  <div
+                    className="queue-progress-track"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow={activeQueueProgress.percent}
+                  >
+                    <span style={{ width: `${activeQueueProgress.percent}%` }} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <button
               className="button primary-action"
               type="button"
@@ -370,20 +427,13 @@ export default function DashboardPage() {
             <section className="work-queue-panel" aria-label="Fila de trabalho">
               <div className="work-queue-toolbar">
                 <ExamFilters filters={filters} onChange={handleFiltersChange} />
-                <header className="work-queue-header">
-                  <div>
-                    <h2>{workQueueTitle}</h2>
-                    <p>{workQueueDescription}</p>
-                  </div>
-                  <span className="work-queue-count" aria-label={`${displayedExams.length} exames na fila`}>
-                    {displayedExams.length}
-                  </span>
-                </header>
               </div>
               <ActiveFiltersBar
                 quickFilter={quickFilter}
+                refinementFilters={refinementFilters}
                 hasAnyFilter={hasAnyFilter}
                 onClearQuickFilter={clearQuickFilter}
+                onClearRefinement={clearRefinementFilter}
                 onClearAll={clearAllFilters}
               />
 
@@ -407,8 +457,10 @@ export default function DashboardPage() {
               stats={stats}
               collapsed={summaryCollapsed}
               quickFilter={quickFilter}
+              refinementFilters={refinementFilters}
               onToggleCollapsed={() => setSummaryCollapsed((current) => !current)}
               onQuickFilter={applyQuickFilter}
+              onRefinementFilter={applyRefinementFilter}
             />
           </aside>
         </div>
@@ -420,7 +472,6 @@ export default function DashboardPage() {
         onClose={() => setIsSupportOpen(false)}
       />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <FloatingSupportButton onClick={openSupport} />
     </div>
   );
 }

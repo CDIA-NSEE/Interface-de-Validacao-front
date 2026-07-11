@@ -1,6 +1,7 @@
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 
 import QuickMetricItem from "./QuickMetricItem.jsx";
+import { QUEUE_STATE_META, REFINEMENT_META } from "../utils/queueSemantics.js";
 
 function safeNumber(value) {
   const numberValue = Number(value);
@@ -11,8 +12,10 @@ export default function ValidationSummaryPanel({
   stats,
   collapsed,
   quickFilter,
+  refinementFilters,
   onToggleCollapsed,
   onQuickFilter,
+  onRefinementFilter,
 }) {
   if (collapsed) {
     return (
@@ -29,17 +32,19 @@ export default function ValidationSummaryPanel({
     );
   }
 
-  const pending = safeNumber(stats?.pending_total);
-  const inValidation = safeNumber(stats?.in_validation_total);
-  const reviewed = safeNumber(stats?.reviewed_total);
-  const openQueue = pending + inValidation;
+  const stateCounts = stats?.queue_state_counts || {};
+  const decisionCounts = stats?.decision_counts || {};
+  const regionCounts = stats?.region_counts || {};
+  const allCount = safeNumber(stateCounts.all ?? stats?.pending_total + stats?.in_validation_total + stats?.reviewed_total);
+  const startCount = safeNumber(stateCounts.start);
+  const validatedCount = safeNumber(stateCounts.validated);
+  const completedCount = safeNumber(stateCounts.completed ?? stats?.reviewed_total);
 
   return (
     <aside className="validation-summary-panel" id="validation-summary-panel">
       <header className="summary-panel-header">
         <div>
           <h2>Resumo</h2>
-          <p>Atalhos da fila</p>
         </div>
         <button
           className="summary-toggle-button"
@@ -53,42 +58,74 @@ export default function ValidationSummaryPanel({
         </button>
       </header>
 
-      <section className="summary-action-block">
+      <section className="summary-block">
         <div className="summary-block-heading">
-          <h3>Fila aberta</h3>
-          <span className="summary-pending">
-            {openQueue > 0
-              ? `${openQueue} exames aguardam revisao`
-              : "Nenhum exame aguardando revisao"}
-          </span>
+          <h3>Estados</h3>
+        </div>
+        <div className="quick-metric-grid summary-quick-grid">
+          <QuickMetricItem
+            label={QUEUE_STATE_META.all.label}
+            value={allCount}
+            tone={QUEUE_STATE_META.all.tone}
+            active={quickFilter?.key === "all"}
+            onClick={() => onQuickFilter("all")}
+          />
+          <QuickMetricItem
+            label={QUEUE_STATE_META.start.label}
+            value={startCount}
+            tone={QUEUE_STATE_META.start.tone}
+            active={quickFilter?.key === "start"}
+            onClick={() => onQuickFilter("start")}
+          />
+          <QuickMetricItem
+            label={QUEUE_STATE_META.validated.label}
+            value={validatedCount}
+            tone={QUEUE_STATE_META.validated.tone}
+            active={quickFilter?.key === "validated"}
+            onClick={() => onQuickFilter("validated")}
+          />
+          <QuickMetricItem
+            label={QUEUE_STATE_META.completed.label}
+            value={completedCount}
+            tone={QUEUE_STATE_META.completed.tone}
+            active={quickFilter?.key === "completed"}
+            onClick={() => onQuickFilter("completed")}
+          />
         </div>
       </section>
 
       <section className="summary-block">
         <div className="summary-block-heading">
-          <h3>Filtros rapidos</h3>
+          <h3>Refinamentos</h3>
         </div>
         <div className="quick-metric-grid summary-quick-grid">
           <QuickMetricItem
-            label="Pendentes"
-            value={pending}
-            tone="pending"
-            active={quickFilter?.key === "pending"}
-            onClick={() => onQuickFilter("pending")}
+            label={REFINEMENT_META.confirmed.label}
+            value={safeNumber(decisionCounts.confirmed)}
+            tone={REFINEMENT_META.confirmed.tone}
+            active={refinementFilters?.decision?.key === "confirmed"}
+            onClick={() => onRefinementFilter("decision", "confirmed")}
           />
           <QuickMetricItem
-            label="Em validacao"
-            value={inValidation}
-            tone="in-validation"
-            active={quickFilter?.key === "in_validation"}
-            onClick={() => onQuickFilter("in_validation")}
+            label={REFINEMENT_META.rejected.label}
+            value={safeNumber(decisionCounts.rejected)}
+            tone={REFINEMENT_META.rejected.tone}
+            active={refinementFilters?.decision?.key === "rejected"}
+            onClick={() => onRefinementFilter("decision", "rejected")}
           />
           <QuickMetricItem
-            label="Revisados"
-            value={reviewed}
-            tone="productivity"
-            active={quickFilter?.key === "reviewed_total"}
-            onClick={() => onQuickFilter("reviewed_total")}
+            label={REFINEMENT_META.with_region.label}
+            value={safeNumber(regionCounts.with_region)}
+            tone={REFINEMENT_META.with_region.tone}
+            active={refinementFilters?.region?.key === "with_region"}
+            onClick={() => onRefinementFilter("region", "with_region")}
+          />
+          <QuickMetricItem
+            label={REFINEMENT_META.without_region.label}
+            value={safeNumber(regionCounts.without_region)}
+            tone={REFINEMENT_META.without_region.tone}
+            active={refinementFilters?.region?.key === "without_region"}
+            onClick={() => onRefinementFilter("region", "without_region")}
           />
         </div>
       </section>

@@ -19,11 +19,11 @@ export default function ClinicalResultBar({ withoutChange, withChange, reviewedT
   const withChangePercent = percent(withChangeTotal, totalReviewed);
 
   return (
-    <div className="clinical-result-bar" aria-label="Distribuição dos resultados revisados">
+    <div className="clinical-result-bar" aria-label="Distribuicao dos resultados concluidos">
       <div
         className="clinical-segmented-progress"
         role="img"
-        aria-label={`${withoutChangePercent}% sem alteração e ${withChangePercent}% alterados`}
+        aria-label={`${withoutChangePercent}% sem alteracao e ${withChangePercent}% alterados`}
       >
         <span
           className="clinical-segment clinical-without-change"
@@ -38,7 +38,7 @@ export default function ClinicalResultBar({ withoutChange, withChange, reviewedT
       <div className="clinical-legend">
         <span>
           <i className="legend-dot clinical-without-change-dot" aria-hidden="true" />
-          Sem alteração: {withoutChangeTotal}
+          Sem alteracao: {withoutChangeTotal}
         </span>
         <span>
           <i className="legend-dot clinical-with-change-dot" aria-hidden="true" />
@@ -48,4 +48,3 @@ export default function ClinicalResultBar({ withoutChange, withChange, reviewedT
     </div>
   );
 }
-

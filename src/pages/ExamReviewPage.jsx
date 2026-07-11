@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import DiagnosisPanel from "../components/DiagnosisPanel.jsx";
 import EcgViewer from "../components/EcgViewer.jsx";
 import EmptyState from "../components/EmptyState.jsx";
-import FloatingSupportButton from "../components/FloatingSupportButton.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
@@ -494,7 +493,11 @@ export default function ExamReviewPage() {
 
             <section className="sidebar-section review-status-section">
               <h2>Status atual</h2>
-              <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
+              <StatusBadge
+                status={exam.status_validation}
+                queueState={exam.queue_state}
+                reviewResult={exam.review_result}
+              />
             </section>
 
             <ReviewActions
@@ -528,7 +531,6 @@ export default function ExamReviewPage() {
         onClose={() => setIsSupportOpen(false)}
       />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <FloatingSupportButton onClick={openSupport} />
     </div>
   );
 }

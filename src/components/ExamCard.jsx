@@ -24,7 +24,11 @@ export default function ExamCard({ exam }) {
           <span className="eyebrow">Exame</span>
           <strong>{exam.exam_code}</strong>
         </div>
-        <StatusBadge status={exam.status_validation} reviewResult={exam.review_result} />
+        <StatusBadge
+          status={exam.status_validation}
+          queueState={exam.queue_state}
+          reviewResult={exam.review_result}
+        />
       </div>
 
       <div className="exam-meta">

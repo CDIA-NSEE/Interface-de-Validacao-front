@@ -2,23 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import EmptyState from "./EmptyState.jsx";
 import ExamCard from "./ExamCard.jsx";
+import { getQueueStateKey, QUEUE_STATE_META, QUEUE_STATE_ORDER } from "../utils/queueSemantics.js";
 
 const PAGE_SIZE = 4;
-
-const groupMeta = {
-  em_validacao: {
-    label: "Em validação",
-    description: "Exames já iniciados que aguardam conclusão.",
-  },
-  nao_validado: {
-    label: "Pendentes",
-    description: "Exames ainda não iniciados.",
-  },
-  valido: {
-    label: "Revisados",
-    description: "Exames com análise concluída.",
-  },
-};
 
 export default function ExamList({
   exams,
@@ -33,12 +19,12 @@ export default function ExamList({
 
   const { visibleExams, groups } = useMemo(() => {
     const nextVisibleExams = exams.slice(0, visibleCount);
-    const nextGroups = Object.keys(groupMeta)
-        .map((status) => ({
-          status,
-          ...groupMeta[status],
-          total: exams.filter((exam) => exam.status_validation === status).length,
-          exams: nextVisibleExams.filter((exam) => exam.status_validation === status),
+    const nextGroups = QUEUE_STATE_ORDER
+        .map((queueState) => ({
+          queueState,
+          ...QUEUE_STATE_META[queueState],
+          total: exams.filter((exam) => getQueueStateKey(exam) === queueState).length,
+          exams: nextVisibleExams.filter((exam) => getQueueStateKey(exam) === queueState),
         }))
         .filter((group) => group.exams.length > 0);
 
@@ -59,13 +45,13 @@ export default function ExamList({
       <div className="exam-groups">
         {groups.map((group) => (
           <section
-            className={`exam-group${groups.length === 1 ? " single-group" : ""}`}
-            key={group.status}
-            aria-labelledby={`group-${group.status}`}
+            className={`exam-group ${group.groupClassName}${groups.length === 1 ? " single-group" : ""}`}
+            key={group.queueState}
+            aria-labelledby={`group-${group.queueState}`}
           >
             <header className="exam-group-header">
               <div>
-                <h3 id={`group-${group.status}`}>{group.label}</h3>
+                <h3 id={`group-${group.queueState}`}>{group.label}</h3>
                 <p>{group.description}</p>
               </div>
               <span>{group.total}</span>

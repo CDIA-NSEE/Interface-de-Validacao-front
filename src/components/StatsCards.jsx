@@ -22,11 +22,13 @@ function percent(value, total) {
 }
 
 export default function StatsCards({ stats }) {
-  const pendingTotal = safeNumber(stats?.pending_total);
-  const inValidationTotal = safeNumber(stats?.in_validation_total);
+  const stateCounts = stats?.queue_state_counts || {};
+  const startTotal = safeNumber(stateCounts.start ?? safeNumber(stats?.pending_total) + safeNumber(stats?.in_validation_total));
+  const validatedTotal = safeNumber(stateCounts.validated);
+  const completedTotal = safeNumber(stateCounts.completed ?? stats?.reviewed_total);
   const reviewedTotal = safeNumber(stats?.reviewed_total);
   const validWithChange = safeNumber(stats?.valid_with_change);
-  const openQueue = pendingTotal + inValidationTotal;
+  const openQueue = startTotal + validatedTotal;
   const alteredPercent = percent(validWithChange, reviewedTotal);
   const validWithoutChange = safeNumber(stats?.valid_without_change);
 
@@ -35,12 +37,12 @@ export default function StatsCards({ stats }) {
       title: "Fila de trabalho",
       summary:
         openQueue > 0
-          ? `${openQueue} exames aguardam finalização`
-          : "Nenhum exame aguardando finalização",
-      summaryTone: "pending",
+          ? `${openQueue} exames em fluxo`
+          : "Nenhum exame em fluxo",
+      summaryTone: "start",
       cards: [
-        ["pending_total", "Pendentes", ClipboardList, "pending"],
-        ["in_validation_total", "Em validação", Timer, "in-validation"],
+        ["start_total", "Iniciar", ClipboardList, "start", startTotal],
+        ["validated_total", "Validados", Timer, "validated", validatedTotal],
       ],
     },
     {
@@ -48,17 +50,17 @@ export default function StatsCards({ stats }) {
       summary: "Hoje e semana atual",
       summaryTone: "neutral",
       cards: [
-        ["reviewed_today", "Revisados hoje", CheckCircle2, "productivity"],
-        ["reviewed_week", "Revisões na semana", CalendarCheck, "productivity"],
-        ["reviewed_total", "Total revisado", FileCheck2, "productivity"],
+        ["reviewed_today", "Concluidos hoje", CheckCircle2, "completed", safeNumber(stats?.reviewed_today)],
+        ["reviewed_week", "Concluidos na semana", CalendarCheck, "completed", safeNumber(stats?.reviewed_week)],
+        ["reviewed_total", "Total concluido", FileCheck2, "completed", completedTotal],
       ],
     },
     {
-      title: "Resultado dos revisados",
+      title: "Resultado dos concluidos",
       summary:
         reviewedTotal > 0
-          ? `${validWithChange} de ${reviewedTotal} revisados apresentaram alteração — ${alteredPercent}%`
-          : "Sem exames revisados para análise de resultado",
+          ? `${validWithChange} de ${reviewedTotal} concluidos apresentaram alteracao - ${alteredPercent}%`
+          : "Sem exames concluidos para analise de resultado",
       summaryTone: "neutral",
       footer: (
         <ClinicalResultBar
@@ -68,8 +70,8 @@ export default function StatsCards({ stats }) {
         />
       ),
       cards: [
-        ["valid_without_change", "Sem alteração", ShieldCheck, "success"],
-        ["valid_with_change", "Alterados", AlertTriangle, "clinical-alert"],
+        ["valid_without_change", "Sem alteracao", ShieldCheck, "success", validWithoutChange],
+        ["valid_with_change", "Alterados", AlertTriangle, "clinical-alert", validWithChange],
       ],
     },
   ];
@@ -84,13 +86,13 @@ export default function StatsCards({ stats }) {
           footer={group.footer}
           key={group.title}
         >
-          {group.cards.map(([key, label, Icon, tone]) => (
+          {group.cards.map(([key, label, Icon, tone, value]) => (
             <article className={`stat-card stat-card-${tone}`} key={key}>
               <div className="stat-icon" aria-hidden="true">
                 <Icon size={20} />
               </div>
               <span>{label}</span>
-              <strong>{safeNumber(stats?.[key])}</strong>
+              <strong>{safeNumber(value ?? stats?.[key])}</strong>
             </article>
           ))}
         </StatsGroup>
