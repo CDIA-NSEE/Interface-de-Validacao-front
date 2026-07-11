@@ -22,7 +22,7 @@ import {
 import { QUEUE_STATE_META, REFINEMENT_META } from "../utils/queueSemantics.js";
 
 const initialFilters = {
-  queue_state: "start",
+  queue_state: "all",
   decision: "",
   region: "",
   search: "",
@@ -94,10 +94,10 @@ function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
       message: "Nao ha ECG para iniciar no diagnostico ativo.",
     };
   }
-  if (quickFilter) {
+  if (quickFilter?.key && quickFilter.key !== "all") {
     return {
       title: "Nenhum exame encontrado",
-      message: "Limpe o filtro rapido ou ajuste a busca.",
+      message: "Limpe o filtro selecionado ou ajuste a busca.",
     };
   }
   if (hasSearch) {
@@ -143,7 +143,7 @@ function normalizeQueueProgress(progress, fallbackRemaining = 0) {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState(initialFilters);
-  const [quickFilter, setQuickFilter] = useState(quickFilterConfig.start);
+  const [quickFilter, setQuickFilter] = useState(quickFilterConfig.all);
   const [refinementFilters, setRefinementFilters] = useState({
     decision: null,
     region: null,
@@ -267,10 +267,10 @@ export default function DashboardPage() {
   }
 
   function clearQuickFilter() {
-    setQuickFilter(quickFilterConfig.start);
+    setQuickFilter(quickFilterConfig.all);
     setFilters((currentFilters) => ({
       ...currentFilters,
-      queue_state: quickFilterConfig.start.filters.queue_state,
+      queue_state: quickFilterConfig.all.filters.queue_state,
     }));
   }
 
@@ -286,9 +286,16 @@ export default function DashboardPage() {
   }
 
   function clearAllFilters() {
-    setQuickFilter(quickFilterConfig.start);
+    setQuickFilter(quickFilterConfig.all);
     setRefinementFilters({ decision: null, region: null });
     setFilters(initialFilters);
+  }
+
+  function clearSearchFilter() {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      search: "",
+    }));
   }
 
   async function openSupport() {
@@ -347,11 +354,10 @@ export default function DashboardPage() {
 
   const hasSearch = Boolean(filters.search.trim());
   const hasRefinementFilter = Boolean(refinementFilters.decision || refinementFilters.region);
-  const hasNonDefaultState = quickFilter?.key !== quickFilterConfig.start.key;
+  const hasNonDefaultState = quickFilter?.key !== quickFilterConfig.all.key;
   const hasAnyFilter = Boolean(hasSearch || hasNonDefaultState || hasRefinementFilter);
-  const useDailyQueue = Boolean(validationContext?.is_configured && !hasAnyFilter);
-  const displayedExams = useDailyQueue ? validationQueue : exams;
-  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch, useDailyQueue);
+  const displayedExams = exams;
+  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch, false);
   const legacyOpenQueue =
     stats != null
       ? Number(stats.pending_total || 0) + Number(stats.in_validation_total || 0)
@@ -427,15 +433,17 @@ export default function DashboardPage() {
             <section className="work-queue-panel" aria-label="Fila de trabalho">
               <div className="work-queue-toolbar">
                 <ExamFilters filters={filters} onChange={handleFiltersChange} />
+                <ActiveFiltersBar
+                  quickFilter={quickFilter}
+                  refinementFilters={refinementFilters}
+                  searchValue={filters.search}
+                  hasAnyFilter={hasAnyFilter}
+                  onClearQuickFilter={clearQuickFilter}
+                  onClearRefinement={clearRefinementFilter}
+                  onClearSearch={clearSearchFilter}
+                  onClearAll={clearAllFilters}
+                />
               </div>
-              <ActiveFiltersBar
-                quickFilter={quickFilter}
-                refinementFilters={refinementFilters}
-                hasAnyFilter={hasAnyFilter}
-                onClearQuickFilter={clearQuickFilter}
-                onClearRefinement={clearRefinementFilter}
-                onClearAll={clearAllFilters}
-              />
 
               {error || overviewError ? (
                 <EmptyState title="Erro ao carregar" message={error || overviewError} />

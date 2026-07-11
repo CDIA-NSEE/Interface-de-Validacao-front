@@ -3,21 +3,36 @@ import { X } from "lucide-react";
 export default function ActiveFiltersBar({
   quickFilter,
   refinementFilters,
+  searchValue,
   hasAnyFilter,
   onClearQuickFilter,
   onClearRefinement,
+  onClearSearch,
   onClearAll,
 }) {
   const activeRefinements = Object.entries(refinementFilters || {}).filter(([, filter]) => filter);
+  const activeSearch = searchValue?.trim();
+  const hasStateContext = Boolean(quickFilter);
 
-  if (!hasAnyFilter && activeRefinements.length === 0) return null;
+  if (!hasStateContext && !hasAnyFilter && activeRefinements.length === 0) return null;
 
   return (
     <section className="active-filters-bar" aria-label="Filtros ativos">
-      {quickFilter && quickFilter.key !== "start" ? (
+      {quickFilter ? (
         <span className={`active-filter-chip active-filter-chip-${quickFilter.tone || "state-start"}`}>
           Estado: {quickFilter.label}
-          <button type="button" onClick={onClearQuickFilter} aria-label="Limpar estado">
+          {quickFilter.key !== "all" ? (
+            <button type="button" onClick={onClearQuickFilter} aria-label="Limpar estado">
+              <X size={14} aria-hidden="true" />
+            </button>
+          ) : null}
+        </span>
+      ) : null}
+
+      {activeSearch ? (
+        <span className="active-filter-chip active-filter-chip-state-all">
+          Busca: {activeSearch}
+          <button type="button" onClick={onClearSearch} aria-label="Limpar busca">
             <X size={14} aria-hidden="true" />
           </button>
         </span>
@@ -40,7 +55,13 @@ export default function ActiveFiltersBar({
       ))}
 
       {hasAnyFilter ? (
-        <button className="clear-filters-button" type="button" onClick={onClearAll}>
+        <button
+          className="clear-filters-button"
+          type="button"
+          onClick={onClearAll}
+          aria-label="Limpar todos os filtros"
+          title="Limpar todos os filtros"
+        >
           Limpar filtros
         </button>
       ) : null}

@@ -39,6 +39,18 @@ export default function ValidationSummaryPanel({
   const startCount = safeNumber(stateCounts.start);
   const validatedCount = safeNumber(stateCounts.validated);
   const completedCount = safeNumber(stateCounts.completed ?? stats?.reviewed_total);
+  const stateItems = [
+    [QUEUE_STATE_META.all, allCount],
+    [QUEUE_STATE_META.start, startCount],
+    [QUEUE_STATE_META.validated, validatedCount],
+    [QUEUE_STATE_META.completed, completedCount],
+  ];
+  const refinementItems = [
+    [REFINEMENT_META.confirmed, safeNumber(decisionCounts.confirmed), "decision", "confirmed"],
+    [REFINEMENT_META.rejected, safeNumber(decisionCounts.rejected), "decision", "rejected"],
+    [REFINEMENT_META.with_region, safeNumber(regionCounts.with_region), "region", "with_region"],
+    [REFINEMENT_META.without_region, safeNumber(regionCounts.without_region), "region", "without_region"],
+  ];
 
   return (
     <aside className="validation-summary-panel" id="validation-summary-panel">
@@ -63,34 +75,18 @@ export default function ValidationSummaryPanel({
           <h3>Estados</h3>
         </div>
         <div className="quick-metric-grid summary-quick-grid">
-          <QuickMetricItem
-            label={QUEUE_STATE_META.all.label}
-            value={allCount}
-            tone={QUEUE_STATE_META.all.tone}
-            active={quickFilter?.key === "all"}
-            onClick={() => onQuickFilter("all")}
-          />
-          <QuickMetricItem
-            label={QUEUE_STATE_META.start.label}
-            value={startCount}
-            tone={QUEUE_STATE_META.start.tone}
-            active={quickFilter?.key === "start"}
-            onClick={() => onQuickFilter("start")}
-          />
-          <QuickMetricItem
-            label={QUEUE_STATE_META.validated.label}
-            value={validatedCount}
-            tone={QUEUE_STATE_META.validated.tone}
-            active={quickFilter?.key === "validated"}
-            onClick={() => onQuickFilter("validated")}
-          />
-          <QuickMetricItem
-            label={QUEUE_STATE_META.completed.label}
-            value={completedCount}
-            tone={QUEUE_STATE_META.completed.tone}
-            active={quickFilter?.key === "completed"}
-            onClick={() => onQuickFilter("completed")}
-          />
+          {stateItems.map(([item, value]) => (
+            <QuickMetricItem
+              key={item.key}
+              label={item.label}
+              value={value}
+              tone={item.tone}
+              active={quickFilter?.key === item.key}
+              title={item.tooltip}
+              ariaLabel={`${item.label}: ${item.tooltip}`}
+              onClick={() => onQuickFilter(item.key)}
+            />
+          ))}
         </div>
       </section>
 
@@ -99,34 +95,18 @@ export default function ValidationSummaryPanel({
           <h3>Refinamentos</h3>
         </div>
         <div className="quick-metric-grid summary-quick-grid">
-          <QuickMetricItem
-            label={REFINEMENT_META.confirmed.label}
-            value={safeNumber(decisionCounts.confirmed)}
-            tone={REFINEMENT_META.confirmed.tone}
-            active={refinementFilters?.decision?.key === "confirmed"}
-            onClick={() => onRefinementFilter("decision", "confirmed")}
-          />
-          <QuickMetricItem
-            label={REFINEMENT_META.rejected.label}
-            value={safeNumber(decisionCounts.rejected)}
-            tone={REFINEMENT_META.rejected.tone}
-            active={refinementFilters?.decision?.key === "rejected"}
-            onClick={() => onRefinementFilter("decision", "rejected")}
-          />
-          <QuickMetricItem
-            label={REFINEMENT_META.with_region.label}
-            value={safeNumber(regionCounts.with_region)}
-            tone={REFINEMENT_META.with_region.tone}
-            active={refinementFilters?.region?.key === "with_region"}
-            onClick={() => onRefinementFilter("region", "with_region")}
-          />
-          <QuickMetricItem
-            label={REFINEMENT_META.without_region.label}
-            value={safeNumber(regionCounts.without_region)}
-            tone={REFINEMENT_META.without_region.tone}
-            active={refinementFilters?.region?.key === "without_region"}
-            onClick={() => onRefinementFilter("region", "without_region")}
-          />
+          {refinementItems.map(([item, value, type, key]) => (
+            <QuickMetricItem
+              key={item.key}
+              label={item.label}
+              value={value}
+              tone={item.tone}
+              active={refinementFilters?.[type]?.key === key}
+              title={item.tooltip}
+              ariaLabel={`${item.label}: ${item.tooltip}`}
+              onClick={() => onRefinementFilter(type, key)}
+            />
+          ))}
         </div>
       </section>
     </aside>
