@@ -4,17 +4,17 @@ const STEPS = [
   {
     icon: ListChecks,
     title: "Fila do dia",
-    text: "Comece pelo diagnostico ativo exibido na home.",
+    text: "Comece pelo diagnóstico ativo exibido na home.",
   },
   {
     icon: MousePointerClick,
-    title: "Decisao obrigatoria",
-    text: "Valide o diagnostico em destaque antes de avancar.",
+    title: "Decisão obrigatória",
+    text: "Valide o diagnóstico em destaque antes de avançar.",
   },
   {
     icon: CheckCircle2,
     title: "Opcionais",
-    text: "Use ficar no exame quando quiser revisar outros diagnosticos.",
+    text: "Use ficar no exame quando quiser revisar outros diagnósticos.",
   },
 ];
 
@@ -31,8 +31,8 @@ export default function TutorialModal({ isOpen, onClose }) {
       >
         <header className="modal-header">
           <div>
-            <span className="eyebrow">Tutorial rapido</span>
-            <h2 id="tutorial-modal-title">Validacao de ECG</h2>
+            <span className="eyebrow">Tutorial rápido</span>
+            <h2 id="tutorial-modal-title">Validação de ECG</h2>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar">
             <X size={18} aria-hidden="true" />

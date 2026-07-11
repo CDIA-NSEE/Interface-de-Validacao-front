@@ -5,11 +5,11 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { formatNow } from "../utils/dateUtils.js";
 
-export default function AppHeader({ onContact, onTutorial, title = "Revisao de ECG" }) {
+export default function AppHeader({ onContact, onTutorial, title = "Revisão de ECG" }) {
   const { logout, user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [now, setNow] = useState(new Date());
-  const doctorName = user?.full_name || "Usuario";
+  const doctorName = user?.full_name || "Usuário";
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60000);
@@ -27,7 +27,7 @@ export default function AppHeader({ onContact, onTutorial, title = "Revisao de E
         </div>
       </div>
       <div className="header-session">
-        <div className="header-tools" aria-label="Acoes globais">
+        <div className="header-tools" aria-label="Ações globais">
           <button
             className="icon-button compact-icon-button header-action-button"
             type="button"

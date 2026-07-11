@@ -74,7 +74,7 @@ function replaceDiagnosis(exam, updatedDiagnosis) {
 }
 
 function regionLabelFor(diagnosis) {
-  return diagnosis?.standard_text || diagnosis?.name || "diagnostico";
+  return diagnosis?.standard_text || diagnosis?.name || "diagnóstico";
 }
 
 export default function ExamReviewPage() {
@@ -119,7 +119,7 @@ export default function ExamReviewPage() {
     } catch (requestError) {
       setError(
         requestError?.response?.data?.detail ||
-          "Nao foi possivel carregar o exame selecionado.",
+          "Não foi possível carregar o exame selecionado.",
       );
     } finally {
       setIsLoading(false);
@@ -144,7 +144,7 @@ export default function ExamReviewPage() {
       }
       return true;
     } catch (requestError) {
-      setError(requestError?.response?.data?.detail || "Nao foi possivel concluir a acao.");
+      setError(requestError?.response?.data?.detail || "Não foi possível concluir a ação.");
       return false;
     } finally {
       setIsBusy(false);
@@ -191,7 +191,7 @@ export default function ExamReviewPage() {
 
   function handleStartRegion(diagnosis, region = null) {
     setError("");
-    setMessage(region ? "Redesenhe a area deste diagnostico no ECG." : "Desenhe a area deste diagnostico no ECG.");
+    setMessage(region ? "Redesenhe a área deste diagnóstico no ECG." : "Desenhe a área deste diagnóstico no ECG.");
     setActiveRegionTarget({
       diagnosisId: diagnosis.id,
       regionId: region?.id || null,
@@ -225,7 +225,7 @@ export default function ExamReviewPage() {
           : await addDiagnosisRegion(target.diagnosisId, region);
         return replaceDiagnosis(exam, updatedDiagnosis);
       },
-      target.regionId ? "Area atualizada." : "Area vinculada ao diagnostico.",
+      target.regionId ? "Área atualizada." : "Área vinculada ao diagnóstico.",
     );
 
     if (wasSaved) {
@@ -242,21 +242,21 @@ export default function ExamReviewPage() {
         const updatedDiagnosis = await removeDiagnosisRegion(diagnosisId, regionId);
         return replaceDiagnosis(exam, updatedDiagnosis);
       },
-      "Area removida.",
+      "Área removida.",
     );
   }
 
   async function handleReviewDiagnosis(diagnosisId, reviewStatus, reviewNotes = "") {
     const diagnosis = exam?.diagnoses?.find((item) => item.id === diagnosisId);
     if (reviewStatus === "confirmed" && diagnosis?.region_required_missing) {
-      setError("Marque ao menos uma area do ECG antes de confirmar este diagnostico.");
+      setError("Marque ao menos uma área do ECG antes de confirmar este diagnóstico.");
       handleStartRegion(diagnosis);
       return false;
     }
 
     return runAction(
       () => reviewDailyDiagnosis(diagnosisId, reviewStatus, reviewNotes),
-      reviewStatus === "confirmed" ? "Diagnostico confirmado." : "Diagnostico discordado.",
+      reviewStatus === "confirmed" ? "Diagnóstico confirmado." : "Diagnóstico discordado.",
     );
   }
 
@@ -270,7 +270,7 @@ export default function ExamReviewPage() {
         }),
       reviewResult === "alterado"
         ? "Exame validado como alterado."
-        : "Exame validado sem alteracao.",
+        : "Exame validado sem alteração.",
     );
   }
 
@@ -286,7 +286,7 @@ export default function ExamReviewPage() {
   async function handlePrimaryAction() {
     if (validationContext?.is_configured && !validationContext.is_general_review_day) {
       if (!requiredDecisionComplete) {
-        setError("Valide o diagnostico obrigatorio antes de avancar.");
+        setError("Valide o diagnóstico obrigatório antes de avançar.");
         return;
       }
       await goToNextDailyExam();
@@ -300,7 +300,7 @@ export default function ExamReviewPage() {
   }
 
   function handleStayOnExam() {
-    setMessage("Voce pode validar os diagnosticos opcionais deste ECG.");
+    setMessage("Você pode validar os diagnósticos opcionais deste ECG.");
   }
 
   const requiredDiagnoses = useMemo(
@@ -320,7 +320,7 @@ export default function ExamReviewPage() {
     [activeRegionTarget, exam],
   );
   const activeSelectionLabel = activeRegionTarget
-    ? `Marcando area: ${activeRegionTarget.label}`
+    ? `Marcando área: ${activeRegionTarget.label}`
     : "";
   const requiredDecisionComplete =
     !validationContext?.is_configured ||
@@ -328,10 +328,10 @@ export default function ExamReviewPage() {
       (diagnosis) => getDiagnosisStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
   const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
-  const doctorName = user?.full_name || "Usuario";
+  const doctorName = user?.full_name || "Usuário";
   const dailyLabel = validationContext?.is_general_review_day
-    ? "Dia 30 - revalidacao geral"
-    : validationContext?.active_standard_diagnosis || "Agenda nao configurada";
+    ? "Dia 30 - revalidação geral"
+    : validationContext?.active_standard_diagnosis || "Agenda não configurada";
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
 
   if (isLoading) {
@@ -341,7 +341,7 @@ export default function ExamReviewPage() {
   if (error && !exam) {
     return (
       <div className="page-shell narrow-shell">
-        <EmptyState title="Exame indisponivel" message={error} />
+        <EmptyState title="Exame indisponível" message={error} />
         <button className="button secondary" type="button" onClick={() => navigate("/")}>
           <ArrowLeft size={17} aria-hidden="true" />
           Voltar
@@ -354,12 +354,12 @@ export default function ExamReviewPage() {
     <div className="review-page">
       <header className="review-topbar">
         <div className="review-title-block">
-          <span className="eyebrow">Validacao medica</span>
+          <span className="eyebrow">Validação médica</span>
           <h1>Exame {exam.exam_code}</h1>
         </div>
         <dl className="review-context-strip">
           <div>
-            <dt>Diagnostico do dia</dt>
+            <dt>Diagnóstico do dia</dt>
             <dd>{dailyLabel}</dd>
           </div>
           <div>
@@ -387,7 +387,7 @@ export default function ExamReviewPage() {
           ) : null}
         </dl>
         <div className="review-topbar-meta">
-          <div className="header-tools compact-review-tools" aria-label="Acoes globais">
+          <div className="header-tools compact-review-tools" aria-label="Ações globais">
             <button
               className="icon-button compact-icon-button"
               type="button"
@@ -416,7 +416,7 @@ export default function ExamReviewPage() {
               {isDark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
             </button>
           </div>
-          <div className="review-session-chip" title={`Sessao ativa: ${doctorName}`}>
+          <div className="review-session-chip" title={`Sessão ativa: ${doctorName}`}>
             <UserRound size={15} aria-hidden="true" />
             <span>{doctorName}</span>
           </div>
@@ -449,16 +449,16 @@ export default function ExamReviewPage() {
             </section>
 
             <details className="review-details">
-              <summary>Dados clinicos completos</summary>
+              <summary>Dados clínicos completos</summary>
               <PatientInfo patient={exam.patient} />
             </details>
 
             {exam.comments || exam.source_notes ? (
               <details className="review-details">
-                <summary>Informacoes do laudo original</summary>
+                <summary>Informações do laudo original</summary>
                 {exam.comments ? (
                   <div className="source-text-block">
-                    <strong>Comentarios</strong>
+                    <strong>Comentários</strong>
                     <p>{exam.comments}</p>
                   </div>
                 ) : null}
@@ -472,12 +472,12 @@ export default function ExamReviewPage() {
             ) : null}
 
             <section className="review-notes-section">
-              <h2>Observacoes gerais da revisao</h2>
+              <h2>Observações gerais da revisão</h2>
               <textarea
                 className="notes-field"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="Registre comentarios gerais sobre o exame"
+                placeholder="Registre comentários gerais sobre o exame"
                 rows={3}
               />
             </section>
@@ -486,7 +486,7 @@ export default function ExamReviewPage() {
           <div className="review-sidebar-actions">
             {hasDiagnosisDivergence ? (
               <div className="diagnosis-divergence-alert">
-                Ha divergencia ou diagnostico medico adicionado. Ao validar, o exame sera
+                Há divergência ou diagnóstico médico adicionado. Ao validar, o exame será
                 classificado como alterado.
               </div>
             ) : null}
@@ -507,7 +507,7 @@ export default function ExamReviewPage() {
               canValidate={requiredDecisionComplete}
               isBusy={isBusy}
               isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
-              primaryLabel={usesDailyFlow ? "Salvar e proximo" : "Validar exame"}
+              primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
               secondaryLabel="Ficar no ECG"
             />
           </div>

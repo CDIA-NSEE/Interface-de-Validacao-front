@@ -2,7 +2,7 @@ import { Check, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const REVIEW_LABELS = {
-  pending: "Aguardando decisao",
+  pending: "Aguardando decisão",
   confirmed: "Concordo",
   rejected: "Discordo",
 };
@@ -25,8 +25,8 @@ function isDailyDiagnosis(diagnosis, dailyStandardDiagnosis) {
 }
 
 function regionCountLabel(count) {
-  if (count === 1) return "1 area";
-  return `${count} areas`;
+  if (count === 1) return "1 área";
+  return `${count} áreas`;
 }
 
 function DiagnosisCard({
@@ -48,7 +48,7 @@ function DiagnosisCard({
   const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
   const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
   const kickerLabel = isRequired
-    ? "Obrigatorio hoje"
+    ? "Obrigatório hoje"
     : diagnosis.source === "doctor_added"
       ? "Adicionado"
       : "Opcional";
@@ -87,11 +87,11 @@ function DiagnosisCard({
           <span className="diagnosis-kicker">{kickerLabel}</span>
           {diagnosis.is_grouped ? <span className="grouped-diagnosis-chip">Agrupado</span> : null}
           {diagnosis.region_required_missing ? (
-            <span className="region-required-chip">Area obrigatoria</span>
+            <span className="region-required-chip">Área obrigatória</span>
           ) : null}
         </div>
         <div className="diagnosis-text-pair">
-          <span>Texto Padrao</span>
+          <span>Texto Padrão</span>
           <strong>{standardText}</strong>
         </div>
         <div className="diagnosis-text-pair original-text-pair">
@@ -124,7 +124,7 @@ function DiagnosisCard({
           </button>
         ) : null}
         {regions.length ? (
-          <span className="diagnosis-region" title="Regiao ECG vinculada">
+          <span className="diagnosis-region" title="Região ECG vinculada">
             <MapPinned size={14} aria-hidden="true" />
             {regionCountLabel(regions.length)}
           </span>
@@ -133,15 +133,15 @@ function DiagnosisCard({
           <div className="diagnosis-region-list">
             {regions.map((region, index) => (
               <div className="diagnosis-region-row" key={region.id || `legacy-${index}`}>
-                <span>Area {index + 1}</span>
+                <span>Área {index + 1}</span>
                 <div className="region-row-actions">
                   <button
                     className="icon-button mini-icon-button"
                     type="button"
                     onClick={() => onEditRegion(diagnosis, region)}
                     disabled={isBusy}
-                    aria-label={`Editar area ${index + 1}`}
-                    title="Editar area"
+                    aria-label={`Editar área ${index + 1}`}
+                    title="Editar área"
                   >
                     <Pencil size={14} aria-hidden="true" />
                   </button>
@@ -150,8 +150,8 @@ function DiagnosisCard({
                     type="button"
                     onClick={() => onRemoveRegion(diagnosis.id, region.id)}
                     disabled={isBusy || !region.id}
-                    aria-label={`Remover area ${index + 1}`}
-                    title={region.id ? "Remover area" : "Area legada sem id"}
+                    aria-label={`Remover área ${index + 1}`}
+                    title={region.id ? "Remover área" : "Área legada sem id"}
                   >
                     <Trash2 size={14} aria-hidden="true" />
                   </button>
@@ -168,8 +168,8 @@ function DiagnosisCard({
           onClick={() => onStartRegion(diagnosis)}
           disabled={isBusy}
           aria-pressed={isRegionTarget}
-          aria-label="Marcar area do ECG"
-          title="Marcar area"
+          aria-label="Marcar área do ECG"
+          title="Marcar área"
         >
           <MapPinned size={20} aria-hidden="true" />
         </button>
@@ -181,7 +181,7 @@ function DiagnosisCard({
           onClick={submitAgreement}
           disabled={isBusy || diagnosis.source === "doctor_added"}
           aria-pressed={status === "confirmed"}
-          aria-label="Concordar com diagnostico"
+          aria-label="Concordar com diagnóstico"
           title="Concordar"
         >
           <Check size={21} aria-hidden="true" />
@@ -194,7 +194,7 @@ function DiagnosisCard({
           onClick={openDisagreementPanel}
           disabled={isBusy || diagnosis.source === "doctor_added"}
           aria-pressed={status === "rejected"}
-          aria-label="Discordar do diagnostico"
+          aria-label="Discordar do diagnóstico"
           title="Discordar"
         >
           <X size={21} aria-hidden="true" />
@@ -206,7 +206,7 @@ function DiagnosisCard({
             onClick={() => onRemove(diagnosis.id)}
             disabled={isBusy}
             aria-label={`Remover ${diagnosis.name}`}
-            title="Remover diagnostico medico"
+            title="Remover diagnóstico médico"
           >
             <Trash2 size={17} aria-hidden="true" />
           </button>
@@ -312,19 +312,19 @@ export default function DiagnosisPanel({
 
   return (
     <div className="diagnosis-panel">
-      <section className="ai-recommendation-box" aria-label="Recomendacao da IA">
+      <section className="ai-recommendation-box" aria-label="Recomendação da IA">
         <Sparkles size={17} aria-hidden="true" />
         <div>
-          <strong>Recomendacao da IA</strong>
+          <strong>Recomendação da IA</strong>
           <p>
-            Apoio visual inicial baseado nos dados extraidos. A decisao final permanece manual.
+            Apoio visual inicial baseado nos dados extraídos. A decisão final permanece manual.
           </p>
         </div>
       </section>
 
       <section className="diagnosis-group">
         <div className="diagnosis-group-heading">
-          <strong>{isGeneralReviewDay ? "Revalidacao geral" : "Diagnostico obrigatorio"}</strong>
+          <strong>{isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico obrigatório"}</strong>
         </div>
 
         <div className="diagnosis-list">
@@ -344,7 +344,7 @@ export default function DiagnosisPanel({
               />
             ))
           ) : (
-            <span className="muted-text">Nenhum diagnostico obrigatorio configurado para este ECG.</span>
+            <span className="muted-text">Nenhum diagnóstico obrigatório configurado para este ECG.</span>
           )}
         </div>
       </section>
@@ -352,7 +352,7 @@ export default function DiagnosisPanel({
       {optionalDiagnoses.length ? (
         <section className="diagnosis-group">
           <div className="diagnosis-group-heading">
-            <strong>Diagnosticos opcionais do ECG</strong>
+            <strong>Diagnósticos opcionais do ECG</strong>
           </div>
           <div className="diagnosis-list">
             {optionalDiagnoses.map((diagnosis) => (
@@ -375,21 +375,21 @@ export default function DiagnosisPanel({
 
       <section className="diagnosis-group">
         <div className="diagnosis-group-heading">
-          <strong>Adicionar novo diagnostico</strong>
+          <strong>Adicionar novo diagnóstico</strong>
         </div>
 
         <div className="diagnosis-form">
           <label className="visually-hidden" htmlFor="new-diagnosis-select">
-            Selecionar um diagnostico
+            Selecionar um diagnóstico
           </label>
           <select
             id="new-diagnosis-select"
             value={name}
             onChange={handleSelectDiagnosis}
             disabled={isBusy}
-            aria-label="Selecionar um diagnostico"
+            aria-label="Selecionar um diagnóstico"
           >
-            <option value="">Selecionar um diagnostico</option>
+            <option value="">Selecionar um diagnóstico</option>
             {options.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -399,7 +399,7 @@ export default function DiagnosisPanel({
           {selectedRegion ? (
             <div className="region-ready">
               <MapPinned size={16} aria-hidden="true" />
-              Regiao selecionada para o proximo diagnostico
+              Região selecionada para o próximo diagnóstico
             </div>
           ) : null}
         </div>

@@ -35,7 +35,7 @@ export default function LoginPage() {
       await login({ email, password: credentials.password });
       navigate("/", { replace: true });
     } catch (requestError) {
-      setError(requestError?.response?.data?.detail || "Nao foi possivel entrar.");
+      setError(requestError?.response?.data?.detail || "Não foi possível entrar.");
     } finally {
       setIsSubmitting(false);
     }
@@ -50,8 +50,8 @@ export default function LoginPage() {
             <img src="/logos/logo_NSEE.jpeg" alt="NSEE" />
           </div>
           <div>
-            <span className="eyebrow">Acesso medico</span>
-            <h1 id="login-title">Revisao de ECG</h1>
+            <span className="eyebrow">Acesso médico</span>
+            <h1 id="login-title">Revisão de ECG</h1>
           </div>
         </div>
 
@@ -64,8 +64,8 @@ export default function LoginPage() {
           {error ? <div className="feedback error-feedback">{error}</div> : null}
           {isRecoveringPassword ? (
             <div className="feedback login-info-feedback">
-              Para recuperar sua senha, contate o administrador responsavel pelo cadastro de
-              usuarios. Novos usuarios nao sao criados por esta tela.
+              Para recuperar sua senha, contate o administrador responsável pelo cadastro de
+              usuários. Novos usuários não são criados por esta tela.
             </div>
           ) : null}
 

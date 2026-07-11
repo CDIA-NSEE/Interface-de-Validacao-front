@@ -1,11 +1,11 @@
 export const STATUS_OPTIONS = [
   { value: "nao_validado", label: "Iniciar" },
   { value: "em_validacao", label: "Iniciar" },
-  { value: "valido", label: "Concluidos" },
+  { value: "valido", label: "Concluídos" },
 ];
 
 export const REVIEW_RESULT_OPTIONS = [
-  { value: "sem_alteracao", label: "Sem alteracao" },
+  { value: "sem_alteracao", label: "Sem alteração" },
   { value: "alterado", label: "Alterado" },
 ];
 
@@ -19,14 +19,14 @@ export const STATUS_META = {
     className: "status-state-start",
   },
   valido: {
-    label: "Concluidos",
+    label: "Concluídos",
     className: "status-state-completed",
   },
 };
 
 export const REVIEW_RESULT_META = {
   sem_alteracao: {
-    label: "Sem alteracao",
+    label: "Sem alteração",
     className: "status-success",
   },
   alterado: {

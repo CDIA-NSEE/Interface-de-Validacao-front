@@ -50,17 +50,17 @@ export default function StatsCards({ stats }) {
       summary: "Hoje e semana atual",
       summaryTone: "neutral",
       cards: [
-        ["reviewed_today", "Concluidos hoje", CheckCircle2, "completed", safeNumber(stats?.reviewed_today)],
-        ["reviewed_week", "Concluidos na semana", CalendarCheck, "completed", safeNumber(stats?.reviewed_week)],
-        ["reviewed_total", "Total concluido", FileCheck2, "completed", completedTotal],
+        ["reviewed_today", "Concluídos hoje", CheckCircle2, "completed", safeNumber(stats?.reviewed_today)],
+        ["reviewed_week", "Concluídos na semana", CalendarCheck, "completed", safeNumber(stats?.reviewed_week)],
+        ["reviewed_total", "Total concluído", FileCheck2, "completed", completedTotal],
       ],
     },
     {
-      title: "Resultado dos concluidos",
+      title: "Resultado dos concluídos",
       summary:
         reviewedTotal > 0
-          ? `${validWithChange} de ${reviewedTotal} concluidos apresentaram alteracao - ${alteredPercent}%`
-          : "Sem exames concluidos para analise de resultado",
+          ? `${validWithChange} de ${reviewedTotal} concluídos apresentaram alteração - ${alteredPercent}%`
+          : "Sem exames concluídos para análise de resultado",
       summaryTone: "neutral",
       footer: (
         <ClinicalResultBar
@@ -70,7 +70,7 @@ export default function StatsCards({ stats }) {
         />
       ),
       cards: [
-        ["valid_without_change", "Sem alteracao", ShieldCheck, "success", validWithoutChange],
+        ["valid_without_change", "Sem alteração", ShieldCheck, "success", validWithoutChange],
         ["valid_with_change", "Alterados", AlertTriangle, "clinical-alert", validWithChange],
       ],
     },

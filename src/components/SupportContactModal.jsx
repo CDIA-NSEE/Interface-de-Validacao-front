@@ -47,7 +47,7 @@ export default function SupportContactModal({ contact, isOpen, onClose }) {
               );
             })
           ) : (
-            <div className="feedback login-info-feedback">Canal oficial pendente de configuracao.</div>
+            <div className="feedback login-info-feedback">Canal oficial pendente de configuração.</div>
           )}
         </div>
       </section>

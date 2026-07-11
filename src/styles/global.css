@@ -186,7 +186,7 @@ a {
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(30, 74, 120, 0.06);
 }
 
@@ -2764,39 +2764,60 @@ textarea:focus {
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero {
-  --queue-hero-accent: #d8f3fa;
-  --queue-hero-fill: #0e5a78;
-  --queue-hero-progress-fill: #eaf9fc;
-  --queue-hero-progress-track: #b7d9e2;
+  --queue-hero-blue: #5fb6cc;
+  --queue-hero-accent: #7dd3e8;
+  --queue-hero-fill: #0f3f52;
+  --queue-hero-icon-fill: #143f50;
+  --queue-hero-progress-fill: #143f50;
+  --queue-hero-progress-track: #2b6a7d;
   --queue-hero-button-fill: #eaf9fc;
   --queue-hero-button-hover: #d8f3fa;
   --queue-hero-button-text: #0e5a78;
-  border-color: #8bcfe2;
+  border-color: var(--queue-hero-blue);
   border-left-color: var(--queue-hero-accent);
   background: var(--queue-hero-fill);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34);
 }
 
+:root[data-theme="dark"] .dashboard-queue-hero .queue-hero-copy h2 {
+  color: #f4fbff;
+}
+
+:root[data-theme="dark"] .dashboard-queue-hero .queue-hero-copy p {
+  color: #c8eaf3;
+}
+
 :root[data-theme="dark"] .dashboard-queue-hero .eyebrow {
+  color: var(--queue-hero-accent);
+}
+
+:root[data-theme="dark"] .dashboard-queue-hero .daily-context-icon {
   color: #d8f3fa;
+  border-color: var(--queue-hero-accent);
+  background: var(--queue-hero-icon-fill);
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero .queue-progress {
-  color: #0e5a78;
-  border-color: #8bcfe2;
-  background: #eaf9fc;
+  color: #f4fbff;
+  border-color: var(--queue-hero-blue);
+  background: var(--queue-hero-progress-fill);
+  box-shadow: inset 0 0 0 1px rgba(167, 232, 245, 0.08);
+}
+
+:root[data-theme="dark"] .dashboard-queue-hero .queue-progress-copy span {
+  color: #a7e8f5;
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero .queue-progress-copy strong {
-  color: #0b2a4a;
+  color: #f4fbff;
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero .queue-progress-track {
-  background: #b7d9e2;
+  background: var(--queue-hero-progress-track);
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero .queue-progress-track span {
-  background: #0e5a78;
+  background: #a7e8f5;
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero .primary-action:hover:not(:disabled) {

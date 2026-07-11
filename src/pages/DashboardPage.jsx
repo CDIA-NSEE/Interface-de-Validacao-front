@@ -90,8 +90,8 @@ function actionQueueSort(firstExam, secondExam) {
 function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
   if (isDailyQueue) {
     return {
-      title: "Fila do dia concluida",
-      message: "Nao ha ECG para iniciar no diagnostico ativo.",
+      title: "Fila do dia concluída",
+      message: "Não há ECG para iniciar no diagnóstico ativo.",
     };
   }
   if (quickFilter?.key && quickFilter.key !== "all") {
@@ -103,27 +103,27 @@ function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
   if (hasSearch) {
     return {
       title: "Nenhum exame encontrado",
-      message: "Ajuste ou limpe a busca para voltar a fila de revisao.",
+      message: "Ajuste ou limpe a busca para voltar à fila de revisão.",
     };
   }
   return {
     title: "Nenhum exame encontrado",
-    message: "Use os filtros do resumo para ajustar a visualizacao.",
+    message: "Use os filtros do resumo para ajustar a visualização.",
   };
 }
 
 function contextTitle(context) {
-  if (!context) return "Carregando diagnostico do dia";
-  if (context.is_general_review_day) return "Dia 30: revalidacao geral";
+  if (!context) return "Carregando diagnóstico do dia";
+  if (context.is_general_review_day) return "Dia 30: revalidação geral";
   if (context.active_standard_diagnosis) return context.active_standard_diagnosis;
-  return "Agenda de diagnostico nao configurada";
+  return "Agenda de diagnóstico não configurada";
 }
 
 function getHeroCopy(context) {
-  if (!context) return "Buscando configuracao do ciclo.";
-  if (!context.is_configured) return "Agenda diaria nao configurada; usando a fila disponivel.";
-  if (context.is_general_review_day) return "Revalidacao geral do ciclo.";
-  return "Diagnostico padronizado do dia.";
+  if (!context) return "Buscando configuração do ciclo.";
+  if (!context.is_configured) return "Agenda diária não configurada; usando a fila disponível.";
+  if (context.is_general_review_day) return "Revalidação geral do ciclo.";
+  return "Diagnóstico padronizado do dia.";
 }
 
 function normalizeQueueProgress(progress, fallbackRemaining = 0) {
@@ -182,7 +182,7 @@ export default function DashboardPage() {
       setQueueProgress(emptyQueueProgress);
       setOverviewError(
         requestError?.response?.data?.detail ||
-          "Nao foi possivel carregar o contexto de validacao diaria.",
+          "Não foi possível carregar o contexto de validação diária.",
       );
     }
   }, []);
@@ -196,7 +196,7 @@ export default function DashboardPage() {
       setStats(null);
       setOverviewError(
         requestError?.response?.data?.detail ||
-          "A API nao respondeu em http://localhost:8000. Inicie o back para carregar metricas e exames.",
+          "A API não respondeu em http://localhost:8000. Inicie o back para carregar métricas e exames.",
       );
     }
 
@@ -218,7 +218,7 @@ export default function DashboardPage() {
       setExams([]);
       setError(
         requestError?.response?.data?.detail ||
-          "Nao foi possivel carregar os exames. Verifique se o back esta rodando em http://localhost:8000.",
+          "Não foi possível carregar os exames. Verifique se o back está rodando em http://localhost:8000.",
       );
     } finally {
       setIsLoading(false);
@@ -374,8 +374,8 @@ export default function DashboardPage() {
 
   const dailyStatus = useMemo(() => {
     if (!validationContext) return "Carregando";
-    if (!validationContext.is_configured) return "Configuracao pendente";
-    if (validationContext.is_general_review_day) return "Revalidacao geral";
+    if (!validationContext.is_configured) return "Configuração pendente";
+    if (validationContext.is_general_review_day) return "Revalidação geral";
     return `Dia ${validationContext.day_index || "-"}`;
   }, [validationContext]);
   const heroCopy = getHeroCopy(validationContext);
@@ -385,7 +385,7 @@ export default function DashboardPage() {
       <div className="page-shell">
         <AppHeader onContact={openSupport} onTutorial={() => setIsTutorialOpen(true)} />
 
-        <section className="dashboard-queue-hero" aria-label="Fila de validacao">
+        <section className="dashboard-queue-hero" aria-label="Fila de validação">
           <div className="queue-hero-main">
             <span className="daily-context-icon" aria-hidden="true">
               <CalendarDays size={24} />
@@ -423,7 +423,7 @@ export default function DashboardPage() {
               disabled={!canStartQueue}
             >
               <PlayCircle size={19} aria-hidden="true" />
-              Iniciar validacao
+              Iniciar validação
             </button>
           </div>
         </section>

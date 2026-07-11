@@ -29,18 +29,18 @@ export default function ProgressSummary({ stats, compact = false }) {
   const completedPercent = percent(completedTotal, totalFlow);
 
   return (
-    <section className={`progress-summary${compact ? " compact-progress-summary" : ""}`} aria-label="Fluxo de validacao">
+    <section className={`progress-summary${compact ? " compact-progress-summary" : ""}`} aria-label="Fluxo de validação">
       <div className="progress-summary-copy">
-        <span className="eyebrow">Fluxo de validacao</span>
+        <span className="eyebrow">Fluxo de validação</span>
         <strong>
-          {completedTotal}/{totalFlow} concluidos - {completedPercent}%
+          {completedTotal}/{totalFlow} concluídos - {completedPercent}%
         </strong>
       </div>
 
       <div
         className="segmented-progress"
         role="img"
-        aria-label={`${startPercent}% iniciar, ${validatedPercent}% validados e ${completedPercent}% concluidos`}
+        aria-label={`${startPercent}% iniciar, ${validatedPercent}% validados e ${completedPercent}% concluídos`}
       >
         <span
           className="progress-segment progress-start"
@@ -68,7 +68,7 @@ export default function ProgressSummary({ stats, compact = false }) {
           dotClass="validated-dot"
         />
         <LegendItem
-          label="Concluidos"
+          label="Concluídos"
           value={completedTotal}
           dotClass="completed-dot"
         />
