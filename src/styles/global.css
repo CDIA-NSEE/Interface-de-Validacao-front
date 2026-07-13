@@ -1683,9 +1683,9 @@ textarea:focus {
 .review-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-height: 0;
-  padding: 8px 8px 0;
+  padding: 6px 8px 0;
   border-right: 1px solid var(--color-border);
   background: #ffffff;
   overflow: hidden;
@@ -1695,7 +1695,7 @@ textarea:focus {
   display: grid;
   align-content: start;
   flex: 1 1 auto;
-  gap: 6px;
+  gap: 5px;
   min-height: 0;
   padding-right: 2px;
   overflow-x: hidden;
@@ -1706,7 +1706,7 @@ textarea:focus {
 .review-sidebar-actions {
   flex: 0 0 auto;
   margin-inline: -8px;
-  padding: 6px 8px 8px;
+  padding: 5px 8px 7px;
   border-top: 1px solid var(--color-border);
   background: #ffffff;
   box-shadow: 0 -8px 18px rgba(32, 50, 74, 0.06);
@@ -1715,9 +1715,9 @@ textarea:focus {
 .review-status-section {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
-  padding-bottom: 4px;
+  padding-bottom: 3px;
   border-bottom: 0;
 }
 
@@ -1846,22 +1846,9 @@ textarea:focus {
   margin-top: 6px;
 }
 
-.review-notes-section {
-  display: grid;
-  gap: 6px;
-  padding: 0 0 7px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.review-notes-section h2 {
-  display: flex;
-  align-items: center;
-  min-height: 26px;
-  margin: 0;
-  color: #20324a;
-  font-size: 0.9225rem;
-  font-weight: 800;
-  line-height: 1.2;
+.review-notes-details .notes-field {
+  width: 100%;
+  margin-top: 5px;
 }
 
 .diagnosis-panel,
@@ -1869,16 +1856,16 @@ textarea:focus {
 .diagnosis-list,
 .diagnosis-group {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .diagnosis-group {
-  padding: 0 0 7px;
+  padding: 0 0 6px;
   border-bottom: 1px solid #cfe0f3;
 }
 
 .diagnosis-group + .diagnosis-group {
-  padding-top: 7px;
+  padding-top: 5px;
 }
 
 .diagnosis-group-heading {
@@ -1899,8 +1886,8 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  min-height: 46px;
-  padding: 5px 7px;
+  min-height: 44px;
+  padding: 5px 8px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #fbfdff;
@@ -1936,9 +1923,62 @@ textarea:focus {
   height: 32px;
 }
 
+.diagnosis-secondary-panel {
+  gap: 5px;
+}
+
+.diagnosis-secondary-summary {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: #20324a;
+  background: #fbfdff;
+  cursor: pointer;
+  font-weight: 900;
+  list-style: none;
+}
+
+.diagnosis-secondary-summary::-webkit-details-marker {
+  display: none;
+}
+
+.diagnosis-secondary-summary::after {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #cfe0f3;
+  border-radius: 999px;
+  color: var(--color-primary);
+  content: "+";
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.diagnosis-secondary-panel[open] .diagnosis-secondary-summary::after {
+  content: "-";
+}
+
+.diagnosis-secondary-summary span {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 0.7925rem;
+  font-weight: 800;
+}
+
+.compact-diagnosis-form {
+  padding-top: 2px;
+}
+
 .diagnosis-item .diagnosis-content {
   display: grid;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -1947,19 +1987,19 @@ textarea:focus {
   flex-wrap: wrap;
   align-items: center;
   justify-content: end;
-  gap: 6px;
+  gap: 5px;
 }
 
 .diagnosis-review-actions .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
   line-height: 1;
-  box-shadow: 0 8px 16px rgba(15, 39, 69, 0.16);
+  box-shadow: 0 6px 12px rgba(15, 39, 69, 0.12);
 }
 
 .diagnosis-review-actions .icon-button {
@@ -1973,6 +2013,7 @@ textarea:focus {
 }
 
 .diagnosis-review-label {
+  width: fit-content;
   font-weight: 800;
   line-height: 1.12;
 }
@@ -2059,10 +2100,24 @@ textarea:focus {
   color: var(--color-danger);
 }
 
-.diagnosis-item strong {
+.diagnosis-item strong,
+.diagnosis-title {
   color: #20324a;
   font-size: 0.9025rem;
   line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.diagnosis-title {
+  display: block;
+}
+
+.diagnosis-original-text {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.7925rem;
+  font-weight: 700;
+  line-height: 1.22;
   overflow-wrap: anywhere;
 }
 
@@ -2296,8 +2351,9 @@ textarea:focus {
 }
 
 .feedback {
-  padding: 12px;
+  padding: 8px 10px;
   border-radius: 8px;
+  font-size: 0.8525rem;
   font-weight: 800;
 }
 
@@ -2545,26 +2601,6 @@ textarea:focus {
   background: var(--color-primary);
 }
 
-.diagnosis-text-pair {
-  display: grid;
-  gap: 2px;
-}
-
-.diagnosis-text-pair > span {
-  color: var(--color-muted) !important;
-  font-size: 0.7425rem !important;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.diagnosis-text-pair p {
-  color: var(--color-text);
-  font-size: 0.8625rem;
-  font-weight: 700;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
 .review-toggle {
   color: #5f6f82;
   border-color: #d6e1ee;
@@ -2613,6 +2649,7 @@ textarea:focus {
 :root[data-theme="dark"] .viewer-toolbar,
 :root[data-theme="dark"] .ecg-canvas,
 :root[data-theme="dark"] .diagnosis-item,
+:root[data-theme="dark"] .diagnosis-secondary-summary,
 :root[data-theme="dark"] .support-channel,
 :root[data-theme="dark"] .tutorial-step {
   background: var(--color-surface);
@@ -2850,6 +2887,21 @@ textarea:focus {
   background: #13263b;
 }
 
+:root[data-theme="dark"] .original-diagnosis.confirmed {
+  border-color: #3fb977;
+  background: rgba(76, 193, 132, 0.16);
+}
+
+:root[data-theme="dark"] .original-diagnosis.rejected {
+  border-color: #dc6a78;
+  background: rgba(242, 109, 125, 0.16);
+}
+
+:root[data-theme="dark"] .diagnosis-kicker {
+  color: #bfdbfe !important;
+  background: #1d3a59;
+}
+
 :root[data-theme="dark"] .grouped-diagnosis-chip {
   color: var(--color-primary) !important;
   border-color: var(--color-primary);
@@ -2866,7 +2918,8 @@ textarea:focus {
 :root[data-theme="dark"] .region-mode-chip,
 :root[data-theme="dark"] .diagnosis-region-row,
 :root[data-theme="dark"] .diagnosis-note-preview,
-:root[data-theme="dark"] .diagnosis-disagreement-panel {
+:root[data-theme="dark"] .diagnosis-disagreement-panel,
+:root[data-theme="dark"] .diagnosis-secondary-summary {
   color: var(--color-text);
   border-color: var(--color-border);
   background: #101b2a;
@@ -2877,8 +2930,56 @@ textarea:focus {
   color: #ffb7bd;
 }
 
+:root[data-theme="dark"] .review-title-block h1,
+:root[data-theme="dark"] .review-context-strip dd,
+:root[data-theme="dark"] .review-session-chip,
+:root[data-theme="dark"] .review-session-chip span,
+:root[data-theme="dark"] .diagnosis-group-heading,
+:root[data-theme="dark"] .diagnosis-group-heading strong,
+:root[data-theme="dark"] .review-details summary,
+:root[data-theme="dark"] .diagnosis-secondary-summary strong,
+:root[data-theme="dark"] .diagnosis-title,
+:root[data-theme="dark"] .source-text-block strong {
+  color: #f4f9ff;
+}
+
+:root[data-theme="dark"] .review-title-block .eyebrow,
+:root[data-theme="dark"] .review-context-strip dt,
+:root[data-theme="dark"] .diagnosis-group-heading span,
+:root[data-theme="dark"] .diagnosis-secondary-summary span,
+:root[data-theme="dark"] .muted-text,
+:root[data-theme="dark"] .source-text-block p {
+  color: #c7d7ea;
+}
+
+:root[data-theme="dark"] .review-context-strip div,
+:root[data-theme="dark"] .review-session-chip {
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .review-details summary::after,
+:root[data-theme="dark"] .diagnosis-secondary-summary::after {
+  color: #bfdbfe;
+  border-color: var(--color-border);
+  background: #101b2a;
+}
+
+:root[data-theme="dark"] .confirmed .diagnosis-review-label {
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .rejected .diagnosis-review-label {
+  color: #fda4af;
+}
+
+:root[data-theme="dark"] .diagnosis-divergence-alert {
+  color: #ffd98f;
+  border-color: #8a651f;
+  background: #2d2415;
+}
+
 :root[data-theme="dark"] .ai-recommendation-box p,
-:root[data-theme="dark"] .diagnosis-text-pair p,
+:root[data-theme="dark"] .diagnosis-original-text,
 :root[data-theme="dark"] .diagnosis-note-preview p,
 :root[data-theme="dark"] .review-context-strip dd,
 :root[data-theme="dark"] .quick-metric strong,

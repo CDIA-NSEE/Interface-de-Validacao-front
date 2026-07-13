@@ -29,6 +29,10 @@ function regionCountLabel(count) {
   return `${count} áreas`;
 }
 
+function sameDiagnosisText(left, right) {
+  return normalize(left) === normalize(right);
+}
+
 function DiagnosisCard({
   activeRegionTarget,
   diagnosis,
@@ -45,13 +49,11 @@ function DiagnosisCard({
   const originalText = diagnosis.original_text || diagnosis.name;
   const regions = diagnosis.regions || [];
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
+  const hasDistinctOriginal = Boolean(originalText && !sameDiagnosisText(standardText, originalText));
   const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
   const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
-  const kickerLabel = isRequired
-    ? "Obrigatório hoje"
-    : diagnosis.source === "doctor_added"
-      ? "Adicionado"
-      : "Opcional";
+  const kickerLabel = isRequired ? "Diagnóstico do dia" : diagnosis.source === "doctor_added" ? "Adicionado" : "";
+  const hasChipRow = Boolean(kickerLabel || diagnosis.is_grouped || diagnosis.region_required_missing);
 
   useEffect(() => {
     setReviewNoteDraft(diagnosis.review_notes || "");
@@ -83,21 +85,23 @@ function DiagnosisCard({
       }`}
     >
       <div className="diagnosis-content">
-        <div className="diagnosis-chip-row">
-          <span className="diagnosis-kicker">{kickerLabel}</span>
-          {diagnosis.is_grouped ? <span className="grouped-diagnosis-chip">Agrupado</span> : null}
-          {diagnosis.region_required_missing ? (
-            <span className="region-required-chip">Área obrigatória</span>
-          ) : null}
-        </div>
-        <div className="diagnosis-text-pair">
-          <span>Texto Padrão</span>
-          <strong>{standardText}</strong>
-        </div>
-        <div className="diagnosis-text-pair original-text-pair">
-          <span>Texto Original</span>
-          <p>{originalText}</p>
-        </div>
+        {hasChipRow ? (
+          <div className="diagnosis-chip-row">
+            {kickerLabel ? <span className="diagnosis-kicker">{kickerLabel}</span> : null}
+            {diagnosis.is_grouped ? <span className="grouped-diagnosis-chip">Agrupado</span> : null}
+            {diagnosis.region_required_missing ? (
+              <span className="region-required-chip">Área obrigatória</span>
+            ) : null}
+          </div>
+        ) : null}
+        <strong className="diagnosis-title" title={`Texto padrão: ${standardText}`}>
+          {standardText}
+        </strong>
+        {hasDistinctOriginal ? (
+          <p className="diagnosis-original-text" title={`Texto original: ${originalText}`}>
+            Original: {originalText}
+          </p>
+        ) : null}
         <span className="diagnosis-review-label">{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</span>
         {status === "rejected" && diagnosis.review_notes ? (
           <div className="diagnosis-note-preview">
@@ -258,27 +262,36 @@ function DiagnosisCard({
 
 export default function DiagnosisPanel({
   activeRegionTarget,
+  aiRecommendation,
   dailyStandardDiagnosis,
   diagnoses = [],
   isBusy,
   isGeneralReviewDay,
+  isSecondaryOpen,
   onAdd,
   onEditRegion,
   onRegionConsumed,
   onRemove,
   onRemoveRegion,
   onReview,
+  onSecondaryToggle,
   onStartRegion,
   options = [],
   selectedRegion,
 }) {
   const [name, setName] = useState("");
-  const originalDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "original");
-  const doctorDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "doctor_added");
+  const aiRecommendationText = typeof aiRecommendation === "string" ? aiRecommendation.trim() : "";
 
-  const { optionalDiagnoses, requiredDiagnoses } = useMemo(() => {
+  const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(() => {
+    const originalDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "original");
+    const addedDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "doctor_added");
+
     if (isGeneralReviewDay) {
-      return { requiredDiagnoses: originalDiagnoses, optionalDiagnoses: [] };
+      return {
+        doctorDiagnoses: addedDiagnoses,
+        requiredDiagnoses: originalDiagnoses,
+        optionalDiagnoses: [],
+      };
     }
 
     const required = originalDiagnoses.filter((diagnosis) =>
@@ -287,8 +300,12 @@ export default function DiagnosisPanel({
     const optional = originalDiagnoses.filter(
       (diagnosis) => !isDailyDiagnosis(diagnosis, dailyStandardDiagnosis),
     );
-    return { requiredDiagnoses: required, optionalDiagnoses: optional };
-  }, [dailyStandardDiagnosis, isGeneralReviewDay, originalDiagnoses]);
+    return {
+      doctorDiagnoses: addedDiagnoses,
+      requiredDiagnoses: required,
+      optionalDiagnoses: optional,
+    };
+  }, [dailyStandardDiagnosis, diagnoses, isGeneralReviewDay]);
 
   async function handleSelectDiagnosis(event) {
     const diagnosisName = event.target.value;
@@ -310,21 +327,29 @@ export default function DiagnosisPanel({
     }
   }
 
+  const hasSecondaryContent =
+    optionalDiagnoses.length > 0 || doctorDiagnoses.length > 0 || options.length > 0 || selectedRegion;
+  const hasOptionalOrAddedDiagnoses = optionalDiagnoses.length > 0 || doctorDiagnoses.length > 0;
+  const secondaryTitle = hasOptionalOrAddedDiagnoses ? "Opcionais" : "Adicionar diagnóstico";
+  const secondarySummary = hasOptionalOrAddedDiagnoses
+    ? `${optionalDiagnoses.length} ECG / ${doctorDiagnoses.length} adicionados`
+    : "Novo diagnóstico";
+
   return (
     <div className="diagnosis-panel">
-      <section className="ai-recommendation-box" aria-label="Recomendação da IA">
-        <Sparkles size={17} aria-hidden="true" />
-        <div>
-          <strong>Recomendação da IA</strong>
-          <p>
-            Apoio visual inicial baseado nos dados extraídos. A decisão final permanece manual.
-          </p>
-        </div>
-      </section>
+      {aiRecommendationText ? (
+        <section className="ai-recommendation-box" aria-label="Recomendação da IA">
+          <Sparkles size={17} aria-hidden="true" />
+          <div>
+            <strong>Recomendação da IA</strong>
+            <p>{aiRecommendationText}</p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="diagnosis-group">
         <div className="diagnosis-group-heading">
-          <strong>{isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico obrigatório"}</strong>
+          <strong>{isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"}</strong>
         </div>
 
         <div className="diagnosis-list">
@@ -344,85 +369,87 @@ export default function DiagnosisPanel({
               />
             ))
           ) : (
-            <span className="muted-text">Nenhum diagnóstico obrigatório configurado para este ECG.</span>
+            <span className="muted-text">Nenhum diagnóstico do dia configurado para este ECG.</span>
           )}
         </div>
       </section>
 
-      {optionalDiagnoses.length ? (
-        <section className="diagnosis-group">
-          <div className="diagnosis-group-heading">
-            <strong>Diagnósticos opcionais do ECG</strong>
-          </div>
-          <div className="diagnosis-list">
-            {optionalDiagnoses.map((diagnosis) => (
-              <DiagnosisCard
-                diagnosis={diagnosis}
-                activeRegionTarget={activeRegionTarget}
-                isBusy={isBusy}
-                isRequired={false}
-                key={diagnosis.id}
-                onEditRegion={onEditRegion}
-                onRemove={onRemove}
-                onRemoveRegion={onRemoveRegion}
-                onReview={onReview}
-                onStartRegion={onStartRegion}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {hasSecondaryContent ? (
+        <details
+          className="diagnosis-group diagnosis-secondary-panel"
+          open={Boolean(isSecondaryOpen)}
+          onToggle={(event) => onSecondaryToggle?.(event.currentTarget.open)}
+        >
+          <summary className="diagnosis-secondary-summary">
+            <strong>{secondaryTitle}</strong>
+            <span>{secondarySummary}</span>
+          </summary>
 
-      <section className="diagnosis-group">
-        <div className="diagnosis-group-heading">
-          <strong>Adicionar novo diagnóstico</strong>
-        </div>
-
-        <div className="diagnosis-form">
-          <label className="visually-hidden" htmlFor="new-diagnosis-select">
-            Selecionar um diagnóstico
-          </label>
-          <select
-            id="new-diagnosis-select"
-            value={name}
-            onChange={handleSelectDiagnosis}
-            disabled={isBusy}
-            aria-label="Selecionar um diagnóstico"
-          >
-            <option value="">Selecionar um diagnóstico</option>
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {selectedRegion ? (
-            <div className="region-ready">
-              <MapPinned size={16} aria-hidden="true" />
-              Região selecionada para o próximo diagnóstico
+          {optionalDiagnoses.length ? (
+            <div className="diagnosis-list">
+              {optionalDiagnoses.map((diagnosis) => (
+                <DiagnosisCard
+                  diagnosis={diagnosis}
+                  activeRegionTarget={activeRegionTarget}
+                  isBusy={isBusy}
+                  isRequired={false}
+                  key={diagnosis.id}
+                  onEditRegion={onEditRegion}
+                  onRemove={onRemove}
+                  onRemoveRegion={onRemoveRegion}
+                  onReview={onReview}
+                  onStartRegion={onStartRegion}
+                />
+              ))}
             </div>
           ) : null}
-        </div>
 
-        {doctorDiagnoses.length ? (
-          <div className="diagnosis-list doctor-diagnosis-list">
-            {doctorDiagnoses.map((diagnosis) => (
-              <DiagnosisCard
-                activeRegionTarget={activeRegionTarget}
-                diagnosis={diagnosis}
-                isBusy={isBusy}
-                isRequired={false}
-                key={diagnosis.id}
-                onEditRegion={onEditRegion}
-                onRemove={onRemove}
-                onRemoveRegion={onRemoveRegion}
-                onReview={onReview}
-                onStartRegion={onStartRegion}
-              />
-            ))}
+          <div className="diagnosis-form compact-diagnosis-form">
+            <label className="visually-hidden" htmlFor="new-diagnosis-select">
+              Selecionar um diagnóstico
+            </label>
+            <select
+              id="new-diagnosis-select"
+              value={name}
+              onChange={handleSelectDiagnosis}
+              disabled={isBusy}
+              aria-label="Selecionar um diagnóstico"
+            >
+              <option value="">Adicionar diagnóstico</option>
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            {selectedRegion ? (
+              <div className="region-ready">
+                <MapPinned size={16} aria-hidden="true" />
+                Região selecionada
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </section>
+
+          {doctorDiagnoses.length ? (
+            <div className="diagnosis-list doctor-diagnosis-list">
+              {doctorDiagnoses.map((diagnosis) => (
+                <DiagnosisCard
+                  activeRegionTarget={activeRegionTarget}
+                  diagnosis={diagnosis}
+                  isBusy={isBusy}
+                  isRequired={false}
+                  key={diagnosis.id}
+                  onEditRegion={onEditRegion}
+                  onRemove={onRemove}
+                  onRemoveRegion={onRemoveRegion}
+                  onReview={onReview}
+                  onStartRegion={onStartRegion}
+                />
+              ))}
+            </div>
+          ) : null}
+        </details>
+      ) : null}
     </div>
   );
 }

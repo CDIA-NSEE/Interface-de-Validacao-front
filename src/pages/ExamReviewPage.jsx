@@ -91,9 +91,10 @@ export default function ExamReviewPage() {
   const [supportContact, setSupportContact] = useState(null);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
+  const [isNotesOpen, setIsNotesOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const loadExam = useCallback(async () => {
@@ -110,6 +111,8 @@ export default function ExamReviewPage() {
       setSupportContact(contextData.support_contact || null);
       setActiveRegionTarget(null);
       setSelectedRegion(null);
+      setIsSecondaryPanelOpen(true);
+      setIsNotesOpen(true);
       if (examData.status_validation === "nao_validado") {
         const updatedExam = await updateExamStatus(id, "em_validacao");
         setExam(updatedExam);
@@ -130,17 +133,13 @@ export default function ExamReviewPage() {
     loadExam();
   }, [loadExam]);
 
-  async function runAction(action, successMessage) {
+  async function runAction(action) {
     setIsBusy(true);
     setError("");
-    setMessage("");
     try {
       const updatedExam = await action();
       if (updatedExam) {
         setExam(updatedExam);
-      }
-      if (successMessage) {
-        setMessage(successMessage);
       }
       return true;
     } catch (requestError) {
@@ -191,7 +190,6 @@ export default function ExamReviewPage() {
 
   function handleStartRegion(diagnosis, region = null) {
     setError("");
-    setMessage(region ? "Redesenhe a área deste diagnóstico no ECG." : "Desenhe a área deste diagnóstico no ECG.");
     setActiveRegionTarget({
       diagnosisId: diagnosis.id,
       regionId: region?.id || null,
@@ -214,6 +212,7 @@ export default function ExamReviewPage() {
 
     if (!activeRegionTarget) {
       setSelectedRegion(region);
+      setIsSecondaryPanelOpen(true);
       return;
     }
 
@@ -224,8 +223,7 @@ export default function ExamReviewPage() {
           ? await updateDiagnosisRegion(target.diagnosisId, target.regionId, region)
           : await addDiagnosisRegion(target.diagnosisId, region);
         return replaceDiagnosis(exam, updatedDiagnosis);
-      },
-      target.regionId ? "Área atualizada." : "Área vinculada ao diagnóstico.",
+      }
     );
 
     if (wasSaved) {
@@ -256,7 +254,6 @@ export default function ExamReviewPage() {
 
     return runAction(
       () => reviewDailyDiagnosis(diagnosisId, reviewStatus, reviewNotes),
-      reviewStatus === "confirmed" ? "Diagnóstico confirmado." : "Diagnóstico discordado.",
     );
   }
 
@@ -268,9 +265,6 @@ export default function ExamReviewPage() {
           review_result: reviewResult,
           notes,
         }),
-      reviewResult === "alterado"
-        ? "Exame validado como alterado."
-        : "Exame validado sem alteração.",
     );
   }
 
@@ -286,7 +280,7 @@ export default function ExamReviewPage() {
   async function handlePrimaryAction() {
     if (validationContext?.is_configured && !validationContext.is_general_review_day) {
       if (!requiredDecisionComplete) {
-        setError("Valide o diagnóstico obrigatório antes de avançar.");
+        setError("Conclua o diagnóstico do dia antes de avançar.");
         return;
       }
       await goToNextDailyExam();
@@ -300,7 +294,7 @@ export default function ExamReviewPage() {
   }
 
   function handleStayOnExam() {
-    setMessage("Você pode validar os diagnósticos opcionais deste ECG.");
+    setIsSecondaryPanelOpen(true);
   }
 
   const requiredDiagnoses = useMemo(
@@ -426,7 +420,6 @@ export default function ExamReviewPage() {
       <main className="review-layout">
         <aside className="review-sidebar">
           <div className="review-sidebar-scroll">
-            {message ? <div className="feedback success-feedback">{message}</div> : null}
             {error ? <div className="feedback error-feedback">{error}</div> : null}
 
             <section className="sidebar-section review-decision-section">
@@ -443,6 +436,8 @@ export default function ExamReviewPage() {
                 onStartRegion={handleStartRegion}
                 isBusy={isBusy}
                 isGeneralReviewDay={validationContext?.is_general_review_day}
+                isSecondaryOpen={isSecondaryPanelOpen}
+                onSecondaryToggle={setIsSecondaryPanelOpen}
                 selectedRegion={selectedRegion}
                 onRegionConsumed={() => setSelectedRegion(null)}
               />
@@ -471,8 +466,12 @@ export default function ExamReviewPage() {
               </details>
             ) : null}
 
-            <section className="review-notes-section">
-              <h2>Observações gerais da revisão</h2>
+            <details
+              className="review-details review-notes-details"
+              open={isNotesOpen}
+              onToggle={(event) => setIsNotesOpen(event.currentTarget.open)}
+            >
+              <summary>Observações gerais</summary>
               <textarea
                 className="notes-field"
                 value={notes}
@@ -480,7 +479,7 @@ export default function ExamReviewPage() {
                 placeholder="Registre comentários gerais sobre o exame"
                 rows={3}
               />
-            </section>
+            </details>
           </div>
 
           <div className="review-sidebar-actions">
@@ -491,8 +490,7 @@ export default function ExamReviewPage() {
               </div>
             ) : null}
 
-            <section className="sidebar-section review-status-section">
-              <h2>Status atual</h2>
+            <section className="sidebar-section review-status-section" aria-label="Status atual">
               <StatusBadge
                 status={exam.status_validation}
                 queueState={exam.queue_state}
