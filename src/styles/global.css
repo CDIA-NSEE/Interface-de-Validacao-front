@@ -1826,16 +1826,20 @@ textarea:focus {
 }
 
 .review-details summary::after {
-  display: inline-grid;
+  display: inline-flex;
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--color-primary);
   background: #ffffff;
   content: "+";
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .review-details[open] summary::after {
@@ -1948,16 +1952,18 @@ textarea:focus {
 }
 
 .diagnosis-secondary-summary::after {
-  display: inline-grid;
+  display: inline-flex;
   width: 22px;
   height: 22px;
   flex: 0 0 auto;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #cfe0f3;
   border-radius: 999px;
   color: var(--color-primary);
   content: "+";
   font-size: 0.9rem;
+  font-weight: 800;
   line-height: 1;
 }
 

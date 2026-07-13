@@ -330,7 +330,7 @@ export default function DiagnosisPanel({
   const hasSecondaryContent =
     optionalDiagnoses.length > 0 || doctorDiagnoses.length > 0 || options.length > 0 || selectedRegion;
   const hasOptionalOrAddedDiagnoses = optionalDiagnoses.length > 0 || doctorDiagnoses.length > 0;
-  const secondaryTitle = hasOptionalOrAddedDiagnoses ? "Opcionais" : "Adicionar diagnóstico";
+  const secondaryTitle = hasOptionalOrAddedDiagnoses ? "Opcionais/Adicionar" : "Adicionar diagnóstico";
   const secondarySummary = hasOptionalOrAddedDiagnoses
     ? `${optionalDiagnoses.length} ECG / ${doctorDiagnoses.length} adicionados`
     : "Novo diagnóstico";
