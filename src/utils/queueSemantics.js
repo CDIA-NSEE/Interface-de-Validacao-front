@@ -52,14 +52,14 @@ export const REFINEMENT_META = {
   },
   with_region: {
     key: "with_region",
-    label: "Com área",
-    tooltip: "Mostra exames com área marcada no ECG.",
+    label: "Mapeado",
+    tooltip: "Mostra exames mapeados no ECG.",
     tone: "refinement-with-region",
   },
   without_region: {
     key: "without_region",
-    label: "Sem área",
-    tooltip: "Mostra exames sem área marcada no ECG.",
+    label: "Não mapeado",
+    tooltip: "Mostra exames não mapeados no ECG.",
     tone: "refinement-without-region",
   },
 };
