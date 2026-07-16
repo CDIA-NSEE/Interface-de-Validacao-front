@@ -72,7 +72,7 @@ export default function ValidationSummaryPanel({
 
       <section className="summary-block">
         <div className="summary-block-heading">
-          <h3>Estados</h3>
+          <h3>Exames</h3>
         </div>
         <div className="quick-metric-grid summary-quick-grid">
           {stateItems.map(([item, value]) => (
@@ -92,7 +92,7 @@ export default function ValidationSummaryPanel({
 
       <section className="summary-block">
         <div className="summary-block-heading">
-          <h3>Refinamentos</h3>
+          <h3>Diagnósticos</h3>
         </div>
         <div className="quick-metric-grid summary-quick-grid">
           {refinementItems.map(([item, value, type, key]) => (

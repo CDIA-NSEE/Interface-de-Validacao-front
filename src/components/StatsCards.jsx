@@ -42,7 +42,7 @@ export default function StatsCards({ stats }) {
       summaryTone: "start",
       cards: [
         ["start_total", "Iniciar", ClipboardList, "start", startTotal],
-        ["validated_total", "Validados", Timer, "validated", validatedTotal],
+        ["validated_total", "Em Validação", Timer, "validated", validatedTotal],
       ],
     },
     {

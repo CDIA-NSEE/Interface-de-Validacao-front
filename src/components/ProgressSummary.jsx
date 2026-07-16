@@ -40,7 +40,7 @@ export default function ProgressSummary({ stats, compact = false }) {
       <div
         className="segmented-progress"
         role="img"
-        aria-label={`${startPercent}% iniciar, ${validatedPercent}% validados e ${completedPercent}% concluídos`}
+        aria-label={`${startPercent}% iniciar, ${validatedPercent}% em validação e ${completedPercent}% concluídos`}
       >
         <span
           className="progress-segment progress-start"
@@ -63,7 +63,7 @@ export default function ProgressSummary({ stats, compact = false }) {
           dotClass="start-dot"
         />
         <LegendItem
-          label="Validados"
+          label="Em Validação"
           value={validatedTotal}
           dotClass="validated-dot"
         />
