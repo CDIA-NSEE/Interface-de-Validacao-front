@@ -1,25 +1,25 @@
-import { ArrowLeft, CheckCircle2, ListPlus } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Save } from "lucide-react";
 
 export default function ReviewActions({
   canValidate = true,
   isBusy,
   isValid,
   onBack,
-  onStay,
+  onSave,
   onValidate,
+  saveLabel = "Salvar",
   primaryLabel = "Validar",
-  secondaryLabel = "Voltar",
 }) {
   return (
     <div className="review-actions">
-      <button className="button ghost" type="button" onClick={onBack}>
+      <button className="button ghost" type="button" onClick={onBack} disabled={isBusy}>
         <ArrowLeft size={17} aria-hidden="true" />
         Voltar
       </button>
-      {onStay ? (
-        <button className="button secondary" type="button" onClick={onStay} disabled={isBusy}>
-          <ListPlus size={17} aria-hidden="true" />
-          {secondaryLabel}
+      {onSave ? (
+        <button className="button secondary" type="button" onClick={onSave} disabled={isBusy}>
+          <Save size={17} aria-hidden="true" />
+          {saveLabel}
         </button>
       ) : null}
       <button

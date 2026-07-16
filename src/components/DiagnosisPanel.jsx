@@ -1,5 +1,5 @@
 import { Check, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const REVIEW_LABELS = {
   pending: "Aguardando decisão",
@@ -42,6 +42,7 @@ function DiagnosisCard({
   onRemove,
   onRemoveRegion,
   onReview,
+  onReviewDraftChange,
   onStartRegion,
 }) {
   const status = statusOf(diagnosis);
@@ -58,6 +59,12 @@ function DiagnosisCard({
   useEffect(() => {
     setReviewNoteDraft(diagnosis.review_notes || "");
   }, [diagnosis.review_notes]);
+
+  useEffect(() => {
+    const hasUnsavedNote = isDisagreementOpen && reviewNoteDraft !== (diagnosis.review_notes || "");
+    onReviewDraftChange?.(diagnosis.id, hasUnsavedNote);
+    return () => onReviewDraftChange?.(diagnosis.id, false);
+  }, [diagnosis.id, diagnosis.review_notes, isDisagreementOpen, onReviewDraftChange, reviewNoteDraft]);
 
   function openDisagreementPanel() {
     setReviewNoteDraft(diagnosis.review_notes || "");
@@ -227,22 +234,24 @@ function DiagnosisCard({
             rows={3}
           />
           <div className="disagreement-actions">
-            <button
-              className="button compact-button"
-              type="button"
-              onClick={() => submitDisagreement(reviewNoteDraft)}
-              disabled={isBusy}
-            >
-              Salvar discordância
-            </button>
-            <button
-              className="button ghost compact-button"
-              type="button"
-              onClick={() => submitDisagreement("")}
-              disabled={isBusy}
-            >
-              Discordar sem observação
-            </button>
+            <div className="disagreement-submit-actions">
+              <button
+                className="button compact-button"
+                type="button"
+                onClick={() => submitDisagreement(reviewNoteDraft)}
+                disabled={isBusy}
+              >
+                Salvar discordância
+              </button>
+              <button
+                className="button ghost compact-button"
+                type="button"
+                onClick={() => submitDisagreement("")}
+                disabled={isBusy}
+              >
+                Discordar sem observação
+              </button>
+            </div>
             <button
               className="icon-button compact-icon-button"
               type="button"
@@ -274,13 +283,26 @@ export default function DiagnosisPanel({
   onRemove,
   onRemoveRegion,
   onReview,
+  onUnsavedChange,
   onSecondaryToggle,
   onStartRegion,
   options = [],
   selectedRegion,
 }) {
   const [name, setName] = useState("");
+  const [unsavedReviewNotes, setUnsavedReviewNotes] = useState({});
   const aiRecommendationText = typeof aiRecommendation === "string" ? aiRecommendation.trim() : "";
+
+  useEffect(() => {
+    onUnsavedChange?.(Object.values(unsavedReviewNotes).some(Boolean));
+  }, [onUnsavedChange, unsavedReviewNotes]);
+
+  const handleReviewDraftChange = useCallback((diagnosisId, isDirty) => {
+    setUnsavedReviewNotes((current) => {
+      if (current[diagnosisId] === isDirty) return current;
+      return { ...current, [diagnosisId]: isDirty };
+    });
+  }, []);
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(() => {
     const originalDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "original");
@@ -329,11 +351,8 @@ export default function DiagnosisPanel({
 
   const hasSecondaryContent =
     optionalDiagnoses.length > 0 || doctorDiagnoses.length > 0 || options.length > 0 || selectedRegion;
-  const hasOptionalOrAddedDiagnoses = optionalDiagnoses.length > 0 || doctorDiagnoses.length > 0;
-  const secondaryTitle = hasOptionalOrAddedDiagnoses ? "Opcionais/Adicionar" : "Adicionar diagnóstico";
-  const secondarySummary = hasOptionalOrAddedDiagnoses
-    ? `${optionalDiagnoses.length} ECG / ${doctorDiagnoses.length} adicionados`
-    : "Novo diagnóstico";
+  const secondaryTitle = "Opcionais e adicionar";
+  const secondarySummary = `${optionalDiagnoses.length} no ECG | ${doctorDiagnoses.length} adicionados`;
 
   return (
     <div className="diagnosis-panel">
@@ -365,6 +384,7 @@ export default function DiagnosisPanel({
                 onRemove={onRemove}
                 onRemoveRegion={onRemoveRegion}
                 onReview={onReview}
+                onReviewDraftChange={handleReviewDraftChange}
                 onStartRegion={onStartRegion}
               />
             ))
@@ -385,69 +405,73 @@ export default function DiagnosisPanel({
             <span>{secondarySummary}</span>
           </summary>
 
-          {optionalDiagnoses.length ? (
-            <div className="diagnosis-list">
-              {optionalDiagnoses.map((diagnosis) => (
-                <DiagnosisCard
-                  diagnosis={diagnosis}
-                  activeRegionTarget={activeRegionTarget}
-                  isBusy={isBusy}
-                  isRequired={false}
-                  key={diagnosis.id}
-                  onEditRegion={onEditRegion}
-                  onRemove={onRemove}
-                  onRemoveRegion={onRemoveRegion}
-                  onReview={onReview}
-                  onStartRegion={onStartRegion}
-                />
-              ))}
-            </div>
-          ) : null}
+          <div className="diagnosis-secondary-content">
+            {optionalDiagnoses.length ? (
+              <div className="diagnosis-list">
+                {optionalDiagnoses.map((diagnosis) => (
+                  <DiagnosisCard
+                    diagnosis={diagnosis}
+                    activeRegionTarget={activeRegionTarget}
+                    isBusy={isBusy}
+                    isRequired={false}
+                    key={diagnosis.id}
+                    onEditRegion={onEditRegion}
+                    onRemove={onRemove}
+                    onRemoveRegion={onRemoveRegion}
+                    onReview={onReview}
+                    onReviewDraftChange={handleReviewDraftChange}
+                    onStartRegion={onStartRegion}
+                  />
+                ))}
+              </div>
+            ) : null}
 
-          <div className="diagnosis-form compact-diagnosis-form">
-            <label className="visually-hidden" htmlFor="new-diagnosis-select">
-              Selecionar um diagnóstico
-            </label>
-            <select
-              id="new-diagnosis-select"
-              value={name}
-              onChange={handleSelectDiagnosis}
-              disabled={isBusy}
-              aria-label="Selecionar um diagnóstico"
-            >
-              <option value="">Adicionar diagnóstico</option>
-              {options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            {selectedRegion ? (
-              <div className="region-ready">
-                <MapPinned size={16} aria-hidden="true" />
-                Região selecionada
+            <div className="diagnosis-form compact-diagnosis-form">
+              <label className="visually-hidden" htmlFor="new-diagnosis-select">
+                Selecionar um diagnóstico
+              </label>
+              <select
+                id="new-diagnosis-select"
+                value={name}
+                onChange={handleSelectDiagnosis}
+                disabled={isBusy}
+                aria-label="Selecionar um diagnóstico"
+              >
+                <option value="">Adicionar diagnóstico</option>
+                {options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {selectedRegion ? (
+                <div className="region-ready">
+                  <MapPinned size={16} aria-hidden="true" />
+                  Região selecionada
+                </div>
+              ) : null}
+            </div>
+
+            {doctorDiagnoses.length ? (
+              <div className="diagnosis-list doctor-diagnosis-list">
+                {doctorDiagnoses.map((diagnosis) => (
+                  <DiagnosisCard
+                    activeRegionTarget={activeRegionTarget}
+                    diagnosis={diagnosis}
+                    isBusy={isBusy}
+                    isRequired={false}
+                    key={diagnosis.id}
+                    onEditRegion={onEditRegion}
+                    onRemove={onRemove}
+                    onRemoveRegion={onRemoveRegion}
+                    onReview={onReview}
+                    onReviewDraftChange={handleReviewDraftChange}
+                    onStartRegion={onStartRegion}
+                  />
+                ))}
               </div>
             ) : null}
           </div>
-
-          {doctorDiagnoses.length ? (
-            <div className="diagnosis-list doctor-diagnosis-list">
-              {doctorDiagnoses.map((diagnosis) => (
-                <DiagnosisCard
-                  activeRegionTarget={activeRegionTarget}
-                  diagnosis={diagnosis}
-                  isBusy={isBusy}
-                  isRequired={false}
-                  key={diagnosis.id}
-                  onEditRegion={onEditRegion}
-                  onRemove={onRemove}
-                  onRemoveRegion={onRemoveRegion}
-                  onReview={onReview}
-                  onStartRegion={onStartRegion}
-                />
-              ))}
-            </div>
-          ) : null}
         </details>
       ) : null}
     </div>

@@ -1,4 +1,4 @@
-import { ArrowLeft, HelpCircle, LifeBuoy, Moon, Sun, UserRound } from "lucide-react";
+import { ArrowLeft, HelpCircle, House, LifeBuoy, Moon, Sun, UserRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -11,6 +11,7 @@ import ReviewActions from "../components/ReviewActions.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
+import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import {
@@ -20,6 +21,7 @@ import {
   getExamById,
   removeDiagnosis,
   removeDiagnosisRegion,
+  saveExamDraft,
   updateExamStatus,
   updateDiagnosisRegion,
   validateExam,
@@ -96,6 +98,9 @@ export default function ExamReviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState("");
+  const [hasUnsavedDiagnosisReview, setHasUnsavedDiagnosisReview] = useState(false);
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
 
   const loadExam = useCallback(async () => {
     setIsLoading(true);
@@ -108,11 +113,15 @@ export default function ExamReviewPage() {
       ]);
       setDiagnosisOptions(options);
       setValidationContext(contextData);
+      setNotes(examData.draft_notes || "");
       setSupportContact(contextData.support_contact || null);
       setActiveRegionTarget(null);
       setSelectedRegion(null);
       setIsSecondaryPanelOpen(true);
       setIsNotesOpen(true);
+      setHasUnsavedDiagnosisReview(false);
+      setIsExitConfirmOpen(false);
+      setSaveFeedback("");
       if (examData.status_validation === "nao_validado") {
         const updatedExam = await updateExamStatus(id, "em_validacao");
         setExam(updatedExam);
@@ -136,6 +145,7 @@ export default function ExamReviewPage() {
   async function runAction(action) {
     setIsBusy(true);
     setError("");
+    setSaveFeedback("");
     try {
       const updatedExam = await action();
       if (updatedExam) {
@@ -257,7 +267,53 @@ export default function ExamReviewPage() {
     );
   }
 
+  function pendingSaveError() {
+    if (selectedRegion && !activeRegionTarget) {
+      return "Associe a área marcada a um diagnóstico antes de salvar.";
+    }
+    if (hasUnsavedDiagnosisReview) {
+      return "Salve ou cancele a observação da discordância antes de continuar.";
+    }
+    return null;
+  }
+
+  async function saveCurrentDraft() {
+    const pendingError = pendingSaveError();
+    if (pendingError) {
+      setError(pendingError);
+      return false;
+    }
+
+    return runAction(() => saveExamDraft(id, { notes }));
+  }
+
+  async function handleSave() {
+    const wasSaved = await saveCurrentDraft();
+    if (wasSaved) {
+      setSaveFeedback("Alterações salvas.");
+    }
+  }
+
+  function handleReturnHome() {
+    if (hasUnsavedChanges) {
+      setIsExitConfirmOpen(true);
+      return;
+    }
+    navigate("/");
+  }
+
+  function handleDiscardAndBack() {
+    setIsExitConfirmOpen(false);
+    navigate("/");
+  }
+
   async function validateCurrentExam() {
+    const pendingError = pendingSaveError();
+    if (pendingError) {
+      setError(pendingError);
+      return false;
+    }
+
     const reviewResult = getAutomaticReviewResult(exam);
     return runAction(
       () =>
@@ -269,16 +325,21 @@ export default function ExamReviewPage() {
   }
 
   async function goToNextDailyExam() {
-    const nextData = await getNextValidationExam();
-    if (nextData.exam && String(nextData.exam.id) !== String(id)) {
-      navigate(`/exams/${nextData.exam.id}`);
-      return;
-    }
-    navigate("/");
+    return runAction(async () => {
+      const nextData = await getNextValidationExam();
+      if (nextData.exam && String(nextData.exam.id) !== String(id)) {
+        navigate(`/exams/${nextData.exam.id}`);
+        return null;
+      }
+      navigate("/");
+      return null;
+    });
   }
 
   async function handlePrimaryAction() {
     if (validationContext?.is_configured && !validationContext.is_general_review_day) {
+      const wasSaved = await saveCurrentDraft();
+      if (!wasSaved) return;
       if (!requiredDecisionComplete) {
         setError("Conclua o diagnóstico do dia antes de avançar.");
         return;
@@ -291,10 +352,6 @@ export default function ExamReviewPage() {
     if (wasValidated && validationContext?.is_general_review_day) {
       await goToNextDailyExam();
     }
-  }
-
-  function handleStayOnExam() {
-    setIsSecondaryPanelOpen(true);
   }
 
   const requiredDiagnoses = useMemo(
@@ -322,6 +379,9 @@ export default function ExamReviewPage() {
       (diagnosis) => getDiagnosisStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
   const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
+  const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
+  const hasUnsavedChanges =
+    notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
   const doctorName = user?.full_name || "Usuário";
   const dailyLabel = validationContext?.is_general_review_day
     ? "Dia 30 - revalidação geral"
@@ -381,7 +441,17 @@ export default function ExamReviewPage() {
           ) : null}
         </dl>
         <div className="review-topbar-meta">
-          <div className="header-tools compact-review-tools" aria-label="Ações globais">
+          <div className="review-utility-tools" role="group" aria-label="Ações globais">
+            <button
+              className="icon-button compact-icon-button"
+              type="button"
+              onClick={handleReturnHome}
+              disabled={isBusy}
+              aria-label="Ir para o início"
+              title="Início"
+            >
+              <House size={17} aria-hidden="true" />
+            </button>
             <button
               className="icon-button compact-icon-button"
               type="button"
@@ -410,7 +480,11 @@ export default function ExamReviewPage() {
               {isDark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
             </button>
           </div>
-          <div className="review-session-chip" title={`Sessão ativa: ${doctorName}`}>
+          <div
+            className="review-session-chip"
+            aria-label={`Sessão ativa: ${doctorName}`}
+            title={`Sessão ativa: ${doctorName}`}
+          >
             <UserRound size={15} aria-hidden="true" />
             <span>{doctorName}</span>
           </div>
@@ -421,6 +495,11 @@ export default function ExamReviewPage() {
         <aside className="review-sidebar">
           <div className="review-sidebar-scroll">
             {error ? <div className="feedback error-feedback">{error}</div> : null}
+            {saveFeedback ? (
+              <div className="feedback success-feedback" role="status">
+                {saveFeedback}
+              </div>
+            ) : null}
 
             <section className="sidebar-section review-decision-section">
               <DiagnosisPanel
@@ -433,6 +512,7 @@ export default function ExamReviewPage() {
                 onRemove={handleRemoveDiagnosis}
                 onRemoveRegion={handleRemoveRegion}
                 onReview={handleReviewDiagnosis}
+                onUnsavedChange={setHasUnsavedDiagnosisReview}
                 onStartRegion={handleStartRegion}
                 isBusy={isBusy}
                 isGeneralReviewDay={validationContext?.is_general_review_day}
@@ -475,7 +555,10 @@ export default function ExamReviewPage() {
               <textarea
                 className="notes-field"
                 value={notes}
-                onChange={(event) => setNotes(event.target.value)}
+                onChange={(event) => {
+                  setNotes(event.target.value);
+                  setSaveFeedback("");
+                }}
                 placeholder="Registre comentários gerais sobre o exame"
                 rows={3}
               />
@@ -498,15 +581,14 @@ export default function ExamReviewPage() {
               />
             </section>
 
-            <ReviewActions
-              onBack={() => navigate("/")}
-              onStay={usesDailyFlow ? handleStayOnExam : undefined}
+          <ReviewActions
+            onBack={handleReturnHome}
+            onSave={usesDailyFlow ? handleSave : undefined}
               onValidate={handlePrimaryAction}
               canValidate={requiredDecisionComplete}
               isBusy={isBusy}
               isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
               primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
-              secondaryLabel="Ficar no ECG"
             />
           </div>
         </aside>
@@ -529,6 +611,11 @@ export default function ExamReviewPage() {
         onClose={() => setIsSupportOpen(false)}
       />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+      <UnsavedChangesModal
+        isOpen={isExitConfirmOpen}
+        onDiscard={handleDiscardAndBack}
+        onStay={() => setIsExitConfirmOpen(false)}
+      />
     </div>
   );
 }

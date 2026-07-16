@@ -14,7 +14,7 @@ const STEPS = [
   {
     icon: CheckCircle2,
     title: "Opcionais",
-    text: "Use ficar no exame quando quiser revisar outros diagnósticos.",
+    text: "Abra a seção Opcionais/Adicionar para revisar outros diagnósticos.",
   },
 ];
 
