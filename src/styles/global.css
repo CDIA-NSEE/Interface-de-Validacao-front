@@ -64,8 +64,13 @@ button:disabled {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid rgba(47, 95, 159, 0.28);
+  outline: 3px solid #1d67af;
   outline-offset: 2px;
+}
+
+:root[data-theme="dark"] button:focus-visible,
+:root[data-theme="dark"] a:focus-visible {
+  outline-color: #9bcfff;
 }
 
 a {
@@ -1603,7 +1608,14 @@ textarea:focus {
 }
 
 .review-title-block {
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.review-title-block h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .review-context-strip {
@@ -1623,7 +1635,7 @@ textarea:focus {
   align-content: center;
   gap: 2px;
   padding: 5px 9px;
-  border: 1px solid #d9e6f5;
+  border: 1px solid #bed2e8;
   border-radius: 8px;
   background: #fbfdff;
 }
@@ -1637,7 +1649,7 @@ textarea:focus {
 .review-context-strip dd {
   min-width: 0;
   margin: 0;
-  color: #20324a;
+  color: #153657;
   font-size: 0.9225rem;
   font-weight: 800;
   overflow-wrap: anywhere;
@@ -1648,28 +1660,52 @@ textarea:focus {
 }
 
 .review-topbar-meta {
-  display: grid;
-  justify-items: end;
-  gap: 5px;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.review-utility-tools {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid #bed2e8;
+  border-radius: 8px;
+  background: #f4f9ff;
+}
+
+.review-utility-tools .icon-button {
+  width: 32px;
+  height: 32px;
+  border-color: transparent;
+  background: transparent;
 }
 
 .review-session-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 26px;
-  padding: 3px 9px;
-  border: 1px solid #d9e6f5;
+  min-width: 0;
+  min-height: 32px;
+  max-width: min(188px, 16vw);
+  padding: 4px 9px;
+  border: 1px solid #bed2e8;
   border-radius: 999px;
-  color: #34506f;
-  background: #fbfdff;
+  color: #1d456d;
+  background: #ffffff;
   font-size: 0.8425rem;
   font-weight: 800;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .review-session-chip span {
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .review-layout {
@@ -1687,7 +1723,7 @@ textarea:focus {
   min-height: 0;
   padding: 6px 8px 0;
   border-right: 1px solid var(--color-border);
-  background: #ffffff;
+  background: var(--color-surface);
   overflow: hidden;
 }
 
@@ -1865,7 +1901,7 @@ textarea:focus {
 
 .diagnosis-group {
   padding: 0 0 6px;
-  border-bottom: 1px solid #cfe0f3;
+  border-bottom: 1px solid #bed2e8;
 }
 
 .diagnosis-group + .diagnosis-group {
@@ -1904,13 +1940,13 @@ textarea:focus {
 }
 
 .original-diagnosis.confirmed {
-  border-color: #a7dec0;
-  background: #eef9f2;
+  border-color: #79cda2;
+  background: #ecf9f1;
 }
 
 .original-diagnosis.rejected {
-  border-color: #efb3ba;
-  background: #fff4f5;
+  border-color: #dc8390;
+  background: #fff3f4;
 }
 
 .doctor-diagnosis {
@@ -1928,7 +1964,7 @@ textarea:focus {
 }
 
 .diagnosis-secondary-panel {
-  gap: 5px;
+  gap: 0;
 }
 
 .diagnosis-secondary-summary {
@@ -1938,10 +1974,10 @@ textarea:focus {
   justify-content: space-between;
   gap: 8px;
   padding: 5px 8px;
-  border: 1px solid var(--color-border);
+  border: 1px solid #a9c2dd;
   border-radius: 8px;
-  color: #20324a;
-  background: #fbfdff;
+  color: #153657;
+  background: #f4f9ff;
   cursor: pointer;
   font-weight: 900;
   list-style: none;
@@ -1971,11 +2007,26 @@ textarea:focus {
   content: "-";
 }
 
+.diagnosis-secondary-panel[open] .diagnosis-secondary-summary {
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
 .diagnosis-secondary-summary span {
   margin-left: auto;
   color: var(--color-muted);
   font-size: 0.7925rem;
-  font-weight: 800;
+  font-weight: 900;
+}
+
+.diagnosis-secondary-content {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #a9c2dd;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: #f8fbff;
 }
 
 .compact-diagnosis-form {
@@ -2069,13 +2120,13 @@ textarea:focus {
   grid-column: 1 / -1;
   gap: 6px;
   padding: 8px;
-  border: 1px solid #efb3ba;
+  border: 1px solid #d86f7c;
   border-radius: 8px;
-  background: #fff7f8;
+  background: #fff4f5;
 }
 
 .diagnosis-disagreement-panel label {
-  color: #8b1f29;
+  color: #8c1824;
   font-size: 0.8225rem;
   font-weight: 900;
 }
@@ -2086,10 +2137,23 @@ textarea:focus {
 }
 
 .disagreement-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
+}
+
+.disagreement-submit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.disagreement-actions > .icon-button {
+  width: 32px;
+  height: 32px;
 }
 
 .disagreement-actions .button {
@@ -2099,11 +2163,11 @@ textarea:focus {
 }
 
 .confirmed .diagnosis-review-label {
-  color: var(--color-success);
+  color: #107343;
 }
 
 .rejected .diagnosis-review-label {
-  color: var(--color-danger);
+  color: #b4232d;
 }
 
 .diagnosis-item strong,
@@ -2364,15 +2428,15 @@ textarea:focus {
 }
 
 .success-feedback {
-  color: #137047;
-  border: 1px solid #a7dec0;
-  background: #e7f6ed;
+  color: #0d633b;
+  border: 1px solid #75c59a;
+  background: #e7f8ed;
 }
 
 .error-feedback {
-  color: #a2272f;
-  border: 1px solid #efb3ba;
-  background: #fff0f2;
+  color: #971e29;
+  border: 1px solid #dc838e;
+  background: #fff1f3;
 }
 
 .login-logo-row {
@@ -2480,6 +2544,17 @@ textarea:focus {
   color: var(--color-muted);
   font-weight: 700;
   line-height: 1.45;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-actions .button {
+  min-height: 38px;
 }
 
 .support-channel-list,
@@ -2925,10 +3000,22 @@ textarea:focus {
 :root[data-theme="dark"] .diagnosis-region-row,
 :root[data-theme="dark"] .diagnosis-note-preview,
 :root[data-theme="dark"] .diagnosis-disagreement-panel,
-:root[data-theme="dark"] .diagnosis-secondary-summary {
+:root[data-theme="dark"] .diagnosis-secondary-summary,
+:root[data-theme="dark"] .diagnosis-secondary-content {
   color: var(--color-text);
   border-color: var(--color-border);
   background: #101b2a;
+}
+
+:root[data-theme="dark"] .review-utility-tools {
+  border-color: #49637f;
+  background: #101b2a;
+}
+
+:root[data-theme="dark"] .review-utility-tools .icon-button {
+  color: #b9dcff;
+  border-color: transparent;
+  background: transparent;
 }
 
 :root[data-theme="dark"] .diagnosis-note-preview strong,
@@ -2976,6 +3063,18 @@ textarea:focus {
 
 :root[data-theme="dark"] .rejected .diagnosis-review-label {
   color: #fda4af;
+}
+
+:root[data-theme="dark"] .success-feedback {
+  color: #b7f5d0;
+  border-color: #3c9b68;
+  background: #102b20;
+}
+
+:root[data-theme="dark"] .error-feedback {
+  color: #ffc0c8;
+  border-color: #a94555;
+  background: #351821;
 }
 
 :root[data-theme="dark"] .diagnosis-divergence-alert {
@@ -3040,7 +3139,7 @@ textarea:focus {
   }
 
   .review-topbar {
-    grid-template-columns: minmax(145px, auto) minmax(220px, 1fr) auto;
+    grid-template-columns: minmax(180px, auto) minmax(0, 1fr) auto;
     gap: 10px;
     padding-inline: 12px;
   }
@@ -3055,7 +3154,11 @@ textarea:focus {
   }
 
   .review-topbar-meta {
-    justify-items: end;
+    gap: 6px;
+  }
+
+  .review-session-chip {
+    max-width: 150px;
   }
 
   .doctor-greeting {
@@ -3264,13 +3367,26 @@ textarea:focus {
   }
 
   .review-topbar {
-    grid-template-columns: minmax(118px, auto) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     padding: 8px 10px;
   }
 
   .review-title-block h1 {
     font-size: 1.0625rem;
+  }
+
+  .review-title-block .eyebrow {
+    display: none;
+  }
+
+  .review-topbar-meta {
+    gap: 4px;
+  }
+
+  .review-utility-tools {
+    gap: 0;
+    padding: 1px;
   }
 
   .review-context-strip {
@@ -3295,10 +3411,8 @@ textarea:focus {
     padding-inline: 8px;
   }
 
-  .review-session-chip span {
-    max-width: none;
-    overflow: visible;
-    text-overflow: clip;
+  .review-session-chip {
+    max-width: 128px;
   }
 
   .info-list div {
@@ -3324,6 +3438,23 @@ textarea:focus {
     align-items: flex-start;
   }
 
+}
+
+@media (max-width: 480px) {
+  .review-session-chip span {
+    display: none;
+  }
+
+  .review-session-chip {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .disagreement-submit-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 380px) {

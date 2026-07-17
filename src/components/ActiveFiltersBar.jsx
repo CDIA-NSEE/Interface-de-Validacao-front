@@ -20,9 +20,9 @@ export default function ActiveFiltersBar({
     <section className="active-filters-bar" aria-label="Filtros ativos">
       {quickFilter ? (
         <span className={`active-filter-chip active-filter-chip-${quickFilter.tone || "state-start"}`}>
-          Estado: {quickFilter.label}
+          Exames: {quickFilter.label}
           {quickFilter.key !== "all" ? (
-            <button type="button" onClick={onClearQuickFilter} aria-label="Limpar estado">
+            <button type="button" onClick={onClearQuickFilter} aria-label="Limpar exames">
               <X size={14} aria-hidden="true" />
             </button>
           ) : null}

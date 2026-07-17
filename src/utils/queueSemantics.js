@@ -19,7 +19,7 @@ export const QUEUE_STATE_META = {
   },
   validated: {
     key: "validated",
-    label: "Validados",
+    label: "Em Validação",
     description: "Diagnóstico do dia já concordado ou discordado.",
     tooltip: "Diagnóstico do dia já concordado ou discordado.",
     tone: "state-validated",

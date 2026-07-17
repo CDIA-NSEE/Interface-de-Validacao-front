@@ -66,3 +66,8 @@ export async function validateExam(examId, payload) {
   const { data } = await api.post(`/exams/${examId}/validate`, payload);
   return data;
 }
+
+export async function saveExamDraft(examId, payload) {
+  const { data } = await api.put(`/exams/${examId}/draft`, payload);
+  return data;
+}
