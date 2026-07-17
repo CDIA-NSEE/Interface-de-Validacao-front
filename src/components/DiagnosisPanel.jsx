@@ -1,28 +1,18 @@
 import { Check, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
+import {
+  getDiagnosisDisplayGroups,
+  getDiagnosisReference,
+  getRegionReference,
+} from "../utils/diagnosisReferences.js";
+
 const REVIEW_LABELS = {
   pending: "Aguardando decisão",
   confirmed: "Concordo",
   rejected: "Discordo",
 };
-
-function statusOf(diagnosis) {
-  return diagnosis.validation_status || diagnosis.review_status || "pending";
-}
-
-function normalize(value = "") {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toUpperCase();
-}
-
-function isDailyDiagnosis(diagnosis, dailyStandardDiagnosis) {
-  if (!dailyStandardDiagnosis) return Boolean(diagnosis.daily_required);
-  return normalize(diagnosis.standard_text || diagnosis.name) === normalize(dailyStandardDiagnosis);
-}
 
 function regionCountLabel(count) {
   if (count === 1) return "1 área";
@@ -36,6 +26,7 @@ function sameDiagnosisText(left, right) {
 function DiagnosisCard({
   activeRegionTarget,
   diagnosis,
+  diagnosisReference,
   isBusy,
   isRequired,
   onEditRegion,
@@ -45,7 +36,8 @@ function DiagnosisCard({
   onReviewDraftChange,
   onStartRegion,
 }) {
-  const status = statusOf(diagnosis);
+  const status = getDiagnosisReviewStatus(diagnosis);
+  const regionVisual = getDiagnosisRegionVisual(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
   const originalText = diagnosis.original_text || diagnosis.name;
   const regions = diagnosis.regions || [];
@@ -90,6 +82,7 @@ function DiagnosisCard({
       className={`diagnosis-item original-diagnosis ${status} ${
         isRequired ? "required-diagnosis" : "optional-diagnosis"
       }`}
+      style={{ "--diagnosis-region-color": regionVisual.color }}
     >
       <div className="diagnosis-content">
         {hasChipRow ? (
@@ -101,9 +94,18 @@ function DiagnosisCard({
             ) : null}
           </div>
         ) : null}
-        <strong className="diagnosis-title" title={`Texto padrão: ${standardText}`}>
-          {standardText}
-        </strong>
+        <div className="diagnosis-title-row">
+          <span
+            aria-hidden="true"
+            className="diagnosis-region-marker"
+          />
+          {diagnosisReference ? (
+            <span className="diagnosis-reference-chip">{diagnosisReference}</span>
+          ) : null}
+          <strong className="diagnosis-title" title={`Texto padrão: ${standardText}`}>
+            {standardText}
+          </strong>
+        </div>
         {hasDistinctOriginal ? (
           <p className="diagnosis-original-text" title={`Texto original: ${originalText}`}>
             Original: {originalText}
@@ -142,33 +144,43 @@ function DiagnosisCard({
         ) : null}
         {regions.length ? (
           <div className="diagnosis-region-list">
-            {regions.map((region, index) => (
-              <div className="diagnosis-region-row" key={region.id || `legacy-${index}`}>
-                <span>Área {index + 1}</span>
-                <div className="region-row-actions">
-                  <button
-                    className="icon-button mini-icon-button"
-                    type="button"
-                    onClick={() => onEditRegion(diagnosis, region)}
-                    disabled={isBusy}
-                    aria-label={`Editar área ${index + 1}`}
-                    title="Editar área"
-                  >
-                    <Pencil size={14} aria-hidden="true" />
-                  </button>
-                  <button
-                    className="icon-button mini-icon-button danger-icon"
-                    type="button"
-                    onClick={() => onRemoveRegion(diagnosis.id, region.id)}
-                    disabled={isBusy || !region.id}
-                    aria-label={`Remover área ${index + 1}`}
-                    title={region.id ? "Remover área" : "Área legada sem id"}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
+            {regions.map((region, index) => {
+              const regionReference = getRegionReference(diagnosisReference, index);
+              const areaLabel = `Área ${index + 1}`;
+
+              return (
+                <div className="diagnosis-region-row" key={region.id || `legacy-${index}`}>
+                  <span className="diagnosis-region-reference">
+                    {regionReference ? (
+                      <strong className="diagnosis-region-code">{regionReference}</strong>
+                    ) : null}
+                    <span>{areaLabel}</span>
+                  </span>
+                  <div className="region-row-actions">
+                    <button
+                      className="icon-button mini-icon-button"
+                      type="button"
+                      onClick={() => onEditRegion(diagnosis, region)}
+                      disabled={isBusy}
+                      aria-label={`Editar ${regionReference || areaLabel}`}
+                      title={`Editar ${regionReference || areaLabel}`}
+                    >
+                      <Pencil size={14} aria-hidden="true" />
+                    </button>
+                    <button
+                      className="icon-button mini-icon-button danger-icon"
+                      type="button"
+                      onClick={() => onRemoveRegion(diagnosis.id, region.id)}
+                      disabled={isBusy || !region.id}
+                      aria-label={`Remover ${regionReference || areaLabel}`}
+                      title={region.id ? `Remover ${regionReference || areaLabel}` : "Área legada sem id"}
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : null}
       </div>
@@ -274,6 +286,7 @@ export default function DiagnosisPanel({
   aiRecommendation,
   dailyStandardDiagnosis,
   diagnoses = [],
+  diagnosisReferences = {},
   isBusy,
   isGeneralReviewDay,
   isSecondaryOpen,
@@ -304,30 +317,14 @@ export default function DiagnosisPanel({
     });
   }, []);
 
-  const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(() => {
-    const originalDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "original");
-    const addedDiagnoses = diagnoses.filter((diagnosis) => diagnosis.source === "doctor_added");
-
-    if (isGeneralReviewDay) {
-      return {
-        doctorDiagnoses: addedDiagnoses,
-        requiredDiagnoses: originalDiagnoses,
-        optionalDiagnoses: [],
-      };
-    }
-
-    const required = originalDiagnoses.filter((diagnosis) =>
-      isDailyDiagnosis(diagnosis, dailyStandardDiagnosis),
-    );
-    const optional = originalDiagnoses.filter(
-      (diagnosis) => !isDailyDiagnosis(diagnosis, dailyStandardDiagnosis),
-    );
-    return {
-      doctorDiagnoses: addedDiagnoses,
-      requiredDiagnoses: required,
-      optionalDiagnoses: optional,
-    };
-  }, [dailyStandardDiagnosis, diagnoses, isGeneralReviewDay]);
+  const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
+    () =>
+      getDiagnosisDisplayGroups(diagnoses, {
+        dailyStandardDiagnosis,
+        isGeneralReviewDay,
+      }),
+    [dailyStandardDiagnosis, diagnoses, isGeneralReviewDay],
+  );
 
   async function handleSelectDiagnosis(event) {
     const diagnosisName = event.target.value;
@@ -376,6 +373,7 @@ export default function DiagnosisPanel({
             requiredDiagnoses.map((diagnosis) => (
               <DiagnosisCard
                 diagnosis={diagnosis}
+                diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)}
                 activeRegionTarget={activeRegionTarget}
                 isBusy={isBusy}
                 isRequired
@@ -411,6 +409,7 @@ export default function DiagnosisPanel({
                 {optionalDiagnoses.map((diagnosis) => (
                   <DiagnosisCard
                     diagnosis={diagnosis}
+                    diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)}
                     activeRegionTarget={activeRegionTarget}
                     isBusy={isBusy}
                     isRequired={false}
@@ -458,6 +457,7 @@ export default function DiagnosisPanel({
                   <DiagnosisCard
                     activeRegionTarget={activeRegionTarget}
                     diagnosis={diagnosis}
+                    diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)}
                     isBusy={isBusy}
                     isRequired={false}
                     key={diagnosis.id}

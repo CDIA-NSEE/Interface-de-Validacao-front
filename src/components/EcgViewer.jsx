@@ -39,6 +39,8 @@ export default function EcgViewer({
   regions = [],
   selectedRegion,
   selectionLabel,
+  selectionReference,
+  selectionVisual,
 }) {
   const [zoom, setZoom] = useState(1);
   const [selectionStart, setSelectionStart] = useState(null);
@@ -242,26 +244,38 @@ export default function EcgViewer({
               className={`saved-region-box ${region.isActive ? "is-active" : ""}`}
               key={`${region.diagnosisId || "region"}-${region.id || `legacy-${index}`}`}
               style={{
+                "--region-color": region.color,
+                "--region-fill": region.fill,
                 left: `${region.x}%`,
                 top: `${region.y}%`,
                 width: `${region.width}%`,
                 height: `${region.height}%`,
               }}
-              title={region.label || `Area ${index + 1}`}
+              title={region.label || region.regionReference || "Área vinculada"}
             >
-              <span>{index + 1}</span>
+              {region.regionReference ? (
+                <span className="region-reference-label">{region.regionReference}</span>
+              ) : null}
             </span>
           ))}
           {activeRegion ? (
             <span
-              className="selection-box active-selection-box"
+              className={`selection-box active-selection-box ${draftRegion ? "is-draft" : ""}`}
               style={{
+                "--region-color": selectionVisual?.color,
+                "--region-fill": selectionVisual?.fill,
+                "--region-draft-fill": selectionVisual?.draftFill,
                 left: `${activeRegion.x}%`,
                 top: `${activeRegion.y}%`,
                 width: `${activeRegion.width}%`,
                 height: `${activeRegion.height}%`,
               }}
-            />
+              title={selectionReference || "Área sem diagnóstico associado"}
+            >
+              {selectionReference ? (
+                <span className="region-reference-label">{selectionReference}</span>
+              ) : null}
+            </span>
           ) : null}
         </div>
       </div>
