@@ -2,10 +2,12 @@ import { Check, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
+import { hasDisagreementNote } from "../utils/disagreementReview.js";
 import {
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
   getRegionReference,
+  normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
 
 const REVIEW_LABELS = {
@@ -20,7 +22,7 @@ function regionCountLabel(count) {
 }
 
 function sameDiagnosisText(left, right) {
-  return normalize(left) === normalize(right);
+  return normalizeDiagnosisText(left) === normalizeDiagnosisText(right);
 }
 
 function DiagnosisCard({
@@ -45,6 +47,7 @@ function DiagnosisCard({
   const hasDistinctOriginal = Boolean(originalText && !sameDiagnosisText(standardText, originalText));
   const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
   const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
+  const canSaveDisagreement = hasDisagreementNote(reviewNoteDraft);
   const kickerLabel = isRequired ? "Diagnóstico do dia" : diagnosis.source === "doctor_added" ? "Adicionado" : "";
   const hasChipRow = Boolean(kickerLabel || diagnosis.is_grouped || diagnosis.region_required_missing);
 
@@ -237,33 +240,10 @@ function DiagnosisCard({
       </div>
       {isDisagreementOpen ? (
         <div className="diagnosis-disagreement-panel">
-          <label htmlFor={`disagreement-note-${diagnosis.id}`}>Observação da discordância</label>
-          <textarea
-            id={`disagreement-note-${diagnosis.id}`}
-            value={reviewNoteDraft}
-            onChange={(event) => setReviewNoteDraft(event.target.value)}
-            placeholder="Registre o motivo da discordância, se necessário"
-            rows={3}
-          />
-          <div className="disagreement-actions">
-            <div className="disagreement-submit-actions">
-              <button
-                className="button compact-button"
-                type="button"
-                onClick={() => submitDisagreement(reviewNoteDraft)}
-                disabled={isBusy}
-              >
-                Salvar discordância
-              </button>
-              <button
-                className="button ghost compact-button"
-                type="button"
-                onClick={() => submitDisagreement("")}
-                disabled={isBusy}
-              >
-                Discordar sem observação
-              </button>
-            </div>
+          <div className="diagnosis-disagreement-header">
+            <label htmlFor={`disagreement-note-${diagnosis.id}`}>
+              Observação da discordância <span>(opcional)</span>
+            </label>
             <button
               className="icon-button compact-icon-button"
               type="button"
@@ -273,6 +253,34 @@ function DiagnosisCard({
               title="Cancelar"
             >
               <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <textarea
+            id={`disagreement-note-${diagnosis.id}`}
+            value={reviewNoteDraft}
+            onChange={(event) => setReviewNoteDraft(event.target.value)}
+            placeholder="Registre o motivo da discordância, se necessário"
+            rows={3}
+          />
+          <div className="disagreement-actions">
+            <button
+              className="button compact-button disagreement-save-button"
+              type="button"
+              onClick={() => submitDisagreement(reviewNoteDraft)}
+              disabled={isBusy || !canSaveDisagreement}
+            >
+              Salvar discordância
+            </button>
+            <div className="disagreement-separator" aria-hidden="true">
+              <span>ou</span>
+            </div>
+            <button
+              className="button ghost compact-button disagreement-no-note-button"
+              type="button"
+              onClick={() => submitDisagreement("")}
+              disabled={isBusy}
+            >
+              Discordar sem observação
             </button>
           </div>
         </div>

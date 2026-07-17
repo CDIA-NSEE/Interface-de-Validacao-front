@@ -1,5 +1,5 @@
-function normalize(value = "") {
-  return value
+export function normalizeDiagnosisText(value) {
+  return String(value || "")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .trim()
@@ -9,7 +9,8 @@ function normalize(value = "") {
 export function isDailyDiagnosis(diagnosis, dailyStandardDiagnosis) {
   if (!dailyStandardDiagnosis) return Boolean(diagnosis.daily_required);
   return (
-    normalize(diagnosis.standard_text || diagnosis.name) === normalize(dailyStandardDiagnosis)
+    normalizeDiagnosisText(diagnosis.standard_text || diagnosis.name) ===
+    normalizeDiagnosisText(dailyStandardDiagnosis)
   );
 }
 
