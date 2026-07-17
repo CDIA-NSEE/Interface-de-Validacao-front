@@ -7,7 +7,15 @@ import {
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
   getRegionReference,
+  normalizeDiagnosisText,
 } from "../src/utils/diagnosisReferences.js";
+
+test("normalizes diagnosis text safely for the review cards", () => {
+  assert.equal(normalizeDiagnosisText("Ritmo sinusal"), "RITMO SINUSAL");
+  const accentedArea = `${String.fromCharCode(0x00e1)}rea eletricamente inativa`;
+  assert.equal(normalizeDiagnosisText(accentedArea), "AREA ELETRICAMENTE INATIVA");
+  assert.equal(normalizeDiagnosisText(undefined), "");
+});
 
 test("creates D1.1 references in the same order shown in the diagnosis panel", () => {
   const diagnoses = [
