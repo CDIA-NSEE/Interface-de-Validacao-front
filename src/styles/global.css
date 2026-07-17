@@ -172,8 +172,22 @@ a {
 }
 
 .dashboard-page {
+  --color-topbar: #0e5a78;
+  --color-topbar-text: #ffffff;
+  --color-topbar-muted: #d8f3fa;
+  --color-primary: #2f5f9f;
+  --color-primary-hover: #244f88;
+  --color-primary-light: #e8f1fb;
+  --color-text: #0b2a4a;
+  --color-muted: #52657a;
+  --color-bg: #eef4fb;
+  --color-surface: #ffffff;
+  --color-border: #cfe0f3;
+  --color-disabled: #dce5eb;
+  --color-disabled-text: #718394;
   min-height: 100vh;
   padding: 20px 0 36px;
+  background: var(--color-bg);
 }
 
 .dashboard-workspace {
@@ -214,15 +228,15 @@ a {
 }
 
 .dashboard-queue-hero {
-  --queue-hero-blue: var(--color-border);
-  --queue-hero-accent: var(--color-topbar);
-  --queue-hero-fill: var(--color-primary-light);
-  --queue-hero-icon-fill: var(--color-surface);
-  --queue-hero-progress-fill: var(--color-surface);
+  --queue-hero-blue: #8bcfe2;
+  --queue-hero-accent: #0e5a78;
+  --queue-hero-fill: #d8f3fa;
+  --queue-hero-icon-fill: #eaf9fc;
+  --queue-hero-progress-fill: #eaf9fc;
   --queue-hero-progress-track: #b7d9e2;
   --queue-hero-button-text: #ffffff;
-  --queue-hero-button-fill: var(--color-primary);
-  --queue-hero-button-hover: var(--color-primary-hover);
+  --queue-hero-button-fill: #0e5a78;
+  --queue-hero-button-hover: #0a4962;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -234,7 +248,7 @@ a {
   border-left: 6px solid var(--queue-hero-accent);
   border-radius: 8px;
   background: var(--queue-hero-fill);
-  box-shadow: 0 14px 30px rgba(11, 79, 108, 0.14);
+  box-shadow: 0 14px 30px rgba(14, 79, 104, 0.14);
 }
 
 .queue-hero-main {
@@ -1627,6 +1641,7 @@ textarea:focus {
   flex-direction: column;
   height: 100dvh;
   min-height: 100vh;
+  background: var(--color-bg);
   overflow: hidden;
 }
 
@@ -3053,16 +3068,32 @@ textarea:focus {
   --semantic-on-color: #0b1220;
 }
 
+:root[data-theme="dark"] .dashboard-page {
+  --color-topbar: #172233;
+  --color-topbar-text: #eef6ff;
+  --color-topbar-muted: #aec0d5;
+  --color-primary: #79aef0;
+  --color-primary-hover: #9bcfff;
+  --color-primary-light: #183552;
+  --color-text: #eef6ff;
+  --color-muted: #aec0d5;
+  --color-bg: #0e1622;
+  --color-surface: #172233;
+  --color-border: #30445d;
+  --color-disabled: #30445d;
+  --color-disabled-text: #aec0d5;
+}
+
 :root[data-theme="dark"] .dashboard-queue-hero {
-  --queue-hero-blue: #397080;
-  --queue-hero-accent: #61becd;
-  --queue-hero-fill: #10323d;
-  --queue-hero-icon-fill: #0c2631;
-  --queue-hero-progress-fill: #0c2631;
-  --queue-hero-progress-track: #244f5c;
-  --queue-hero-button-fill: var(--color-primary);
-  --queue-hero-button-hover: var(--color-primary-hover);
-  --queue-hero-button-text: #ffffff;
+  --queue-hero-blue: #5fb6cc;
+  --queue-hero-accent: #7dd3e8;
+  --queue-hero-fill: #0f3f52;
+  --queue-hero-icon-fill: #143f50;
+  --queue-hero-progress-fill: #143f50;
+  --queue-hero-progress-track: #2b6a7d;
+  --queue-hero-button-fill: #eaf9fc;
+  --queue-hero-button-hover: #d8f3fa;
+  --queue-hero-button-text: #0e5a78;
   border-color: var(--queue-hero-blue);
   border-left-color: var(--queue-hero-accent);
   background: var(--queue-hero-fill);
@@ -3111,7 +3142,7 @@ textarea:focus {
 }
 
 :root[data-theme="dark"] .dashboard-queue-hero .primary-action:hover:not(:disabled) {
-  color: #ffffff;
+  color: #0e5a78;
 }
 
 :root[data-theme="dark"] .summary-pending strong {
@@ -3200,6 +3231,23 @@ textarea:focus {
   color: var(--color-topbar-text);
   border-color: rgba(255, 255, 255, 0.34);
   background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .review-page {
+  --color-topbar: #061b27;
+  --color-topbar-text: #f2f8fa;
+  --color-topbar-muted: #c4dbe0;
+  --color-primary: #0b7185;
+  --color-primary-hover: #1592a6;
+  --color-primary-light: #103a45;
+  --color-text: #f0f7f9;
+  --color-muted: #b4c8cd;
+  --color-bg: #06242e;
+  --color-surface: #0b303a;
+  --color-border: #205d6b;
+  --color-disabled: #1b404b;
+  --color-disabled-text: #8ca5ab;
+  --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.34);
 }
 
 :root[data-theme="dark"] .diagnosis-note-preview strong,
