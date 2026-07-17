@@ -33,37 +33,22 @@ import {
   reviewDailyDiagnosis,
 } from "../services/validationService.js";
 import { formatDate } from "../utils/dateUtils.js";
-
-function getDiagnosisStatus(diagnosis) {
-  return diagnosis.validation_status || diagnosis.review_status || "pending";
-}
+import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
+import {
+  createDiagnosisReferences,
+  getActiveRegionReference,
+  getDiagnosisDisplayGroups,
+  getDiagnosisReference,
+  getRegionReference,
+} from "../utils/diagnosisReferences.js";
 
 function getAutomaticReviewResult(exam) {
   const hasDivergence = exam?.diagnoses?.some(
     (diagnosis) =>
-      getDiagnosisStatus(diagnosis) === "rejected" || diagnosis.source === "doctor_added",
+      getDiagnosisReviewStatus(diagnosis) === "rejected" || diagnosis.source === "doctor_added",
   );
 
   return hasDivergence ? "alterado" : "sem_alteracao";
-}
-
-function normalize(value = "") {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toUpperCase();
-}
-
-function requiredDiagnosesFor(exam, context) {
-  const originalDiagnoses = exam?.diagnoses?.filter((diagnosis) => diagnosis.source === "original") || [];
-  if (!context?.is_configured) return [];
-  if (context.is_general_review_day) return originalDiagnoses;
-
-  return originalDiagnoses.filter((diagnosis) => {
-    if (diagnosis.daily_required) return true;
-    return normalize(diagnosis.standard_text || diagnosis.name) === normalize(context.active_standard_diagnosis);
-  });
 }
 
 function replaceDiagnosis(exam, updatedDiagnosis) {
@@ -354,29 +339,73 @@ export default function ExamReviewPage() {
     }
   }
 
-  const requiredDiagnoses = useMemo(
-    () => requiredDiagnosesFor(exam, validationContext),
-    [exam, validationContext],
+  const diagnosisGroups = useMemo(
+    () =>
+      getDiagnosisDisplayGroups(exam?.diagnoses || [], {
+        dailyStandardDiagnosis: validationContext?.active_standard_diagnosis,
+        isGeneralReviewDay: validationContext?.is_general_review_day,
+      }),
+    [
+      exam?.diagnoses,
+      validationContext?.active_standard_diagnosis,
+      validationContext?.is_general_review_day,
+    ],
   );
+  const diagnosisReferences = useMemo(
+    () => createDiagnosisReferences(diagnosisGroups.displayOrder),
+    [diagnosisGroups],
+  );
+  const requiredDiagnoses = diagnosisGroups.requiredDiagnoses;
   const viewerRegions = useMemo(
     () =>
-      (exam?.diagnoses || []).flatMap((diagnosis) =>
-        (diagnosis.regions || []).map((region) => ({
-          ...region,
-          diagnosisId: diagnosis.id,
-          isActive: activeRegionTarget?.diagnosisId === diagnosis.id,
-          label: regionLabelFor(diagnosis),
-        })),
-      ),
-    [activeRegionTarget, exam],
+      diagnosisGroups.displayOrder.flatMap((diagnosis) => {
+        const diagnosisReference = getDiagnosisReference(diagnosisReferences, diagnosis.id);
+
+        return (diagnosis.regions || []).map((region, index) => {
+          const regionReference = getRegionReference(diagnosisReference, index);
+          const diagnosisLabel = regionLabelFor(diagnosis);
+
+          return {
+            ...region,
+            ...getDiagnosisRegionVisual(diagnosis),
+            diagnosisId: diagnosis.id,
+            diagnosisReference,
+            isActive: activeRegionTarget?.diagnosisId === diagnosis.id,
+            label: regionReference ? `${regionReference} · ${diagnosisLabel}` : diagnosisLabel,
+            regionReference,
+          };
+        });
+      }),
+    [activeRegionTarget?.diagnosisId, diagnosisGroups, diagnosisReferences],
   );
+  const activeRegionDiagnosis = useMemo(
+    () =>
+      (exam?.diagnoses || []).find(
+        (diagnosis) => String(diagnosis.id) === String(activeRegionTarget?.diagnosisId),
+      ) || null,
+    [activeRegionTarget?.diagnosisId, exam],
+  );
+  const activeRegionVisual = activeRegionDiagnosis
+    ? getDiagnosisRegionVisual(activeRegionDiagnosis)
+    : null;
+  const activeRegionReference = useMemo(() => {
+    if (!activeRegionTarget || !activeRegionDiagnosis) return null;
+
+    const diagnosisReference = getDiagnosisReference(diagnosisReferences, activeRegionDiagnosis.id);
+    return getActiveRegionReference(
+      diagnosisReference,
+      activeRegionDiagnosis.regions || [],
+      activeRegionTarget,
+    );
+  }, [activeRegionDiagnosis, activeRegionTarget, diagnosisReferences]);
   const activeSelectionLabel = activeRegionTarget
-    ? `Marcando área: ${activeRegionTarget.label}`
+    ? `Marcando ${activeRegionReference || "área"}: ${activeRegionTarget.label}`
     : "";
   const requiredDecisionComplete =
     !validationContext?.is_configured ||
     requiredDiagnoses.some(
-      (diagnosis) => getDiagnosisStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
+      (diagnosis) =>
+        getDiagnosisReviewStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
   const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
   const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
@@ -506,6 +535,7 @@ export default function ExamReviewPage() {
                 activeRegionTarget={activeRegionTarget}
                 dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
                 diagnoses={exam.diagnoses}
+                diagnosisReferences={diagnosisReferences}
                 options={diagnosisOptions}
                 onAdd={handleAddDiagnosis}
                 onEditRegion={handleStartRegion}
@@ -601,6 +631,8 @@ export default function ExamReviewPage() {
             onRegionChange={handleRegionChange}
             regions={viewerRegions}
             selectionLabel={activeSelectionLabel}
+            selectionReference={activeRegionReference}
+            selectionVisual={activeRegionVisual}
           />
         </section>
       </main>

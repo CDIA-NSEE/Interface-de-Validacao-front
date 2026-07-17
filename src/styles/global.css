@@ -2039,6 +2039,40 @@ textarea:focus {
   min-width: 0;
 }
 
+.diagnosis-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.diagnosis-region-marker {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  border: 1px solid rgba(15, 39, 69, 0.28);
+  border-radius: 999px;
+  background: var(--diagnosis-region-color, #52677b);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72);
+}
+
+.diagnosis-reference-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 20px;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 5px;
+  color: #ffffff !important;
+  background: var(--diagnosis-region-color, #52677b);
+  font-size: 0.72rem !important;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .diagnosis-review-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2180,6 +2214,7 @@ textarea:focus {
 
 .diagnosis-title {
   display: block;
+  min-width: 0;
 }
 
 .diagnosis-original-text {
@@ -2228,6 +2263,37 @@ textarea:focus {
 .diagnosis-region-row > span {
   color: var(--color-text);
   font-weight: 800;
+}
+
+.diagnosis-region-reference {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.diagnosis-region-reference .diagnosis-region-code {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 20px;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 5px;
+  color: #ffffff;
+  background: var(--diagnosis-region-color, #52677b);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.diagnosis-region-reference > span {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 0.8025rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .region-row-actions {
@@ -2374,50 +2440,57 @@ textarea:focus {
 
 .selection-box {
   position: absolute;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--region-color, var(--color-primary));
   border-radius: 4px;
-  background: rgba(47, 95, 159, 0.14);
+  background: var(--region-fill, rgba(47, 95, 159, 0.14));
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85) inset;
   pointer-events: none;
 }
 
 .active-selection-box {
   z-index: 3;
+  border-width: 3px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9) inset, 0 0 0 2px rgba(15, 39, 69, 0.18);
+}
+
+.active-selection-box.is-draft {
+  border-style: dashed;
+  background: var(--region-draft-fill, var(--region-fill, rgba(47, 95, 159, 0.1)));
 }
 
 .saved-region-box {
   position: absolute;
   z-index: 2;
-  border: 2px solid #137047;
+  border: 2px solid var(--region-color, #137047);
   border-radius: 4px;
-  background: rgba(19, 112, 71, 0.12);
+  background: var(--region-fill, rgba(19, 112, 71, 0.12));
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.78) inset;
   pointer-events: none;
 }
 
 .saved-region-box.is-active {
-  border-color: var(--color-primary);
-  background: rgba(47, 95, 159, 0.16);
+  border-width: 3px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9) inset, 0 0 0 2px rgba(15, 39, 69, 0.18);
 }
 
-.saved-region-box > span {
+.region-reference-label {
   position: absolute;
-  top: -18px;
+  z-index: 1;
+  top: -22px;
   left: -2px;
-  min-width: 18px;
-  min-height: 18px;
-  padding: 1px 5px;
-  border-radius: 999px;
+  width: max-content;
+  min-width: 38px;
+  min-height: 20px;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
   color: #ffffff;
-  background: #137047;
+  background: var(--region-color, #137047);
   font-size: 0.72rem;
   font-weight: 900;
-  line-height: 16px;
+  line-height: 18px;
   text-align: center;
-}
-
-.saved-region-box.is-active > span {
-  background: var(--color-primary);
+  white-space: nowrap;
 }
 
 .feedback {
@@ -2995,6 +3068,11 @@ textarea:focus {
   background: #351821;
 }
 
+:root[data-theme="dark"] .diagnosis-region-marker {
+  border-color: rgba(244, 249, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(16, 27, 42, 0.92);
+}
+
 :root[data-theme="dark"] .region-link-button,
 :root[data-theme="dark"] .region-mode-chip,
 :root[data-theme="dark"] .diagnosis-region-row,
@@ -3093,6 +3171,11 @@ textarea:focus {
 :root[data-theme="dark"] .summary-block-heading h3,
 :root[data-theme="dark"] .progress-summary-copy strong {
   color: var(--color-text);
+}
+
+:root[data-theme="dark"] .diagnosis-region-reference .diagnosis-region-code {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.88);
 }
 
 @media (max-width: 1180px) {
