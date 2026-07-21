@@ -6,7 +6,9 @@ import {
   getActiveRegionReference,
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
+  getOriginalTextPreview,
   getRegionReference,
+  ORIGINAL_TEXT_PREVIEW_LIMIT,
   normalizeDiagnosisText,
 } from "../src/utils/diagnosisReferences.js";
 
@@ -15,6 +17,17 @@ test("normalizes diagnosis text safely for the review cards", () => {
   const accentedArea = `${String.fromCharCode(0x00e1)}rea eletricamente inativa`;
   assert.equal(normalizeDiagnosisText(accentedArea), "AREA ELETRICAMENTE INATIVA");
   assert.equal(normalizeDiagnosisText(undefined), "");
+});
+
+test("compacts original diagnosis text without splitting Unicode characters", () => {
+  assert.equal(getOriginalTextPreview("  Ritmo\n sinusal  "), "Ritmo sinusal");
+  assert.equal(getOriginalTextPreview("a".repeat(ORIGINAL_TEXT_PREVIEW_LIMIT)), "a".repeat(ORIGINAL_TEXT_PREVIEW_LIMIT));
+
+  const longAccentedText = "\u00e1".repeat(ORIGINAL_TEXT_PREVIEW_LIMIT + 1);
+  const preview = getOriginalTextPreview(longAccentedText);
+
+  assert.equal(Array.from(preview).length, ORIGINAL_TEXT_PREVIEW_LIMIT);
+  assert.equal(preview, `${"\u00e1".repeat(ORIGINAL_TEXT_PREVIEW_LIMIT - 1)}\u2026`);
 });
 
 test("creates D1.1 references in the same order shown in the diagnosis panel", () => {
