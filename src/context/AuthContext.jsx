@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { getCurrentUser, login as requestLogin } from "../services/authService.js";
+import { getCurrentUser, logout } from "../services/authService.js";
 import { AUTH_TOKEN_KEY, AUTH_UNAUTHORIZED_EVENT } from "../services/api.js";
 
 const AUTH_USER_KEY = "medpage.authUser";
@@ -62,26 +62,30 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, clearSession);
   }, [clearSession]);
 
-  const login = useCallback(async ({ email, username, password }) => {
-    const identifier = email || username;
-    const authData = await requestLogin(identifier, password);
-    window.localStorage.setItem(AUTH_TOKEN_KEY, authData.access_token);
-    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(authData.user));
-    setToken(authData.access_token);
-    setUser(authData.user);
-    return authData.user;
+  const login = useCallback(async ({ email, password }) => {
+    const authData = await loginService({ email, password });
+    window.localStorage.setItem(AUTH_TOKEN_KEY, authData.access_token || "mock-token");
+    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(authData));
+    setToken(authData.access_token || "mock-token");
+    setUser(authData);
+    return authData;
   }, []);
+
+  const logout = useCallback(async () => {
+    await logoutService();
+    clearSession();
+  }, [clearSession]);
 
   const value = useMemo(
     () => ({
       isAuthenticated: Boolean(token && user),
       isInitializing,
       login,
-      logout: clearSession,
+      logout,
       token,
       user,
     }),
-    [clearSession, isInitializing, login, token, user],
+    [clearSession, isInitializing, login, logout, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -94,3 +98,7 @@ export function useAuth() {
   }
   return context;
 }
+
+// Import after context to avoid circular dependency
+import { login as loginService } from "../services/authService.js";
+import { logout as logoutService } from "../services/authService.js";

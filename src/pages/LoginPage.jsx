@@ -35,7 +35,7 @@ export default function LoginPage() {
       await login({ email, password: credentials.password });
       navigate("/", { replace: true });
     } catch (requestError) {
-      setError(requestError?.response?.data?.detail || "Não foi possível entrar.");
+      setError(requestError?.message || "Não foi possível entrar.");
     } finally {
       setIsSubmitting(false);
     }

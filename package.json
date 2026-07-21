@@ -10,6 +10,8 @@
     "test": "node --test"
   },
   "dependencies": {
+    "aws-amplify": "^6.6.0",
+    "@aws-amplify/auth": "^6.5.0",
     "axios": "^1.7.9",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
