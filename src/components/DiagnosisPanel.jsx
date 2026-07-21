@@ -6,8 +6,8 @@ import { hasDisagreementNote } from "../utils/disagreementReview.js";
 import {
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
+  getOriginalTextPreview,
   getRegionReference,
-  normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
 
 const REVIEW_LABELS = {
@@ -19,10 +19,6 @@ const REVIEW_LABELS = {
 function regionCountLabel(count) {
   if (count === 1) return "1 área";
   return `${count} áreas`;
-}
-
-function sameDiagnosisText(left, right) {
-  return normalizeDiagnosisText(left) === normalizeDiagnosisText(right);
 }
 
 function DiagnosisCard({
@@ -44,7 +40,8 @@ function DiagnosisCard({
   const originalText = diagnosis.original_text || diagnosis.name;
   const regions = diagnosis.regions || [];
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
-  const hasDistinctOriginal = Boolean(originalText && !sameDiagnosisText(standardText, originalText));
+  const originalPreview = getOriginalTextPreview(originalText);
+  const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText);
   const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
   const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
   const canSaveDisagreement = hasDisagreementNote(reviewNoteDraft);
@@ -109,9 +106,19 @@ function DiagnosisCard({
             {standardText}
           </strong>
         </div>
-        {hasDistinctOriginal ? (
-          <p className="diagnosis-original-text" title={`Texto original: ${originalText}`}>
-            Original: {originalText}
+        {shouldShowOriginal ? (
+          <p className="diagnosis-original-text">
+            <span
+              aria-label={`Texto original completo: ${originalText}`}
+              className="diagnosis-original-preview"
+              tabIndex={0}
+              title={`Texto original: ${originalText}`}
+            >
+              Original: {originalPreview}
+            </span>
+            <span aria-hidden="true" className="diagnosis-original-tooltip">
+              {originalText}
+            </span>
           </p>
         ) : null}
         <span className="diagnosis-review-label">{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</span>

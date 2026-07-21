@@ -1949,7 +1949,11 @@ textarea:focus {
 
 .review-notes-details .notes-field {
   width: 100%;
+  min-height: 64px;
   margin-top: 5px;
+  padding: 8px 10px;
+  line-height: 1.35;
+  resize: vertical;
 }
 
 .diagnosis-panel,
@@ -2339,12 +2343,58 @@ textarea:focus {
 }
 
 .diagnosis-original-text {
+  position: relative;
   margin: 0;
+  min-width: 0;
   color: var(--color-muted);
   font-size: 0.7925rem;
   font-weight: 700;
   line-height: 1.22;
+}
+
+.diagnosis-original-preview {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnosis-original-preview:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.diagnosis-original-text .diagnosis-original-tooltip {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 7px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+  opacity: 0;
   overflow-wrap: anywhere;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+  white-space: pre-wrap;
+}
+
+.diagnosis-original-preview:hover + .diagnosis-original-tooltip,
+.diagnosis-original-preview:focus-visible + .diagnosis-original-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
 }
 
 .diagnosis-item span {

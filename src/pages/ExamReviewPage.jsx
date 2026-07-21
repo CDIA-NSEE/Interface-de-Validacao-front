@@ -589,7 +589,7 @@ export default function ExamReviewPage() {
                   setSaveFeedback("");
                 }}
                 placeholder="Registre comentários gerais sobre o exame"
-                rows={3}
+                rows={2}
               />
             </details>
           </div>

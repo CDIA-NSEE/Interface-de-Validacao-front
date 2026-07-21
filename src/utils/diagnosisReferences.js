@@ -6,6 +6,19 @@ export function normalizeDiagnosisText(value) {
     .toUpperCase();
 }
 
+export const ORIGINAL_TEXT_PREVIEW_LIMIT = 48;
+
+export function getOriginalTextPreview(value, limit = ORIGINAL_TEXT_PREVIEW_LIMIT) {
+  const normalizedText = String(value || "").replace(/\s+/g, " ").trim();
+  const characters = Array.from(normalizedText);
+  const maxLength = Math.max(1, Math.floor(Number(limit) || ORIGINAL_TEXT_PREVIEW_LIMIT));
+
+  if (characters.length <= maxLength) return normalizedText;
+  if (maxLength === 1) return "\u2026";
+
+  return `${characters.slice(0, maxLength - 1).join("")}\u2026`;
+}
+
 export function isDailyDiagnosis(diagnosis, dailyStandardDiagnosis) {
   if (!dailyStandardDiagnosis) return Boolean(diagnosis.daily_required);
   return (
