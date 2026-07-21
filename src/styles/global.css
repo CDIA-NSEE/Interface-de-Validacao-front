@@ -2228,14 +2228,21 @@ textarea:focus {
 }
 
 .diagnosis-disagreement-header label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
   color: #8c1824;
   font-size: 0.8225rem;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .diagnosis-disagreement-header label span {
   color: #74444b;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .diagnosis-disagreement-header .icon-button {
@@ -2449,18 +2456,6 @@ textarea:focus {
 .notes-field {
   min-height: 54px;
   resize: none;
-}
-
-.diagnosis-divergence-alert {
-  margin-bottom: 5px;
-  padding: 6px 8px;
-  border: 1px solid #f7d38b;
-  border-radius: 7px;
-  color: #754900;
-  background: #fff8e7;
-  font-size: 0.8025rem;
-  font-weight: 700;
-  line-height: 1.35;
 }
 
 .review-actions {
@@ -3347,12 +3342,6 @@ textarea:focus {
   color: #ffc0c8;
   border-color: #a94555;
   background: #351821;
-}
-
-:root[data-theme="dark"] .diagnosis-divergence-alert {
-  color: #ffd98f;
-  border-color: #8a651f;
-  background: #2d2415;
 }
 
 :root[data-theme="dark"] .ai-recommendation-box p,
