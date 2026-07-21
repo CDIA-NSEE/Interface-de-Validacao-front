@@ -407,7 +407,6 @@ export default function ExamReviewPage() {
       (diagnosis) =>
         getDiagnosisReviewStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
-  const hasDiagnosisDivergence = getAutomaticReviewResult(exam) === "alterado";
   const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
@@ -596,13 +595,6 @@ export default function ExamReviewPage() {
           </div>
 
           <div className="review-sidebar-actions">
-            {hasDiagnosisDivergence ? (
-              <div className="diagnosis-divergence-alert">
-                Há divergência ou diagnóstico médico adicionado. Ao validar, o exame será
-                classificado como alterado.
-              </div>
-            ) : null}
-
             <section className="sidebar-section review-status-section" aria-label="Status atual">
               <StatusBadge
                 status={exam.status_validation}
