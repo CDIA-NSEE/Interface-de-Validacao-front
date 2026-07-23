@@ -1,7 +1,11 @@
 import { Check, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
+import {
+  getDiagnosisRegionVisual,
+  getDiagnosisReviewStatus,
+  getDiagnosisVisualStatus,
+} from "../utils/diagnosisRegionVisuals.js";
 import { hasDisagreementNote } from "../utils/disagreementReview.js";
 import {
   getDiagnosisDisplayGroups,
@@ -32,10 +36,10 @@ function DiagnosisCard({
   onRemoveRegion,
   onReview,
   onReviewDraftChange,
+  onDisagreementPreviewChange,
   onStartRegion,
 }) {
   const status = getDiagnosisReviewStatus(diagnosis);
-  const regionVisual = getDiagnosisRegionVisual(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
   const originalText = diagnosis.original_text || diagnosis.name;
   const regions = diagnosis.regions || [];
@@ -44,6 +48,11 @@ function DiagnosisCard({
   const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText);
   const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
   const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
+  const visualStatus = getDiagnosisVisualStatus(
+    diagnosis,
+    isDisagreementOpen ? "rejected" : null,
+  );
+  const regionVisual = getDiagnosisRegionVisual(diagnosis, visualStatus);
   const canSaveDisagreement = hasDisagreementNote(reviewNoteDraft);
   const kickerLabel = isRequired ? "Diagnóstico do dia" : diagnosis.source === "doctor_added" ? "Adicionado" : "";
   const hasChipRow = Boolean(kickerLabel || diagnosis.is_grouped || diagnosis.region_required_missing);
@@ -58,28 +67,38 @@ function DiagnosisCard({
     return () => onReviewDraftChange?.(diagnosis.id, false);
   }, [diagnosis.id, diagnosis.review_notes, isDisagreementOpen, onReviewDraftChange, reviewNoteDraft]);
 
+  useEffect(
+    () => () => onDisagreementPreviewChange?.(diagnosis.id, false),
+    [diagnosis.id, onDisagreementPreviewChange],
+  );
+
+  function setDisagreementPanelOpen(isOpen) {
+    setIsDisagreementOpen(isOpen);
+    onDisagreementPreviewChange?.(diagnosis.id, isOpen);
+  }
+
   function openDisagreementPanel() {
     setReviewNoteDraft(diagnosis.review_notes || "");
-    setIsDisagreementOpen(true);
+    setDisagreementPanelOpen(true);
   }
 
   async function submitDisagreement(note) {
     const wasReviewed = await onReview(diagnosis.id, "rejected", note);
     if (wasReviewed) {
-      setIsDisagreementOpen(false);
+      setDisagreementPanelOpen(false);
     }
   }
 
   async function submitAgreement() {
     const wasReviewed = await onReview(diagnosis.id, "confirmed");
     if (wasReviewed) {
-      setIsDisagreementOpen(false);
+      setDisagreementPanelOpen(false);
     }
   }
 
   return (
     <article
-      className={`diagnosis-item original-diagnosis ${status} ${
+      className={`diagnosis-item original-diagnosis ${visualStatus} ${
         isRequired ? "required-diagnosis" : "optional-diagnosis"
       }`}
       style={{ "--diagnosis-region-color": regionVisual.color }}
@@ -121,7 +140,11 @@ function DiagnosisCard({
             </span>
           </p>
         ) : null}
-        <span className="diagnosis-review-label">{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</span>
+        <span className="diagnosis-review-label">
+          {isDisagreementOpen
+            ? "Discordância em edição"
+            : REVIEW_LABELS[status] || REVIEW_LABELS.pending}
+        </span>
         {status === "rejected" && diagnosis.review_notes ? (
           <div className="diagnosis-note-preview">
             <strong>Observação</strong>
@@ -208,12 +231,12 @@ function DiagnosisCard({
         </button>
         <button
           className={`button compact-button review-toggle agree ${
-            status === "confirmed" ? "is-active" : "is-muted"
+            visualStatus === "confirmed" ? "is-active" : "is-muted"
           }`}
           type="button"
           onClick={submitAgreement}
           disabled={isBusy || diagnosis.source === "doctor_added"}
-          aria-pressed={status === "confirmed"}
+          aria-pressed={visualStatus === "confirmed"}
           aria-label="Concordar com diagnóstico"
           title="Concordar"
         >
@@ -221,12 +244,12 @@ function DiagnosisCard({
         </button>
         <button
           className={`button compact-button review-toggle disagree ${
-            status === "rejected" ? "is-active" : "is-muted"
+            visualStatus === "rejected" ? "is-active" : "is-muted"
           }`}
           type="button"
           onClick={openDisagreementPanel}
           disabled={isBusy || diagnosis.source === "doctor_added"}
-          aria-pressed={status === "rejected"}
+          aria-pressed={visualStatus === "rejected"}
           aria-label="Discordar do diagnóstico"
           title="Discordar"
         >
@@ -254,7 +277,7 @@ function DiagnosisCard({
             <button
               className="icon-button compact-icon-button"
               type="button"
-              onClick={() => setIsDisagreementOpen(false)}
+              onClick={() => setDisagreementPanelOpen(false)}
               disabled={isBusy}
               aria-label="Cancelar observação"
               title="Cancelar"
@@ -311,6 +334,7 @@ export default function DiagnosisPanel({
   onRemove,
   onRemoveRegion,
   onReview,
+  onDisagreementPreviewChange,
   onUnsavedChange,
   onSecondaryToggle,
   onStartRegion,
@@ -398,6 +422,7 @@ export default function DiagnosisPanel({
                 onRemoveRegion={onRemoveRegion}
                 onReview={onReview}
                 onReviewDraftChange={handleReviewDraftChange}
+                onDisagreementPreviewChange={onDisagreementPreviewChange}
                 onStartRegion={onStartRegion}
               />
             ))
@@ -434,6 +459,7 @@ export default function DiagnosisPanel({
                     onRemoveRegion={onRemoveRegion}
                     onReview={onReview}
                     onReviewDraftChange={handleReviewDraftChange}
+                    onDisagreementPreviewChange={onDisagreementPreviewChange}
                     onStartRegion={onStartRegion}
                   />
                 ))}
@@ -481,6 +507,7 @@ export default function DiagnosisPanel({
                     onRemoveRegion={onRemoveRegion}
                     onReview={onReview}
                     onReviewDraftChange={handleReviewDraftChange}
+                    onDisagreementPreviewChange={onDisagreementPreviewChange}
                     onStartRegion={onStartRegion}
                   />
                 ))}
