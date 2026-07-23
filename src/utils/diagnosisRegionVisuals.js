@@ -28,6 +28,18 @@ export function getDiagnosisReviewStatus(diagnosis) {
   return status === "confirmed" || status === "rejected" ? status : "pending";
 }
 
+export function getDiagnosisVisualStatus(diagnosis, previewStatus = null) {
+  if (
+    previewStatus === "pending" ||
+    previewStatus === "confirmed" ||
+    previewStatus === "rejected"
+  ) {
+    return previewStatus;
+  }
+
+  return getDiagnosisReviewStatus(diagnosis);
+}
+
 function stablePaletteIndex(value, paletteSize) {
   let hash = 0;
   const key = String(value);
@@ -39,8 +51,8 @@ function stablePaletteIndex(value, paletteSize) {
   return hash % paletteSize;
 }
 
-export function getDiagnosisRegionVisual(diagnosis) {
-  const status = getDiagnosisReviewStatus(diagnosis);
+export function getDiagnosisRegionVisual(diagnosis, previewStatus = null) {
+  const status = getDiagnosisVisualStatus(diagnosis, previewStatus);
   if (status === "pending") {
     return { status, ...PENDING_REGION_VISUAL };
   }

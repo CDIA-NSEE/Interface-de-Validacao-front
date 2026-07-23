@@ -85,6 +85,7 @@ export default function ExamReviewPage() {
   const [error, setError] = useState("");
   const [saveFeedback, setSaveFeedback] = useState("");
   const [hasUnsavedDiagnosisReview, setHasUnsavedDiagnosisReview] = useState(false);
+  const [disagreementPreviewIds, setDisagreementPreviewIds] = useState(() => new Set());
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
 
   const loadExam = useCallback(async () => {
@@ -105,6 +106,7 @@ export default function ExamReviewPage() {
       setIsSecondaryPanelOpen(true);
       setIsNotesOpen(true);
       setHasUnsavedDiagnosisReview(false);
+      setDisagreementPreviewIds(new Set());
       setIsExitConfirmOpen(false);
       setSaveFeedback("");
       if (examData.status_validation === "nao_validado") {
@@ -126,6 +128,22 @@ export default function ExamReviewPage() {
   useEffect(() => {
     loadExam();
   }, [loadExam]);
+
+  const handleDisagreementPreviewChange = useCallback((diagnosisId, isOpen) => {
+    const key = String(diagnosisId);
+
+    setDisagreementPreviewIds((current) => {
+      if (current.has(key) === isOpen) return current;
+
+      const next = new Set(current);
+      if (isOpen) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
+  }, []);
 
   async function runAction(action) {
     setIsBusy(true);
@@ -367,7 +385,10 @@ export default function ExamReviewPage() {
 
           return {
             ...region,
-            ...getDiagnosisRegionVisual(diagnosis),
+            ...getDiagnosisRegionVisual(
+              diagnosis,
+              disagreementPreviewIds.has(String(diagnosis.id)) ? "rejected" : null,
+            ),
             diagnosisId: diagnosis.id,
             diagnosisReference,
             isActive: activeRegionTarget?.diagnosisId === diagnosis.id,
@@ -376,7 +397,12 @@ export default function ExamReviewPage() {
           };
         });
       }),
-    [activeRegionTarget?.diagnosisId, diagnosisGroups, diagnosisReferences],
+    [
+      activeRegionTarget?.diagnosisId,
+      diagnosisGroups,
+      diagnosisReferences,
+      disagreementPreviewIds,
+    ],
   );
   const activeRegionDiagnosis = useMemo(
     () =>
@@ -386,7 +412,10 @@ export default function ExamReviewPage() {
     [activeRegionTarget?.diagnosisId, exam],
   );
   const activeRegionVisual = activeRegionDiagnosis
-    ? getDiagnosisRegionVisual(activeRegionDiagnosis)
+    ? getDiagnosisRegionVisual(
+        activeRegionDiagnosis,
+        disagreementPreviewIds.has(String(activeRegionDiagnosis.id)) ? "rejected" : null,
+      )
     : null;
   const activeRegionReference = useMemo(() => {
     if (!activeRegionTarget || !activeRegionDiagnosis) return null;
@@ -541,6 +570,7 @@ export default function ExamReviewPage() {
                 onRemove={handleRemoveDiagnosis}
                 onRemoveRegion={handleRemoveRegion}
                 onReview={handleReviewDiagnosis}
+                onDisagreementPreviewChange={handleDisagreementPreviewChange}
                 onUnsavedChange={setHasUnsavedDiagnosisReview}
                 onStartRegion={handleStartRegion}
                 isBusy={isBusy}
