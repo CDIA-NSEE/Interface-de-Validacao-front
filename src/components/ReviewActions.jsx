@@ -12,23 +12,33 @@ export default function ReviewActions({
 }) {
   return (
     <div className="review-actions">
-      <button className="button ghost" type="button" onClick={onBack} disabled={isBusy}>
-        <ArrowLeft size={17} aria-hidden="true" />
+      <button
+        className="button ghost review-action-button"
+        type="button"
+        onClick={onBack}
+        disabled={isBusy}
+      >
+        <ArrowLeft className="review-action-icon" size={17} aria-hidden="true" />
         Voltar
       </button>
       {onSave ? (
-        <button className="button secondary" type="button" onClick={onSave} disabled={isBusy}>
-          <Save size={17} aria-hidden="true" />
+        <button
+          className="button secondary review-action-button"
+          type="button"
+          onClick={onSave}
+          disabled={isBusy}
+        >
+          <Save className="review-action-icon" size={17} aria-hidden="true" />
           {saveLabel}
         </button>
       ) : null}
       <button
-        className="button success"
+        className="button success review-action-button"
         type="button"
         onClick={onValidate}
         disabled={isBusy || isValid || !canValidate}
       >
-        <CheckCircle2 size={17} aria-hidden="true" />
+        <CheckCircle2 className="review-action-icon" size={17} aria-hidden="true" />
         {primaryLabel}
       </button>
     </div>
