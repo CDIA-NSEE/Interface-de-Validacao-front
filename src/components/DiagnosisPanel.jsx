@@ -402,12 +402,22 @@ export default function DiagnosisPanel({
         </section>
       ) : null}
 
-      <section className="diagnosis-group">
-        <div className="diagnosis-group-heading">
+      <section
+        className={`diagnosis-group${isGeneralReviewDay ? "" : " diagnosis-primary-panel"}`}
+      >
+        <div
+          className={`diagnosis-group-heading${
+            isGeneralReviewDay ? "" : " diagnosis-primary-heading"
+          }`}
+        >
           <strong>{isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"}</strong>
         </div>
 
-        <div className="diagnosis-list">
+        <div
+          className={`diagnosis-list${
+            isGeneralReviewDay ? "" : " diagnosis-primary-content"
+          }`}
+        >
           {requiredDiagnoses.length ? (
             requiredDiagnoses.map((diagnosis) => (
               <DiagnosisCard

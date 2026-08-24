@@ -2712,10 +2712,17 @@ textarea:focus {
   height: 32px;
 }
 
-.diagnosis-secondary-panel {
+.diagnosis-secondary-panel,
+.diagnosis-primary-panel {
   gap: 0;
 }
 
+.diagnosis-primary-panel {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.diagnosis-primary-heading,
 .diagnosis-secondary-summary {
   display: flex;
   min-height: 34px;
@@ -2727,9 +2734,16 @@ textarea:focus {
   border-radius: 8px;
   color: #153657;
   background: #f4f9ff;
-  cursor: pointer;
   font-weight: 900;
+}
+
+.diagnosis-secondary-summary {
+  cursor: pointer;
   list-style: none;
+}
+
+.diagnosis-primary-heading {
+  border-radius: 8px 8px 0 0;
 }
 
 .diagnosis-secondary-summary::-webkit-details-marker {
@@ -2768,6 +2782,7 @@ textarea:focus {
   font-weight: 900;
 }
 
+.diagnosis-primary-content,
 .diagnosis-secondary-content {
   display: grid;
   gap: 8px;
@@ -3645,6 +3660,7 @@ textarea:focus {
 :root[data-theme="dark"] .viewer-toolbar,
 :root[data-theme="dark"] .ecg-canvas,
 :root[data-theme="dark"] .diagnosis-item,
+:root[data-theme="dark"] .diagnosis-primary-heading,
 :root[data-theme="dark"] .diagnosis-secondary-summary,
 :root[data-theme="dark"] .support-channel,
 :root[data-theme="dark"] .tutorial-step {
@@ -3937,6 +3953,8 @@ textarea:focus {
 :root[data-theme="dark"] .diagnosis-region-row,
 :root[data-theme="dark"] .diagnosis-note-preview,
 :root[data-theme="dark"] .diagnosis-disagreement-panel,
+:root[data-theme="dark"] .diagnosis-primary-heading,
+:root[data-theme="dark"] .diagnosis-primary-content,
 :root[data-theme="dark"] .diagnosis-secondary-summary,
 :root[data-theme="dark"] .diagnosis-secondary-content {
   color: var(--color-text);
