@@ -3231,6 +3231,18 @@ textarea:focus {
   background: var(--color-primary-light);
 }
 
+.zoom-control-button {
+  flex: 0 0 40px;
+  padding: 0;
+  border-radius: 50%;
+  line-height: 0;
+}
+
+.zoom-control-button svg {
+  display: block;
+  margin: auto;
+}
+
 .zoom-value {
   min-width: 52px;
   color: var(--color-muted);

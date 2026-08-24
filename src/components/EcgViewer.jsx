@@ -179,7 +179,7 @@ export default function EcgViewer({
     <div className="ecg-viewer">
       <div className="viewer-toolbar" aria-label="Controles do ECG">
         <button
-          className="icon-button"
+          className="icon-button zoom-control-button"
           type="button"
           onClick={() => changeZoom(0.15)}
           aria-label="Zoom mais"
@@ -188,7 +188,7 @@ export default function EcgViewer({
           <Plus size={18} aria-hidden="true" />
         </button>
         <button
-          className="icon-button"
+          className="icon-button zoom-control-button"
           type="button"
           onClick={() => changeZoom(-0.15)}
           aria-label="Zoom menos"
