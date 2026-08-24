@@ -2515,6 +2515,10 @@ textarea:focus {
   border-bottom: 1px solid var(--color-border);
 }
 
+.review-sidebar-actions .review-status-section {
+  border-bottom: 0;
+}
+
 .review-decision-section {
   gap: 0;
   padding-bottom: 0;
