@@ -2,13 +2,7 @@ import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import api from "../services/api.js";
-
-const ECG_SIZE = {
-  width: 1125,
-  height: 645,
-};
-
-const ECG_ASPECT_RATIO = ECG_SIZE.width / ECG_SIZE.height;
+import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
 function clamp(value) {
   return Math.min(100, Math.max(0, value));
@@ -34,6 +28,7 @@ function regionFromPoints(start, end) {
 
 export default function EcgViewer({
   imageUrl,
+  onImageAspectRatioChange,
   onRegionCancel,
   onRegionChange,
   regions = [],
@@ -46,6 +41,7 @@ export default function EcgViewer({
   const [selectionStart, setSelectionStart] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [resolvedSource, setResolvedSource] = useState("/sample-ecg.svg");
   const canvasRef = useRef(null);
   const source = useMemo(() => imageUrl || "/sample-ecg.svg", [imageUrl]);
@@ -57,13 +53,13 @@ export default function EcgViewer({
   const fittedSize = useMemo(() => {
     if (!canvasSize.width || !canvasSize.height) return null;
 
-    const widthByHeight = canvasSize.height * ECG_ASPECT_RATIO;
+    const widthByHeight = canvasSize.height * imageAspectRatio;
     const width = Math.min(canvasSize.width, widthByHeight);
     return {
       width,
-      height: width / ECG_ASPECT_RATIO,
+      height: width / imageAspectRatio,
     };
-  }, [canvasSize]);
+  }, [canvasSize, imageAspectRatio]);
   const stageStyle = fittedSize
     ? {
         width: `${fittedSize.width * zoom}px`,
@@ -128,6 +124,15 @@ export default function EcgViewer({
     return () => observer.disconnect();
   }, []);
 
+  function handleImageLoad(event) {
+    const { naturalHeight, naturalWidth } = event.currentTarget;
+    if (!naturalHeight || !naturalWidth) return;
+
+    const nextAspectRatio = naturalWidth / naturalHeight;
+    setImageAspectRatio(nextAspectRatio);
+    onImageAspectRatioChange?.(nextAspectRatio);
+  }
+
   function changeZoom(amount) {
     setZoom((current) => Math.min(2.4, Math.max(0.6, Number((current + amount).toFixed(2)))));
   }
@@ -179,7 +184,7 @@ export default function EcgViewer({
     <div className="ecg-viewer">
       <div className="viewer-toolbar" aria-label="Controles do ECG">
         <button
-          className="icon-button"
+          className="icon-button zoom-control-button"
           type="button"
           onClick={() => changeZoom(0.15)}
           aria-label="Zoom mais"
@@ -188,7 +193,7 @@ export default function EcgViewer({
           <Plus size={18} aria-hidden="true" />
         </button>
         <button
-          className="icon-button"
+          className="icon-button zoom-control-button"
           type="button"
           onClick={() => changeZoom(-0.15)}
           aria-label="Zoom menos"
@@ -236,9 +241,14 @@ export default function EcgViewer({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
-          style={stageStyle}
+          style={{ ...stageStyle, aspectRatio: imageAspectRatio }}
         >
-          <img src={resolvedSource} alt="Traçado do ECG" draggable="false" />
+          <img
+            src={resolvedSource}
+            alt="Traçado do ECG"
+            draggable="false"
+            onLoad={handleImageLoad}
+          />
           {visibleRegions.map((region, index) => (
             <span
               className={`saved-region-box ${region.isActive ? "is-active" : ""}`}

@@ -1,5 +1,5 @@
 import { ArrowLeft, HelpCircle, House, LifeBuoy, Moon, Sun, UserRound } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import DiagnosisPanel from "../components/DiagnosisPanel.jsx";
@@ -34,6 +34,7 @@ import {
 } from "../services/validationService.js";
 import { formatDate } from "../utils/dateUtils.js";
 import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
+import { DEFAULT_ECG_ASPECT_RATIO, getReviewSidebarWidth } from "../utils/reviewLayout.js";
 import {
   createDiagnosisReferences,
   getActiveRegionReference,
@@ -69,6 +70,7 @@ export default function ExamReviewPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const reviewLayoutRef = useRef(null);
   const [exam, setExam] = useState(null);
   const [notes, setNotes] = useState("");
   const [activeRegionTarget, setActiveRegionTarget] = useState(null);
@@ -87,6 +89,8 @@ export default function ExamReviewPage() {
   const [hasUnsavedDiagnosisReview, setHasUnsavedDiagnosisReview] = useState(false);
   const [disagreementPreviewIds, setDisagreementPreviewIds] = useState(() => new Set());
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
+  const [sidebarWidth, setSidebarWidth] = useState(null);
 
   const loadExam = useCallback(async () => {
     setIsLoading(true);
@@ -128,6 +132,43 @@ export default function ExamReviewPage() {
   useEffect(() => {
     loadExam();
   }, [loadExam]);
+
+  useEffect(() => {
+    const layout = reviewLayoutRef.current;
+    if (!layout) return undefined;
+
+    function updateSidebarWidth() {
+      const layoutStyles = window.getComputedStyle(layout);
+      const nextWidth = getReviewSidebarWidth({
+        imageAspectRatio,
+        layoutHeight: layout.clientHeight,
+        layoutWidth: layout.clientWidth,
+        maximumSidebarRatio: Number.parseFloat(
+          layoutStyles.getPropertyValue("--review-sidebar-max-ratio"),
+        ),
+        minimumSidebarWidth: Number.parseFloat(layoutStyles.getPropertyValue("--review-sidebar-min-width")),
+        viewerHorizontalChrome: Number.parseFloat(
+          layoutStyles.getPropertyValue("--review-viewer-horizontal-chrome"),
+        ),
+        viewerVerticalChrome: Number.parseFloat(
+          layoutStyles.getPropertyValue("--review-viewer-vertical-chrome"),
+        ),
+      });
+
+      setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
+    }
+
+    updateSidebarWidth();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateSidebarWidth);
+      return () => window.removeEventListener("resize", updateSidebarWidth);
+    }
+
+    const observer = new ResizeObserver(updateSidebarWidth);
+    observer.observe(layout);
+    return () => observer.disconnect();
+  }, [imageAspectRatio]);
 
   const handleDisagreementPreviewChange = useCallback((diagnosisId, isOpen) => {
     const key = String(diagnosisId);
@@ -548,7 +589,11 @@ export default function ExamReviewPage() {
         </div>
       </header>
 
-      <main className="review-layout">
+      <main
+        className="review-layout"
+        ref={reviewLayoutRef}
+        style={sidebarWidth ? { "--review-sidebar-width": `${sidebarWidth}px` } : undefined}
+      >
         <aside className="review-sidebar">
           <div className="review-sidebar-scroll">
             {error ? <div className="feedback error-feedback">{error}</div> : null}
@@ -648,6 +693,7 @@ export default function ExamReviewPage() {
         <section className="review-viewer" aria-label="Visualizador de ECG">
           <EcgViewer
             imageUrl={exam.image_endpoint || exam.image_url}
+            onImageAspectRatioChange={setImageAspectRatio}
             onRegionCancel={handleCancelRegionSelection}
             selectedRegion={selectedRegion}
             onRegionChange={handleRegionChange}

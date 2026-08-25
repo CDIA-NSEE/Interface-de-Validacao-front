@@ -2454,19 +2454,29 @@ textarea:focus {
 }
 
 .review-layout {
+  --review-sidebar-min-width: 340px;
+  --review-sidebar-max-ratio: 0.5;
+  --review-viewer-horizontal-chrome: 30px;
+  --review-viewer-vertical-chrome: 72px;
+  --review-sidebar-width: clamp(
+    var(--review-sidebar-min-width),
+    32vw,
+    50vw
+  );
   display: grid;
-  grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, var(--review-sidebar-width)) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
 .review-sidebar {
+  --review-sidebar-inline-padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-height: 0;
-  padding: 6px 8px 0;
+  padding: 6px var(--review-sidebar-inline-padding) 0;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
   overflow: hidden;
@@ -2475,19 +2485,35 @@ textarea:focus {
 .review-sidebar-scroll {
   display: grid;
   align-content: start;
+  justify-items: stretch;
   flex: 1 1 auto;
+  width: 100%;
   gap: 5px;
   min-height: 0;
-  padding-right: 2px;
+  padding-inline: 2px;
+  box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
+}
+
+.review-sidebar-scroll > * {
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
 }
 
 .review-sidebar-actions {
   flex: 0 0 auto;
-  margin-inline: -8px;
-  padding: 5px 8px 7px;
+  align-self: center;
+  width: calc(
+    100% + var(--review-sidebar-inline-padding) + var(--review-sidebar-inline-padding)
+  );
+  max-width: none;
+  margin-inline: calc(0px - var(--review-sidebar-inline-padding));
+  padding: 5px var(--review-sidebar-inline-padding) 7px;
+  box-sizing: border-box;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
   box-shadow: 0 -8px 18px rgba(32, 50, 74, 0.06);
@@ -2513,6 +2539,10 @@ textarea:focus {
   gap: 6px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.review-sidebar-actions .review-status-section {
+  border-bottom: 0;
 }
 
 .review-decision-section {
@@ -2712,10 +2742,17 @@ textarea:focus {
   height: 32px;
 }
 
-.diagnosis-secondary-panel {
+.diagnosis-secondary-panel,
+.diagnosis-primary-panel {
   gap: 0;
 }
 
+.diagnosis-primary-panel {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.diagnosis-primary-heading,
 .diagnosis-secondary-summary {
   display: flex;
   min-height: 34px;
@@ -2727,9 +2764,16 @@ textarea:focus {
   border-radius: 8px;
   color: #153657;
   background: #f4f9ff;
-  cursor: pointer;
   font-weight: 900;
+}
+
+.diagnosis-secondary-summary {
+  cursor: pointer;
   list-style: none;
+}
+
+.diagnosis-primary-heading {
+  border-radius: 8px 8px 0 0;
 }
 
 .diagnosis-secondary-summary::-webkit-details-marker {
@@ -2768,6 +2812,7 @@ textarea:focus {
   font-weight: 900;
 }
 
+.diagnosis-primary-content,
 .diagnosis-secondary-content {
   display: grid;
   gap: 8px;
@@ -3194,20 +3239,30 @@ textarea:focus {
 
 .review-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  grid-auto-rows: minmax(42px, 1fr);
   gap: 6px;
 }
 
-.review-actions .button {
-  min-height: 34px;
+.review-actions .review-action-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  height: 100%;
   padding: 6px 8px;
   font-size: 0.8425rem;
+}
+
+.review-action-icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: 0 0 1.25em;
 }
 
 .review-viewer {
   min-width: 0;
   min-height: 0;
-  padding: 10px;
+  padding: clamp(4px, 0.5vw, 8px);
   overflow: hidden;
 }
 
@@ -3229,6 +3284,18 @@ textarea:focus {
   padding: 4px 8px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-primary-light);
+}
+
+.zoom-control-button {
+  flex: 0 0 40px;
+  padding: 0;
+  border-radius: 50%;
+  line-height: 0;
+}
+
+.zoom-control-button svg {
+  display: block;
+  margin: auto;
 }
 
 .zoom-value {
@@ -3258,7 +3325,7 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 8px;
+  padding: clamp(2px, 0.35vw, 6px);
   overflow: auto;
   background: #fffefe;
   scrollbar-width: thin;
@@ -3633,6 +3700,7 @@ textarea:focus {
 :root[data-theme="dark"] .viewer-toolbar,
 :root[data-theme="dark"] .ecg-canvas,
 :root[data-theme="dark"] .diagnosis-item,
+:root[data-theme="dark"] .diagnosis-primary-heading,
 :root[data-theme="dark"] .diagnosis-secondary-summary,
 :root[data-theme="dark"] .support-channel,
 :root[data-theme="dark"] .tutorial-step {
@@ -3925,6 +3993,8 @@ textarea:focus {
 :root[data-theme="dark"] .diagnosis-region-row,
 :root[data-theme="dark"] .diagnosis-note-preview,
 :root[data-theme="dark"] .diagnosis-disagreement-panel,
+:root[data-theme="dark"] .diagnosis-primary-heading,
+:root[data-theme="dark"] .diagnosis-primary-content,
 :root[data-theme="dark"] .diagnosis-secondary-summary,
 :root[data-theme="dark"] .diagnosis-secondary-content {
   color: var(--color-text);
@@ -4199,7 +4269,8 @@ textarea:focus {
   }
 
   .review-layout {
-    grid-template-columns: minmax(300px, 36vw) minmax(0, 1fr);
+    --review-sidebar-min-width: 300px;
+    --review-sidebar-max-ratio: 0.46;
   }
 
   .review-page {
@@ -4219,13 +4290,9 @@ textarea:focus {
     overflow-y: auto;
   }
 
-  .review-sidebar-actions {
-    margin-inline: -10px;
-  }
-
   .review-viewer {
     min-height: 0;
-    padding: 10px;
+    padding: clamp(4px, 0.5vw, 8px);
     overflow: hidden;
   }
 
@@ -4372,21 +4439,16 @@ textarea:focus {
   }
 
   .review-sidebar {
-    padding: 8px 8px 0;
+    padding-block: 8px 0;
   }
 
   .review-layout {
-    grid-template-columns: minmax(250px, 42vw) minmax(0, 1fr);
-  }
-
-  .review-actions {
-    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    --review-sidebar-min-width: 250px;
+    --review-sidebar-max-ratio: 0.5;
   }
 
   .review-sidebar-actions {
-    margin-inline: -8px;
     margin-bottom: 0;
-    padding-inline: 8px;
   }
 
   .review-session-chip {
