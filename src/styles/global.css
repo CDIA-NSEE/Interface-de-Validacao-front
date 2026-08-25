@@ -2471,11 +2471,12 @@ textarea:focus {
 }
 
 .review-sidebar {
+  --review-sidebar-inline-padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-height: 0;
-  padding: 6px 8px 0;
+  padding: 6px var(--review-sidebar-inline-padding) 0;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
   overflow: hidden;
@@ -2483,20 +2484,36 @@ textarea:focus {
 
 .review-sidebar-scroll {
   display: grid;
-  align-content: safe center;
+  align-content: start;
+  justify-items: stretch;
   flex: 1 1 auto;
+  width: 100%;
   gap: 5px;
   min-height: 0;
-  padding-right: 2px;
+  padding-inline: 2px;
+  box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
+}
+
+.review-sidebar-scroll > * {
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
 }
 
 .review-sidebar-actions {
   flex: 0 0 auto;
-  margin-inline: -8px;
-  padding: 5px 8px 7px;
+  align-self: center;
+  width: calc(
+    100% + var(--review-sidebar-inline-padding) + var(--review-sidebar-inline-padding)
+  );
+  max-width: none;
+  margin-inline: calc(0px - var(--review-sidebar-inline-padding));
+  padding: 5px var(--review-sidebar-inline-padding) 7px;
+  box-sizing: border-box;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
   box-shadow: 0 -8px 18px rgba(32, 50, 74, 0.06);
@@ -4273,10 +4290,6 @@ textarea:focus {
     overflow-y: auto;
   }
 
-  .review-sidebar-actions {
-    margin-inline: -10px;
-  }
-
   .review-viewer {
     min-height: 0;
     padding: clamp(4px, 0.5vw, 8px);
@@ -4426,7 +4439,7 @@ textarea:focus {
   }
 
   .review-sidebar {
-    padding: 8px 8px 0;
+    padding-block: 8px 0;
   }
 
   .review-layout {
@@ -4435,9 +4448,7 @@ textarea:focus {
   }
 
   .review-sidebar-actions {
-    margin-inline: -8px;
     margin-bottom: 0;
-    padding-inline: 8px;
   }
 
   .review-session-chip {
