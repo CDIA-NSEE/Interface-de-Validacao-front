@@ -143,7 +143,9 @@ export default function ExamReviewPage() {
         imageAspectRatio,
         layoutHeight: layout.clientHeight,
         layoutWidth: layout.clientWidth,
-        maximumSidebarWidth: Number.parseFloat(layoutStyles.getPropertyValue("--review-sidebar-max-width")),
+        maximumSidebarRatio: Number.parseFloat(
+          layoutStyles.getPropertyValue("--review-sidebar-max-ratio"),
+        ),
         minimumSidebarWidth: Number.parseFloat(layoutStyles.getPropertyValue("--review-sidebar-min-width")),
         viewerHorizontalChrome: Number.parseFloat(
           layoutStyles.getPropertyValue("--review-viewer-horizontal-chrome"),

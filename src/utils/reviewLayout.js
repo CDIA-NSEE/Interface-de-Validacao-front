@@ -8,13 +8,17 @@ export function getReviewSidebarWidth({
   imageAspectRatio,
   layoutHeight,
   layoutWidth,
-  maximumSidebarWidth,
+  maximumSidebarRatio,
   minimumSidebarWidth,
   viewerHorizontalChrome,
   viewerVerticalChrome,
 }) {
   const imageHeight = Math.max(0, layoutHeight - viewerVerticalChrome);
   const preferredViewerWidth = imageHeight * imageAspectRatio + viewerHorizontalChrome;
+  const maximumSidebarWidth = Math.max(
+    minimumSidebarWidth,
+    layoutWidth * maximumSidebarRatio,
+  );
 
   return Math.round(
     clamp(layoutWidth - preferredViewerWidth, minimumSidebarWidth, maximumSidebarWidth),

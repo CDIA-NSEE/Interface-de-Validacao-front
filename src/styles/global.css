@@ -2455,13 +2455,13 @@ textarea:focus {
 
 .review-layout {
   --review-sidebar-min-width: 340px;
-  --review-sidebar-max-width: 510px;
+  --review-sidebar-max-ratio: 0.5;
   --review-viewer-horizontal-chrome: 30px;
   --review-viewer-vertical-chrome: 72px;
   --review-sidebar-width: clamp(
     var(--review-sidebar-min-width),
     32vw,
-    var(--review-sidebar-max-width)
+    50vw
   );
   display: grid;
   grid-template-columns: minmax(0, var(--review-sidebar-width)) minmax(0, 1fr);
@@ -4270,7 +4270,7 @@ textarea:focus {
 
   .review-layout {
     --review-sidebar-min-width: 300px;
-    --review-sidebar-max-width: 390px;
+    --review-sidebar-max-ratio: 0.46;
   }
 
   .review-page {
@@ -4444,7 +4444,7 @@ textarea:focus {
 
   .review-layout {
     --review-sidebar-min-width: 250px;
-    --review-sidebar-max-width: 300px;
+    --review-sidebar-max-ratio: 0.5;
   }
 
   .review-sidebar-actions {
