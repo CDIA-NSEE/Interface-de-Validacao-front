@@ -1,23 +1,21 @@
+import { ToggleGroupItem } from "@/components/ui/toggle-group";
+
 export default function QuickMetricItem({
   label,
   value,
-  tone = "neutral",
-  active,
-  onClick,
+  count,
   title,
   ariaLabel,
 }) {
   return (
-    <button
-      className={`quick-metric quick-metric-${tone}${active ? " is-active" : ""}`}
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      aria-label={ariaLabel || title || label}
+    <ToggleGroupItem
+      className="h-auto min-h-9 flex-1 justify-between gap-3"
+      value={value}
       title={title}
+      aria-label={ariaLabel || title || label}
     >
       <span>{label}</span>
-      <strong>{value}</strong>
-    </button>
+      <strong className="tabular-nums">{count}</strong>
+    </ToggleGroupItem>
   );
 }
