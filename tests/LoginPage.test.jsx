@@ -232,8 +232,14 @@ describe("LoginPage", () => {
       expect(getCredentialInput()).toBeDisabled();
       expect(getPasswordInput()).toBeDisabled();
       expect(screen.getByRole("button", { name: "Mostrar senha" })).toBeDisabled();
-      expect(screen.getByRole("checkbox", { name: "Lembrar meu acesso" })).toBeDisabled();
-      expect(screen.getByRole("button", { name: "Esqueci minha senha" })).toBeDisabled();
+      expect(screen.getByRole("checkbox", { name: "Lembrar meu acesso" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Esqueci minha senha" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
     });
 
     expect(authMocks.login).toHaveBeenCalledTimes(1);
@@ -264,7 +270,12 @@ describe("LoginPage", () => {
     const user = userEvent.setup();
     renderLoginPage();
 
-    await user.click(screen.getByRole("button", { name: "Esqueci minha senha" }));
+    const recoveryButton = screen.getByRole("button", { name: "Esqueci minha senha" });
+    expect(recoveryButton).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(recoveryButton);
+
+    expect(recoveryButton).toHaveAttribute("aria-expanded", "true");
 
     expect(
       screen.getByText(
@@ -272,6 +283,7 @@ describe("LoginPage", () => {
       ),
     ).toBeVisible();
     expect(screen.getByText(/Novos usuários não são criados por esta tela\./i)).toBeVisible();
+    expect(screen.getByRole("note")).toHaveTextContent(/recuperação de acesso/i);
     expect(authMocks.login).not.toHaveBeenCalled();
   });
 
