@@ -16,13 +16,13 @@ export default function PatientInfo({ patient }) {
   ];
 
   return (
-    <dl className="info-list clinical-info-list">
+    <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
       {rows
         .filter(([, value]) => value !== null && value !== undefined && value !== "")
         .map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
+          <div className="rounded-lg bg-muted/50 p-3" key={label}>
+            <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+            <dd className="mt-1 font-medium text-foreground">{value}</dd>
           </div>
         ))}
     </dl>

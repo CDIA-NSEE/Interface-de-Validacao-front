@@ -1,6 +1,14 @@
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import api from "../services/api.js";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
@@ -24,6 +32,28 @@ function regionFromPoints(start, end) {
     width: Math.abs(start.x - end.x),
     height: Math.abs(start.y - end.y),
   };
+}
+
+function ToolbarButton({ children, disabled = false, label, onClick }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            aria-label={label}
+            disabled={disabled}
+            onClick={onClick}
+            size="icon-lg"
+            type="button"
+            variant="outline"
+          />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 export default function EcgViewer({
@@ -181,58 +211,42 @@ export default function EcgViewer({
   }
 
   return (
-    <div className="ecg-viewer">
-      <div className="viewer-toolbar" aria-label="Controles do ECG">
-        <button
-          className="icon-button zoom-control-button"
-          type="button"
-          onClick={() => changeZoom(0.15)}
-          aria-label="Zoom mais"
-          title="Zoom mais"
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+      <TooltipProvider>
+        <div
+          aria-label="Controles do ECG"
+          className="flex min-h-14 flex-wrap items-center justify-end gap-2 border-b bg-muted/50 p-2"
+          role="toolbar"
         >
-          <Plus size={18} aria-hidden="true" />
-        </button>
-        <button
-          className="icon-button zoom-control-button"
-          type="button"
-          onClick={() => changeZoom(-0.15)}
-          aria-label="Zoom menos"
-          title="Zoom menos"
-        >
-          <Minus size={18} aria-hidden="true" />
-        </button>
-        <button
-          className="icon-button"
-          type="button"
-          onClick={() => setZoom(1)}
-          aria-label="Resetar zoom"
-          title="Resetar zoom"
-        >
-          <RotateCcw size={18} aria-hidden="true" />
-        </button>
-        <button
-          className="icon-button"
-          type="button"
-          onClick={() => setZoom(1)}
-          aria-label="Ajustar à tela"
-          title="Ajustar à tela"
-        >
-          <Maximize2 size={18} aria-hidden="true" />
-        </button>
-        {selectionLabel ? <span className="region-mode-chip">{selectionLabel}</span> : null}
-        {selectedRegion || selectionLabel ? (
-          <button
-            className="icon-button"
-            type="button"
-            onClick={clearSelection}
-            aria-label="Limpar seleção"
-            title="Limpar seleção"
+          <ToolbarButton
+            disabled={zoom >= 2.4}
+            label="Zoom mais"
+            onClick={() => changeZoom(0.15)}
           >
-            <X size={18} aria-hidden="true" />
-          </button>
-        ) : null}
-        <span className="zoom-value">{Math.round(zoom * 100)}%</span>
-      </div>
+            <Plus aria-hidden="true" />
+          </ToolbarButton>
+          <ToolbarButton
+            disabled={zoom <= 0.6}
+            label="Zoom menos"
+            onClick={() => changeZoom(-0.15)}
+          >
+            <Minus aria-hidden="true" />
+          </ToolbarButton>
+          <ToolbarButton label="Resetar zoom" onClick={() => setZoom(1)}>
+            <RotateCcw aria-hidden="true" />
+          </ToolbarButton>
+          <ToolbarButton label="Ajustar à tela" onClick={() => setZoom(1)}>
+            <Maximize2 aria-hidden="true" />
+          </ToolbarButton>
+          {selectionLabel ? <Badge variant="info">{selectionLabel}</Badge> : null}
+          {selectedRegion || selectionLabel ? (
+            <ToolbarButton label="Limpar seleção" onClick={clearSelection}>
+              <X aria-hidden="true" />
+            </ToolbarButton>
+          ) : null}
+          <Badge variant="outline">{Math.round(zoom * 100)}%</Badge>
+        </div>
+      </TooltipProvider>
 
       <div className="ecg-canvas" ref={canvasRef}>
         <div

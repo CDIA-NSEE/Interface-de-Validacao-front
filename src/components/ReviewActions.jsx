@@ -1,5 +1,8 @@
 import { ArrowLeft, CheckCircle2, Save } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 export default function ReviewActions({
   canValidate = true,
   isBusy,
@@ -11,36 +14,46 @@ export default function ReviewActions({
   primaryLabel = "Validar",
 }) {
   return (
-    <div className="review-actions">
-      <button
-        className="button ghost review-action-button"
-        type="button"
-        onClick={onBack}
+    <div
+      aria-label="Ações da validação"
+      className={cn(
+        "grid w-full grid-cols-1 gap-2 min-[28rem]:grid-cols-2",
+        onSave && "xl:grid-cols-3",
+      )}
+      role="group"
+    >
+      <Button
+        className="h-[42px] w-full min-w-0"
         disabled={isBusy}
-      >
-        <ArrowLeft className="review-action-icon" size={17} aria-hidden="true" />
-        Voltar
-      </button>
-      {onSave ? (
-        <button
-          className="button secondary review-action-button"
-          type="button"
-          onClick={onSave}
-          disabled={isBusy}
-        >
-          <Save className="review-action-icon" size={17} aria-hidden="true" />
-          {saveLabel}
-        </button>
-      ) : null}
-      <button
-        className="button success review-action-button"
+        onClick={onBack}
         type="button"
-        onClick={onValidate}
-        disabled={isBusy || isValid || !canValidate}
+        variant="outline"
       >
-        <CheckCircle2 className="review-action-icon" size={17} aria-hidden="true" />
+        <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+        Voltar
+      </Button>
+      {onSave ? (
+        <Button
+          className="h-[42px] w-full min-w-0"
+          disabled={isBusy}
+          onClick={onSave}
+          type="button"
+          variant="secondary"
+        >
+          <Save aria-hidden="true" data-icon="inline-start" />
+          {saveLabel}
+        </Button>
+      ) : null}
+      <Button
+        className="h-[42px] w-full min-w-0"
+        disabled={isBusy || isValid || !canValidate}
+        onClick={onValidate}
+        type="button"
+        variant="success"
+      >
+        <CheckCircle2 aria-hidden="true" data-icon="inline-start" />
         {primaryLabel}
-      </button>
+      </Button>
     </div>
   );
 }
