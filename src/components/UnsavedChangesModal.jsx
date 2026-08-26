@@ -1,41 +1,49 @@
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, TriangleAlert, X } from "lucide-react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog.jsx";
 
 export default function UnsavedChangesModal({ isOpen, onDiscard, onStay }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section
-        aria-labelledby="unsaved-changes-modal-title"
-        aria-modal="true"
-        className="modal-panel unsaved-changes-modal"
-        role="dialog"
-      >
-        <header className="modal-header">
-          <div>
-            <span className="eyebrow">Alterações pendentes</span>
-            <h2 id="unsaved-changes-modal-title">Sair sem salvar?</h2>
-          </div>
-          <button className="icon-button" type="button" onClick={onStay} aria-label="Continuar no ECG">
-            <X size={18} aria-hidden="true" />
-          </button>
-        </header>
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onStay()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia className="text-warning-foreground">
+            <TriangleAlert aria-hidden="true" />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Há informações que ainda não foram salvas neste ECG. Você pode continuar revisando ou
+            descartar essas alterações e voltar à lista.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
-        <p className="modal-copy">
-          Há informações que ainda não foram salvas neste ECG. Você pode continuar revisando ou
-          descartar essas alterações e voltar à lista.
-        </p>
+        <AlertDialogCancel
+          aria-label="Fechar e continuar no ECG"
+          className="absolute top-3 right-3"
+          size="icon-sm"
+          variant="ghost"
+        >
+          <X aria-hidden="true" />
+        </AlertDialogCancel>
 
-        <div className="modal-actions">
-          <button className="button secondary" type="button" onClick={onStay}>
-            Continuar no ECG
-          </button>
-          <button className="button ghost" type="button" onClick={onDiscard}>
-            <ArrowLeft size={17} aria-hidden="true" />
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={onDiscard} variant="destructive">
+            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
             Descartar e voltar
-          </button>
-        </div>
-      </section>
-    </div>
+          </AlertDialogAction>
+          <AlertDialogCancel>Continuar no ECG</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
