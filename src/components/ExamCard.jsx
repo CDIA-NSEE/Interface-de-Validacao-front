@@ -1,6 +1,14 @@
 import { ArrowRight, CalendarDays, Clock3 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemTitle,
+} from "@/components/ui/item";
+
 import { formatDate, formatDateTime } from "../utils/dateUtils.js";
 import StatusBadge from "./StatusBadge.jsx";
 
@@ -16,44 +24,56 @@ function getFlowDate(exam) {
 
 export default function ExamCard({ exam }) {
   const flowDate = getFlowDate(exam);
+  const titleId = `exam-${exam.id}-title`;
 
   return (
-    <article className="exam-card">
-      <div className="exam-card-main">
-        <div>
-          <span className="eyebrow">Exame</span>
-          <strong>{exam.exam_code}</strong>
+    <Item
+      render={<article />}
+      role="listitem"
+      aria-labelledby={titleId}
+      variant="outline"
+      className="items-start sm:items-center"
+    >
+      <ItemContent className="min-w-0 gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ItemTitle>
+            <h4 id={titleId} aria-label={`Exame ${exam.exam_code}`}>
+              <span className="text-muted-foreground">Exame</span>{" "}
+              <strong>{exam.exam_code}</strong>
+            </h4>
+          </ItemTitle>
+          <StatusBadge
+            status={exam.status_validation}
+            queueState={exam.queue_state}
+            reviewResult={exam.review_result}
+          />
         </div>
-        <StatusBadge
-          status={exam.status_validation}
-          queueState={exam.queue_state}
-          reviewResult={exam.review_result}
-        />
-      </div>
 
-      <div className="exam-meta">
-        <span>
-          <CalendarDays size={16} aria-hidden="true" />
-          <span>
-            <b>Data do exame:</b> {formatDate(exam.exam_date)}
-          </span>
-        </span>
-        {flowDate?.value ? (
-          <span>
-            <Clock3 size={16} aria-hidden="true" />
-            <span>
-              <b>{flowDate.label}:</b> {formatDateTime(flowDate.value)}
-            </span>
-          </span>
-        ) : null}
-      </div>
+        <dl className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
+            <dt className="font-medium text-foreground">Data do exame:</dt>
+            <dd>{formatDate(exam.exam_date)}</dd>
+          </div>
+          {flowDate?.value ? (
+            <div className="flex items-center gap-1.5">
+              <Clock3 className="size-4 shrink-0" aria-hidden="true" />
+              <dt className="font-medium text-foreground">{flowDate.label}:</dt>
+              <dd>{formatDateTime(flowDate.value)}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </ItemContent>
 
-      <div className="exam-card-footer">
-        <Link className="button secondary compact-button" to={`/exams/${exam.id}`}>
+      <ItemActions className="basis-full justify-end sm:basis-auto">
+        <Link
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+          to={`/exams/${exam.id}`}
+        >
           Abrir
-          <ArrowRight size={16} aria-hidden="true" />
+          <ArrowRight data-icon="inline-end" aria-hidden="true" />
         </Link>
-      </div>
-    </article>
+      </ItemActions>
+    </Item>
   );
 }

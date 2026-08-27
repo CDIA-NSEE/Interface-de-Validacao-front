@@ -1,4 +1,5 @@
 export const DEFAULT_ECG_ASPECT_RATIO = 1125 / 645;
+export const REVIEW_MOBILE_BREAKPOINT = 768;
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));

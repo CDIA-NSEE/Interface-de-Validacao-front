@@ -1,5 +1,12 @@
 import { Search } from "lucide-react";
 
+import { Field, FieldLabel } from "@/components/ui/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+
 export default function ExamFilters({ filters, onChange }) {
   function updateFilter(event) {
     const { name, value } = event.target;
@@ -7,20 +14,23 @@ export default function ExamFilters({ filters, onChange }) {
   }
 
   return (
-    <section className="filters-panel" aria-label="Filtros de exames">
-      <label className="search-field">
-        Buscar exame
-        <div className="input-with-icon">
-          <Search size={18} aria-hidden="true" />
-          <input
+    <section className="w-full" aria-label="Filtros de exames">
+      <Field>
+        <FieldLabel htmlFor="exam-search">Buscar exame</FieldLabel>
+        <InputGroup>
+          <InputGroupInput
+            id="exam-search"
             name="search"
             type="search"
             value={filters.search}
             onChange={updateFilter}
             placeholder="ID ou código do exame"
           />
-        </div>
-      </label>
+          <InputGroupAddon align="inline-start">
+            <Search aria-hidden="true" />
+          </InputGroupAddon>
+        </InputGroup>
+      </Field>
     </section>
   );
 }

@@ -1,9 +1,10 @@
 import { Activity, Clock, HelpCircle, LifeBuoy, LogOut, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { useAuth } from "../context/AuthContext.jsx";
-import { useTheme } from "../context/ThemeContext.jsx";
-import { formatNow } from "../utils/dateUtils.js";
+import { useAuth } from "@/context/AuthContext.jsx";
+import { useTheme } from "@/context/ThemeContext.jsx";
+import { formatNow } from "@/utils/dateUtils.js";
+import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 
 export default function AppHeader({ onContact, onTutorial, title = "Revisão de ECG" }) {
   const { logout, user } = useAuth();
@@ -17,61 +18,52 @@ export default function AppHeader({ onContact, onTutorial, title = "Revisão de 
   }, []);
 
   return (
-    <header className="app-header">
-      <div className="brand-lockup">
-        <span className="brand-icon" aria-hidden="true">
-          <Activity size={21} />
-        </span>
-        <div>
-          <h1>{title}</h1>
+    <header className="sticky top-0 z-40 border-b border-brand bg-brand text-brand-foreground shadow-sm">
+        <div className="mx-auto flex min-h-16 w-full max-w-screen-2xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-foreground/15 text-brand-foreground"
+            >
+              <Activity className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
+                BP · NSEE
+              </p>
+              <h1 className="truncate text-base font-semibold sm:text-lg">{title}</h1>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="hidden items-center gap-2 rounded-lg bg-brand-foreground/10 px-3 py-2 text-xs text-brand-foreground/80 md:flex">
+              <Clock className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {formatNow(now)} · {doctorName}
+              </span>
+            </div>
+
+            <nav className="flex items-center gap-1" aria-label="Ações globais">
+              <TooltipIconButton label="Abrir tutorial" onClick={onTutorial} size="icon" variant="brandGhost">
+                <HelpCircle aria-hidden="true" />
+              </TooltipIconButton>
+              <TooltipIconButton label="Entrar em contato" onClick={onContact} size="icon" variant="brandGhost">
+                <LifeBuoy aria-hidden="true" />
+              </TooltipIconButton>
+              <TooltipIconButton
+                label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+                onClick={toggleTheme}
+                size="icon"
+                variant="brandGhost"
+              >
+                {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+              </TooltipIconButton>
+              <TooltipIconButton label="Sair" onClick={logout} size="icon" variant="brandGhost">
+                <LogOut aria-hidden="true" />
+              </TooltipIconButton>
+            </nav>
+          </div>
         </div>
-      </div>
-      <div className="header-session">
-        <div className="header-tools" aria-label="Ações globais">
-          <button
-            className="icon-button compact-icon-button header-action-button"
-            type="button"
-            onClick={onTutorial}
-            aria-label="Abrir tutorial"
-            title="Tutorial"
-          >
-            <HelpCircle size={18} aria-hidden="true" />
-          </button>
-          <button
-            className="icon-button compact-icon-button header-action-button"
-            type="button"
-            onClick={onContact}
-            aria-label="Entrar em contato"
-            title="Entrar em contato"
-          >
-            <LifeBuoy size={18} aria-hidden="true" />
-          </button>
-          <button
-            className="icon-button compact-icon-button header-action-button"
-            type="button"
-            onClick={toggleTheme}
-            aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-            title={isDark ? "Modo claro" : "Modo escuro"}
-          >
-            {isDark ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
-          </button>
-        </div>
-        <div className="doctor-greeting">
-          <Clock size={19} aria-hidden="true" />
-          <span>
-            {formatNow(now)} - {doctorName}
-          </span>
-        </div>
-        <button
-          className="icon-button compact-icon-button header-action-button"
-          type="button"
-          onClick={logout}
-          aria-label="Sair"
-          title="Sair"
-        >
-          <LogOut size={18} aria-hidden="true" />
-        </button>
-      </div>
     </header>
   );
 }

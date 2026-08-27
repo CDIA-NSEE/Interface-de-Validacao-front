@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getReviewSidebarWidth } from "../src/utils/reviewLayout.js";
+import {
+  getReviewSidebarWidth,
+} from "../src/utils/reviewLayout.js";
 
 test("gives the sidebar only the space left after preserving the ECG ratio", () => {
   assert.equal(

@@ -1,4 +1,16 @@
-import { ArrowLeft, HelpCircle, House, LifeBuoy, Moon, Sun, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  HelpCircle,
+  House,
+  LifeBuoy,
+  Moon,
+  NotebookPen,
+  PanelRightOpen,
+  Stethoscope,
+  Sun,
+  UserRound,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -12,6 +24,23 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
 import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import {
@@ -34,7 +63,11 @@ import {
 } from "../services/validationService.js";
 import { formatDate } from "../utils/dateUtils.js";
 import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
-import { DEFAULT_ECG_ASPECT_RATIO, getReviewSidebarWidth } from "../utils/reviewLayout.js";
+import {
+  DEFAULT_ECG_ASPECT_RATIO,
+  REVIEW_MOBILE_BREAKPOINT,
+  getReviewSidebarWidth,
+} from "../utils/reviewLayout.js";
 import {
   createDiagnosisReferences,
   getActiveRegionReference,
@@ -65,12 +98,32 @@ function regionLabelFor(diagnosis) {
   return diagnosis?.standard_text || diagnosis?.name || "diagnóstico";
 }
 
+function useCompactReviewLayout() {
+  const compactMediaQuery = `(max-width: ${REVIEW_MOBILE_BREAKPOINT - 1}px)`;
+  const [isCompact, setIsCompact] = useState(
+    () => typeof window !== "undefined" && window.matchMedia?.(compactMediaQuery).matches,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.(compactMediaQuery);
+    if (!mediaQuery) return undefined;
+
+    const handleChange = (event) => setIsCompact(event.matches);
+    setIsCompact(mediaQuery.matches);
+    mediaQuery.addEventListener?.("change", handleChange);
+    return () => mediaQuery.removeEventListener?.("change", handleChange);
+  }, [compactMediaQuery]);
+
+  return isCompact;
+}
+
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const reviewLayoutRef = useRef(null);
+  const isCompactLayout = useCompactReviewLayout();
   const [exam, setExam] = useState(null);
   const [notes, setNotes] = useState("");
   const [activeRegionTarget, setActiveRegionTarget] = useState(null);
@@ -81,13 +134,13 @@ export default function ExamReviewPage() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
-  const [isNotesOpen, setIsNotesOpen] = useState(true);
+  const [openDetailSections, setOpenDetailSections] = useState(["notes"]);
+  const [isReviewSheetOpen, setIsReviewSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
   const [saveFeedback, setSaveFeedback] = useState("");
-  const [hasUnsavedDiagnosisReview, setHasUnsavedDiagnosisReview] = useState(false);
-  const [disagreementPreviewIds, setDisagreementPreviewIds] = useState(() => new Set());
+  const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [sidebarWidth, setSidebarWidth] = useState(null);
@@ -108,9 +161,9 @@ export default function ExamReviewPage() {
       setActiveRegionTarget(null);
       setSelectedRegion(null);
       setIsSecondaryPanelOpen(true);
-      setIsNotesOpen(true);
-      setHasUnsavedDiagnosisReview(false);
-      setDisagreementPreviewIds(new Set());
+      setOpenDetailSections(["notes"]);
+      setIsReviewSheetOpen(false);
+      setDiagnosisReviewDrafts({});
       setIsExitConfirmOpen(false);
       setSaveFeedback("");
       if (examData.status_validation === "nao_validado") {
@@ -135,24 +188,18 @@ export default function ExamReviewPage() {
 
   useEffect(() => {
     const layout = reviewLayoutRef.current;
-    if (!layout) return undefined;
+    if (!layout || isCompactLayout) return undefined;
 
     function updateSidebarWidth() {
-      const layoutStyles = window.getComputedStyle(layout);
+      const usesIntermediateLayout = layout.clientWidth <= 920;
       const nextWidth = getReviewSidebarWidth({
         imageAspectRatio,
         layoutHeight: layout.clientHeight,
         layoutWidth: layout.clientWidth,
-        maximumSidebarRatio: Number.parseFloat(
-          layoutStyles.getPropertyValue("--review-sidebar-max-ratio"),
-        ),
-        minimumSidebarWidth: Number.parseFloat(layoutStyles.getPropertyValue("--review-sidebar-min-width")),
-        viewerHorizontalChrome: Number.parseFloat(
-          layoutStyles.getPropertyValue("--review-viewer-horizontal-chrome"),
-        ),
-        viewerVerticalChrome: Number.parseFloat(
-          layoutStyles.getPropertyValue("--review-viewer-vertical-chrome"),
-        ),
+        maximumSidebarRatio: usesIntermediateLayout ? 0.46 : 0.5,
+        minimumSidebarWidth: usesIntermediateLayout ? 300 : 340,
+        viewerHorizontalChrome: 30,
+        viewerVerticalChrome: 72,
       });
 
       setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
@@ -168,21 +215,24 @@ export default function ExamReviewPage() {
     const observer = new ResizeObserver(updateSidebarWidth);
     observer.observe(layout);
     return () => observer.disconnect();
-  }, [imageAspectRatio]);
+  }, [imageAspectRatio, isCompactLayout]);
 
-  const handleDisagreementPreviewChange = useCallback((diagnosisId, isOpen) => {
+  const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
 
-    setDisagreementPreviewIds((current) => {
-      if (current.has(key) === isOpen) return current;
-
-      const next = new Set(current);
-      if (isOpen) {
-        next.add(key);
-      } else {
-        next.delete(key);
+    setDiagnosisReviewDrafts((current) => {
+      if (!draft) {
+        if (!(key in current)) return current;
+        const next = { ...current };
+        delete next[key];
+        return next;
       }
-      return next;
+
+      const currentDraft = current[key];
+      if (currentDraft?.isOpen === draft.isOpen && currentDraft?.note === draft.note) {
+        return current;
+      }
+      return { ...current, [key]: draft };
     });
   }, []);
 
@@ -251,11 +301,17 @@ export default function ExamReviewPage() {
       region,
     });
     setSelectedRegion(region || null);
+    if (isCompactLayout) {
+      setIsReviewSheetOpen(false);
+    }
   }
 
   function handleCancelRegionSelection() {
     setActiveRegionTarget(null);
     setSelectedRegion(null);
+    if (isCompactLayout) {
+      setIsReviewSheetOpen(true);
+    }
   }
 
   async function handleRegionChange(region) {
@@ -283,6 +339,10 @@ export default function ExamReviewPage() {
     if (wasSaved) {
       setActiveRegionTarget(null);
       setSelectedRegion(null);
+    }
+
+    if (isCompactLayout) {
+      setIsReviewSheetOpen(true);
     }
   }
 
@@ -428,7 +488,7 @@ export default function ExamReviewPage() {
             ...region,
             ...getDiagnosisRegionVisual(
               diagnosis,
-              disagreementPreviewIds.has(String(diagnosis.id)) ? "rejected" : null,
+              diagnosisReviewDrafts[String(diagnosis.id)]?.isOpen ? "rejected" : null,
             ),
             diagnosisId: diagnosis.id,
             diagnosisReference,
@@ -442,7 +502,7 @@ export default function ExamReviewPage() {
       activeRegionTarget?.diagnosisId,
       diagnosisGroups,
       diagnosisReferences,
-      disagreementPreviewIds,
+      diagnosisReviewDrafts,
     ],
   );
   const activeRegionDiagnosis = useMemo(
@@ -455,7 +515,7 @@ export default function ExamReviewPage() {
   const activeRegionVisual = activeRegionDiagnosis
     ? getDiagnosisRegionVisual(
         activeRegionDiagnosis,
-        disagreementPreviewIds.has(String(activeRegionDiagnosis.id)) ? "rejected" : null,
+        diagnosisReviewDrafts[String(activeRegionDiagnosis.id)]?.isOpen ? "rejected" : null,
       )
     : null;
   const activeRegionReference = useMemo(() => {
@@ -477,6 +537,15 @@ export default function ExamReviewPage() {
       (diagnosis) =>
         getDiagnosisReviewStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
+  const hasUnsavedDiagnosisReview = Object.entries(diagnosisReviewDrafts).some(
+    ([diagnosisId, draft]) => {
+      if (!draft?.isOpen) return false;
+      const diagnosis = (exam?.diagnoses || []).find(
+        (item) => String(item.id) === diagnosisId,
+      );
+      return (draft.note || "") !== (diagnosis?.review_notes || "");
+    },
+  );
   const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
@@ -492,24 +561,173 @@ export default function ExamReviewPage() {
 
   if (error && !exam) {
     return (
-      <div className="page-shell narrow-shell">
+      <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-col justify-center gap-4 p-4 sm:p-6">
         <EmptyState title="Exame indisponível" message={error} />
-        <button className="button secondary" type="button" onClick={() => navigate("/")}>
-          <ArrowLeft size={17} aria-hidden="true" />
+        <Button className="self-start" type="button" onClick={() => navigate("/")} variant="outline">
+          <ArrowLeft aria-hidden="true" data-icon="inline-start" />
           Voltar
-        </button>
+        </Button>
       </div>
     );
   }
 
+  const diagnosisPanel = (
+    <DiagnosisPanel
+      activeRegionTarget={activeRegionTarget}
+      dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
+      diagnoses={exam.diagnoses}
+      diagnosisReferences={diagnosisReferences}
+      options={diagnosisOptions}
+      reviewDrafts={diagnosisReviewDrafts}
+      onAdd={handleAddDiagnosis}
+      onEditRegion={handleStartRegion}
+      onRemove={handleRemoveDiagnosis}
+      onRemoveRegion={handleRemoveRegion}
+      onReview={handleReviewDiagnosis}
+      onReviewDraftChange={handleDiagnosisReviewDraftChange}
+      onStartRegion={handleStartRegion}
+      isBusy={isBusy}
+      isGeneralReviewDay={validationContext?.is_general_review_day}
+      isSecondaryOpen={isSecondaryPanelOpen}
+      onSecondaryToggle={setIsSecondaryPanelOpen}
+      selectedRegion={selectedRegion}
+      onRegionConsumed={() => setSelectedRegion(null)}
+    />
+  );
+
+  const detailSections = (
+    <Accordion
+      className="rounded-xl bg-card px-4 ring-1 ring-foreground/10"
+      multiple
+      onValueChange={setOpenDetailSections}
+      value={openDetailSections}
+    >
+      <AccordionItem value="clinical">
+        <AccordionTrigger>
+          <span className="flex items-center gap-2">
+            <Stethoscope aria-hidden="true" data-icon="inline-start" />
+            Dados clínicos completos
+          </span>
+        </AccordionTrigger>
+        <AccordionContent><PatientInfo patient={exam.patient} /></AccordionContent>
+      </AccordionItem>
+      {exam.comments || exam.source_notes ? (
+        <AccordionItem value="report">
+          <AccordionTrigger>
+            <span className="flex items-center gap-2">
+              <FileText aria-hidden="true" data-icon="inline-start" />
+              Informações do laudo original
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-3">
+            {exam.comments ? (
+              <div className="rounded-lg bg-muted/50 p-3">
+                <strong className="text-xs font-medium text-muted-foreground">Comentários</strong>
+                <p className="mt-1 break-words text-sm text-foreground">{exam.comments}</p>
+              </div>
+            ) : null}
+            {exam.source_notes ? (
+              <div className="rounded-lg bg-muted/50 p-3">
+                <strong className="text-xs font-medium text-muted-foreground">Notas</strong>
+                <p className="mt-1 break-words text-sm text-foreground">{exam.source_notes}</p>
+              </div>
+            ) : null}
+          </AccordionContent>
+        </AccordionItem>
+      ) : null}
+      <AccordionItem value="notes">
+        <AccordionTrigger>
+          <span className="flex items-center gap-2">
+            <NotebookPen aria-hidden="true" data-icon="inline-start" />
+            Observações gerais
+          </span>
+        </AccordionTrigger>
+        <AccordionContent>
+          <Textarea
+            aria-label="Observações gerais"
+            value={notes}
+            onChange={(event) => {
+              setNotes(event.target.value);
+              setSaveFeedback("");
+            }}
+            placeholder="Registre comentários gerais sobre o exame"
+            rows={3}
+          />
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+
+  const reviewBody = (
+    <div className="flex flex-col gap-4">
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Não foi possível concluir a ação</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      {saveFeedback ? (
+        <Alert role="status" variant="success">
+          <AlertTitle>Exame atualizado</AlertTitle>
+          <AlertDescription>{saveFeedback}</AlertDescription>
+        </Alert>
+      ) : null}
+      {diagnosisPanel}
+      {detailSections}
+    </div>
+  );
+
+  const reviewFooter = (
+    <div className="flex flex-col gap-3">
+      <Card size="sm" variant="highlight">
+        <CardHeader className="flex-row items-center justify-between gap-3">
+          <CardTitle className="text-sm">Status atual</CardTitle>
+          <StatusBadge
+            status={exam.status_validation}
+            queueState={exam.queue_state}
+            reviewResult={exam.review_result}
+          />
+        </CardHeader>
+      </Card>
+      <ReviewActions
+        onBack={handleReturnHome}
+        onSave={usesDailyFlow ? handleSave : undefined}
+        onValidate={handlePrimaryAction}
+        canValidate={requiredDecisionComplete}
+        isBusy={isBusy}
+        isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
+        primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
+      />
+    </div>
+  );
+
   return (
-    <div className="review-page">
-      <header className="review-topbar">
-        <div className="review-title-block">
-          <span className="eyebrow">Validação médica</span>
-          <h1>Exame {exam.exam_code}</h1>
+    <TooltipProvider>
+      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-secondary/40">
+      <header className="shrink-0 border-b border-brand bg-brand text-brand-foreground shadow-sm">
+        <div className="flex min-h-14 items-center justify-between gap-3 px-3 py-2 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button aria-label="Ir para o início" disabled={isBusy} onClick={handleReturnHome} size="icon-sm" type="button" variant="brandGhost">
+              <House aria-hidden="true" />
+            </Button>
+            <div className="min-w-0">
+              <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">Validação médica</p>
+              <h1 className="truncate font-heading text-base font-medium sm:text-lg">Exame {exam.exam_code}</h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-1" role="group" aria-label="Ações globais">
+            <TooltipIconButton label="Tutorial" onClick={() => setIsTutorialOpen(true)} size="icon-sm" variant="brandGhost"><HelpCircle aria-hidden="true" /></TooltipIconButton>
+            <TooltipIconButton label="Contato" onClick={openSupport} size="icon-sm" variant="brandGhost"><LifeBuoy aria-hidden="true" /></TooltipIconButton>
+            <TooltipIconButton label={isDark ? "Ativar modo claro" : "Ativar modo escuro"} onClick={toggleTheme} size="icon-sm" variant="brandGhost">
+              {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            </TooltipIconButton>
+            <div className="hidden items-center gap-1.5 rounded-lg bg-brand-foreground/10 px-2.5 py-1.5 text-xs text-brand-foreground/80 sm:flex" aria-label={`Sessão ativa: ${doctorName}`} title={`Sessão ativa: ${doctorName}`}>
+              <UserRound aria-hidden="true" />
+              <span className="max-w-36 truncate">{doctorName}</span>
+            </div>
+          </div>
         </div>
-        <dl className="review-context-strip">
+        <dl className="hidden grid-cols-3 gap-px border-t border-brand-foreground/15 bg-brand-foreground/15 *:bg-brand *:px-4 *:py-2 [&_dd]:mt-0.5 [&_dd]:truncate [&_dd]:text-sm [&_dd]:font-medium [&_dt]:text-xs [&_dt]:text-brand-foreground/65 md:grid md:grid-cols-5">
           <div>
             <dt>Diagnóstico do dia</dt>
             <dd>{dailyLabel}</dd>
@@ -538,159 +756,23 @@ export default function ExamReviewPage() {
             </div>
           ) : null}
         </dl>
-        <div className="review-topbar-meta">
-          <div className="review-utility-tools" role="group" aria-label="Ações globais">
-            <button
-              className="icon-button compact-icon-button"
-              type="button"
-              onClick={handleReturnHome}
-              disabled={isBusy}
-              aria-label="Ir para o início"
-              title="Início"
-            >
-              <House size={17} aria-hidden="true" />
-            </button>
-            <button
-              className="icon-button compact-icon-button"
-              type="button"
-              onClick={() => setIsTutorialOpen(true)}
-              aria-label="Tutorial"
-              title="Tutorial"
-            >
-              <HelpCircle size={17} aria-hidden="true" />
-            </button>
-            <button
-              className="icon-button compact-icon-button"
-              type="button"
-              onClick={openSupport}
-              aria-label="Contato"
-              title="Contato"
-            >
-              <LifeBuoy size={17} aria-hidden="true" />
-            </button>
-            <button
-              className="icon-button compact-icon-button"
-              type="button"
-              onClick={toggleTheme}
-              aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-              title={isDark ? "Modo claro" : "Modo escuro"}
-            >
-              {isDark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
-            </button>
-          </div>
-          <div
-            className="review-session-chip"
-            aria-label={`Sessão ativa: ${doctorName}`}
-            title={`Sessão ativa: ${doctorName}`}
-          >
-            <UserRound size={15} aria-hidden="true" />
-            <span>{doctorName}</span>
-          </div>
-        </div>
       </header>
 
       <main
-        className="review-layout"
+        className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]"
         ref={reviewLayoutRef}
-        style={sidebarWidth ? { "--review-sidebar-width": `${sidebarWidth}px` } : undefined}
+        style={{ "--review-sidebar-width": `${sidebarWidth || 360}px` }}
       >
-        <aside className="review-sidebar">
-          <div className="review-sidebar-scroll">
-            {error ? <div className="feedback error-feedback">{error}</div> : null}
-            {saveFeedback ? (
-              <div className="feedback success-feedback" role="status">
-                {saveFeedback}
-              </div>
-            ) : null}
+        {!isCompactLayout ? (
+          <aside className="flex min-h-0 min-w-0 flex-col border-r bg-background" aria-label="Diagnósticos e ações">
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-4">{reviewBody}</div>
+            </ScrollArea>
+            <div className="shrink-0 border-t bg-background p-4">{reviewFooter}</div>
+          </aside>
+        ) : null}
 
-            <section className="sidebar-section review-decision-section">
-              <DiagnosisPanel
-                activeRegionTarget={activeRegionTarget}
-                dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
-                diagnoses={exam.diagnoses}
-                diagnosisReferences={diagnosisReferences}
-                options={diagnosisOptions}
-                onAdd={handleAddDiagnosis}
-                onEditRegion={handleStartRegion}
-                onRemove={handleRemoveDiagnosis}
-                onRemoveRegion={handleRemoveRegion}
-                onReview={handleReviewDiagnosis}
-                onDisagreementPreviewChange={handleDisagreementPreviewChange}
-                onUnsavedChange={setHasUnsavedDiagnosisReview}
-                onStartRegion={handleStartRegion}
-                isBusy={isBusy}
-                isGeneralReviewDay={validationContext?.is_general_review_day}
-                isSecondaryOpen={isSecondaryPanelOpen}
-                onSecondaryToggle={setIsSecondaryPanelOpen}
-                selectedRegion={selectedRegion}
-                onRegionConsumed={() => setSelectedRegion(null)}
-              />
-            </section>
-
-            <details className="review-details">
-              <summary>Dados clínicos completos</summary>
-              <PatientInfo patient={exam.patient} />
-            </details>
-
-            {exam.comments || exam.source_notes ? (
-              <details className="review-details">
-                <summary>Informações do laudo original</summary>
-                {exam.comments ? (
-                  <div className="source-text-block">
-                    <strong>Comentários</strong>
-                    <p>{exam.comments}</p>
-                  </div>
-                ) : null}
-                {exam.source_notes ? (
-                  <div className="source-text-block">
-                    <strong>Notas</strong>
-                    <p>{exam.source_notes}</p>
-                  </div>
-                ) : null}
-              </details>
-            ) : null}
-
-            <details
-              className="review-details review-notes-details"
-              open={isNotesOpen}
-              onToggle={(event) => setIsNotesOpen(event.currentTarget.open)}
-            >
-              <summary>Observações gerais</summary>
-              <textarea
-                className="notes-field"
-                value={notes}
-                onChange={(event) => {
-                  setNotes(event.target.value);
-                  setSaveFeedback("");
-                }}
-                placeholder="Registre comentários gerais sobre o exame"
-                rows={2}
-              />
-            </details>
-          </div>
-
-          <div className="review-sidebar-actions">
-            <section className="sidebar-section review-status-section" aria-label="Status atual">
-              <StatusBadge
-                status={exam.status_validation}
-                queueState={exam.queue_state}
-                reviewResult={exam.review_result}
-              />
-            </section>
-
-          <ReviewActions
-            onBack={handleReturnHome}
-            onSave={usesDailyFlow ? handleSave : undefined}
-              onValidate={handlePrimaryAction}
-              canValidate={requiredDecisionComplete}
-              isBusy={isBusy}
-              isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
-              primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
-            />
-          </div>
-        </aside>
-
-        <section className="review-viewer" aria-label="Visualizador de ECG">
+        <section className="flex min-h-0 min-w-0 flex-1 p-2 pb-20 md:p-4" aria-label="Visualizador de ECG">
           <EcgViewer
             imageUrl={exam.image_endpoint || exam.image_url}
             onImageAspectRatioChange={setImageAspectRatio}
@@ -705,6 +787,30 @@ export default function ExamReviewPage() {
         </section>
       </main>
 
+      {isCompactLayout ? (
+        <Sheet open={isReviewSheetOpen} onOpenChange={setIsReviewSheetOpen}>
+          <div className="fixed inset-x-0 bottom-0 flex justify-center border-t bg-background/95 p-3 backdrop-blur">
+            <SheetTrigger render={<Button className="w-full max-w-sm" size="lg" type="button" />}>
+              <PanelRightOpen aria-hidden="true" data-icon="inline-start" />
+              Diagnósticos e ações
+            </SheetTrigger>
+          </div>
+          <SheetContent
+            className="gap-0 data-[side=right]:w-[min(94vw,30rem)] data-[side=right]:sm:max-w-none"
+            side="right"
+          >
+            <SheetHeader className="border-b bg-accent/60 pr-12">
+              <SheetTitle>Diagnósticos e ações</SheetTitle>
+              <SheetDescription>Revise os achados e conclua este ECG.</SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-4">{reviewBody}</div>
+            </ScrollArea>
+            <SheetFooter className="shrink-0 border-t bg-background">{reviewFooter}</SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : null}
+
       <SupportContactModal
         contact={supportContact}
         isOpen={isSupportOpen}
@@ -716,6 +822,7 @@ export default function ExamReviewPage() {
         onDiscard={handleDiscardAndBack}
         onStay={() => setIsExitConfirmOpen(false)}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

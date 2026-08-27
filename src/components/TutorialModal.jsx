@@ -1,4 +1,19 @@
-import { CheckCircle2, ListChecks, MousePointerClick, X } from "lucide-react";
+import { CheckCircle2, ListChecks, MousePointerClick } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.jsx";
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item.jsx";
 
 const STEPS = [
   {
@@ -14,48 +29,40 @@ const STEPS = [
   {
     icon: CheckCircle2,
     title: "Opcionais",
-    text: "Abra a seção Opcionais/Adicionar para revisar outros diagnósticos.",
+    text: "Abra a seção Opcionais e adicionar para revisar outros diagnósticos.",
   },
 ];
 
 export default function TutorialModal({ isOpen, onClose }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section
-        aria-labelledby="tutorial-modal-title"
-        aria-modal="true"
-        className="modal-panel tutorial-modal"
-        role="dialog"
-      >
-        <header className="modal-header">
-          <div>
-            <span className="eyebrow">Tutorial rápido</span>
-            <h2 id="tutorial-modal-title">Validação de ECG</h2>
-          </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar">
-            <X size={18} aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="tutorial-steps">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="pr-10">
+          <span className="text-xs font-medium tracking-wide text-primary uppercase">
+            Tutorial rápido
+          </span>
+          <DialogTitle>Validação de ECG</DialogTitle>
+          <DialogDescription>
+            Três passos para revisar a fila com segurança.
+          </DialogDescription>
+        </DialogHeader>
+        <ItemGroup className="gap-2">
           {STEPS.map((step) => {
             const Icon = step.icon;
             return (
-              <article className="tutorial-step" key={step.title}>
-                <span className="tutorial-step-icon">
-                  <Icon size={20} aria-hidden="true" />
-                </span>
-                <div>
-                  <strong>{step.title}</strong>
-                  <p>{step.text}</p>
-                </div>
-              </article>
+              <Item key={step.title} variant="outline">
+                <ItemMedia variant="icon" className="text-primary">
+                  <Icon aria-hidden="true" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>{step.title}</ItemTitle>
+                  <span className="text-sm text-muted-foreground">{step.text}</span>
+                </ItemContent>
+              </Item>
             );
           })}
-        </div>
-      </section>
-    </div>
+        </ItemGroup>
+      </DialogContent>
+    </Dialog>
   );
 }

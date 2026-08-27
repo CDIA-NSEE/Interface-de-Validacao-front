@@ -9,7 +9,7 @@ describe("ReviewActions", () => {
     const onSave = vi.fn();
     const onValidate = vi.fn();
 
-    const { container, rerender } = render(
+    const { rerender } = render(
       <ReviewActions
         isBusy={false}
         isValid={false}
@@ -20,11 +20,15 @@ describe("ReviewActions", () => {
       />,
     );
 
+    const actions = screen.getByRole("group", { name: "Ações da validação" });
     const buttons = screen.getAllByRole("button");
 
     expect(buttons).toHaveLength(3);
-    buttons.forEach((button) => expect(button).toHaveClass("review-action-button"));
-    expect(container.querySelectorAll(".review-action-icon")).toHaveLength(3);
+    buttons.forEach((button) => {
+      expect(button).toHaveClass("h-[42px]", "w-full");
+      expect(button.querySelector("svg")).toBeInTheDocument();
+    });
+    expect(actions).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
 
     buttons.forEach((button) => fireEvent.click(button));
 

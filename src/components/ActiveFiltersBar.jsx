@@ -1,5 +1,34 @@
 import { X } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+const refinementVariants = {
+  confirmed: "success",
+  rejected: "destructive",
+  with_region: "info",
+  without_region: "warning",
+};
+
+const queueVariants = {
+  all: "secondary",
+  start: "warning",
+  validated: "info",
+  completed: "success",
+};
+
+function RemovableFilterBadge({ children, label, onRemove, variant }) {
+  return (
+    <Badge
+      render={<button type="button" onClick={onRemove} aria-label={label} />}
+      variant={variant}
+    >
+      {children}
+      <X data-icon="inline-end" aria-hidden="true" />
+    </Badge>
+  );
+}
+
 export default function ActiveFiltersBar({
   quickFilter,
   refinementFilters,
@@ -17,53 +46,52 @@ export default function ActiveFiltersBar({
   if (!hasStateContext && !hasAnyFilter && activeRefinements.length === 0) return null;
 
   return (
-    <section className="active-filters-bar" aria-label="Filtros ativos">
+    <section className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Filtros ativos">
       {quickFilter ? (
-        <span className={`active-filter-chip active-filter-chip-${quickFilter.tone || "state-start"}`}>
-          Exames: {quickFilter.label}
-          {quickFilter.key !== "all" ? (
-            <button type="button" onClick={onClearQuickFilter} aria-label="Limpar exames">
-              <X size={14} aria-hidden="true" />
-            </button>
-          ) : null}
-        </span>
+        quickFilter.key === "all" ? (
+          <Badge variant={queueVariants[quickFilter.key]}>Exames: {quickFilter.label}</Badge>
+        ) : (
+          <RemovableFilterBadge
+            label="Limpar exames"
+            onRemove={onClearQuickFilter}
+            variant={queueVariants[quickFilter.key] || "secondary"}
+          >
+            Exames: {quickFilter.label}
+          </RemovableFilterBadge>
+        )
       ) : null}
 
       {activeSearch ? (
-        <span className="active-filter-chip active-filter-chip-state-all">
+        <RemovableFilterBadge
+          label="Limpar busca"
+          onRemove={onClearSearch}
+          variant="secondary"
+        >
           Busca: {activeSearch}
-          <button type="button" onClick={onClearSearch} aria-label="Limpar busca">
-            <X size={14} aria-hidden="true" />
-          </button>
-        </span>
+        </RemovableFilterBadge>
       ) : null}
 
       {activeRefinements.map(([type, filter]) => (
-        <span
-          className={`active-filter-chip active-filter-chip-${filter.tone || "state-all"}`}
+        <RemovableFilterBadge
           key={`${type}-${filter.key}`}
+          label={`Limpar filtro ${filter.label}`}
+          onRemove={() => onClearRefinement(type)}
+          variant={refinementVariants[filter.key] || "secondary"}
         >
           {filter.label}
-          <button
-            type="button"
-            onClick={() => onClearRefinement(type)}
-            aria-label={`Limpar filtro ${filter.label}`}
-          >
-            <X size={14} aria-hidden="true" />
-          </button>
-        </span>
+        </RemovableFilterBadge>
       ))}
 
       {hasAnyFilter ? (
-        <button
-          className="clear-filters-button"
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={onClearAll}
           aria-label="Limpar todos os filtros"
-          title="Limpar todos os filtros"
         >
           Limpar filtros
-        </button>
+        </Button>
       ) : null}
     </section>
   );

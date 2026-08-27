@@ -1,6 +1,22 @@
-import { CalendarDays, PlayCircle } from "lucide-react";
+import { CalendarDays, CircleAlert, PlayCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 import ActiveFiltersBar from "../components/ActiveFiltersBar.jsx";
 import AppHeader from "../components/AppHeader.jsx";
@@ -39,25 +55,21 @@ const quickFilterConfig = {
   all: {
     key: "all",
     label: QUEUE_STATE_META.all.label,
-    tone: QUEUE_STATE_META.all.tone,
     filters: { queue_state: "all" },
   },
   start: {
     key: "start",
     label: QUEUE_STATE_META.start.label,
-    tone: QUEUE_STATE_META.start.tone,
     filters: { queue_state: "start" },
   },
   validated: {
     key: "validated",
     label: QUEUE_STATE_META.validated.label,
-    tone: QUEUE_STATE_META.validated.tone,
     filters: { queue_state: "validated" },
   },
   completed: {
     key: "completed",
     label: QUEUE_STATE_META.completed.label,
-    tone: QUEUE_STATE_META.completed.tone,
     filters: { queue_state: "completed" },
   },
 };
@@ -87,13 +99,7 @@ function actionQueueSort(firstExam, secondExam) {
   return new Date(firstExam.created_at) - new Date(secondExam.created_at);
 }
 
-function getEmptyStateCopy(quickFilter, hasSearch, isDailyQueue) {
-  if (isDailyQueue) {
-    return {
-      title: "Fila do dia concluída",
-      message: "Não há ECG para iniciar no diagnóstico ativo.",
-    };
-  }
+function getEmptyStateCopy(quickFilter, hasSearch) {
   if (quickFilter?.key && quickFilter.key !== "all") {
     return {
       title: "Nenhum exame encontrado",
@@ -138,6 +144,15 @@ function normalizeQueueProgress(progress, fallbackRemaining = 0) {
     completed: Math.max(completed, 0),
     percent: Math.min(Math.max(Math.round(rawPercent), 0), 100),
   };
+}
+
+function hasActiveExamFilters(filters) {
+  return Boolean(
+    filters.search.trim() ||
+      filters.queue_state !== "all" ||
+      filters.decision ||
+      filters.region,
+  );
 }
 
 export default function DashboardPage() {
@@ -200,22 +215,19 @@ export default function DashboardPage() {
       );
     }
 
-    try {
-      const allExamsData = await getExams();
-      setAllExams(allExamsData);
-    } catch {
-      setAllExams([]);
-    }
   }, []);
 
   const loadExams = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
+      const isFiltered = hasActiveExamFilters(filters);
       const examsData = await getExams(filters);
       setExams([...examsData].sort(actionQueueSort));
+      if (!isFiltered) setAllExams(examsData);
     } catch (requestError) {
       setExams([]);
+      if (!hasActiveExamFilters(filters)) setAllExams([]);
       setError(
         requestError?.response?.data?.detail ||
           "Não foi possível carregar os exames. Verifique se o back está rodando em http://localhost:8000.",
@@ -356,8 +368,7 @@ export default function DashboardPage() {
   const hasRefinementFilter = Boolean(refinementFilters.decision || refinementFilters.region);
   const hasNonDefaultState = quickFilter?.key !== quickFilterConfig.all.key;
   const hasAnyFilter = Boolean(hasSearch || hasNonDefaultState || hasRefinementFilter);
-  const displayedExams = exams;
-  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch, false);
+  const emptyStateCopy = getEmptyStateCopy(quickFilter, hasSearch);
   const legacyOpenQueue =
     stats != null
       ? Number(stats.pending_total || 0) + Number(stats.in_validation_total || 0)
@@ -371,67 +382,79 @@ export default function DashboardPage() {
     activeQueueProgress.total > 0
       ? `${activeQueueProgress.remaining} restantes de ${activeQueueProgress.total}`
       : "Sem exames nesta fila";
-
   const dailyStatus = useMemo(() => {
     if (!validationContext) return "Carregando";
     if (!validationContext.is_configured) return "Configuração pendente";
     if (validationContext.is_general_review_day) return "Revalidação geral";
     return `Dia ${validationContext.day_index || "-"}`;
   }, [validationContext]);
-  const heroCopy = getHeroCopy(validationContext);
 
   return (
-    <div className="dashboard-page">
-      <div className="page-shell">
+    <TooltipProvider>
+      <div className="min-h-screen bg-muted/30">
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-5 px-3 py-4 sm:px-5 lg:px-8">
         <AppHeader onContact={openSupport} onTutorial={() => setIsTutorialOpen(true)} />
 
-        <section className="dashboard-queue-hero" aria-label="Fila de validação">
-          <div className="queue-hero-main">
-            <span className="daily-context-icon" aria-hidden="true">
-              <CalendarDays size={24} />
-            </span>
-            <div className="queue-hero-copy">
-              <span className="eyebrow">{dailyStatus}</span>
+        <Card
+          aria-label="Fila de validação"
+          className="[--card-spacing:--spacing(5)] lg:grid lg:grid-cols-[minmax(15rem,0.8fr)_minmax(20rem,1.4fr)_auto] lg:items-stretch lg:gap-0 lg:py-0"
+          variant="highlight"
+        >
+          <CardHeader className="lg:self-center lg:py-5">
+            <CardTitle className="flex items-center gap-2">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+                <CalendarDays className="size-5" aria-hidden="true" />
+              </span>
               <h2>{contextTitle(validationContext)}</h2>
-              <p>{heroCopy}</p>
-            </div>
-          </div>
-          <div className="queue-hero-actions">
-            {showQueueProgress ? (
-              <div className="queue-progress" aria-label={`Progresso da fila: ${queueProgressText}`}>
-                <div className="queue-progress-copy">
-                  <span>Progresso da fila</span>
-                  <strong>{queueProgressText}</strong>
-                </div>
-                {activeQueueProgress.total > 0 ? (
-                  <div
-                    className="queue-progress-track"
-                    role="progressbar"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-valuenow={activeQueueProgress.percent}
-                  >
-                    <span style={{ width: `${activeQueueProgress.percent}%` }} />
-                  </div>
-                ) : null}
+            </CardTitle>
+            <CardDescription>{getHeroCopy(validationContext)}</CardDescription>
+            <CardAction>
+              <Badge variant={validationContext?.is_configured ? "info" : "warning"}>
+                {dailyStatus}
+              </Badge>
+            </CardAction>
+          </CardHeader>
+
+          {showQueueProgress ? (
+            <CardContent className="flex flex-col gap-2 lg:justify-center lg:border-l lg:py-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="font-medium">Progresso da fila</span>
+                <strong className="tabular-nums">{queueProgressText}</strong>
               </div>
-            ) : null}
-            <button
-              className="button primary-action"
+              {activeQueueProgress.total > 0 ? (
+                <Progress
+                  value={activeQueueProgress.percent}
+                  aria-label={`Progresso da fila: ${queueProgressText}`}
+                />
+              ) : null}
+            </CardContent>
+          ) : null}
+
+          <CardFooter className="justify-end border-primary/15 bg-primary/8 lg:rounded-none lg:rounded-r-xl lg:border-t-0 lg:border-l">
+            <Button
               type="button"
+              size="lg"
               onClick={handleOpenNextExam}
               disabled={!canStartQueue}
+              className="w-full sm:w-auto"
             >
-              <PlayCircle size={19} aria-hidden="true" />
+              <PlayCircle data-icon="inline-start" aria-hidden="true" />
               Iniciar validação
-            </button>
-          </div>
-        </section>
+            </Button>
+          </CardFooter>
+        </Card>
 
-        <div className={`dashboard-workspace${summaryCollapsed ? " summary-collapsed" : ""}`}>
-          <main className="dashboard-main">
-            <section className="work-queue-panel" aria-label="Fila de trabalho">
-              <div className="work-queue-toolbar">
+        <div
+          className={cn(
+            "grid items-start gap-5",
+            summaryCollapsed
+              ? "lg:grid-cols-[minmax(0,1fr)_auto]"
+              : "lg:grid-cols-[minmax(0,1fr)_20rem]",
+          )}
+        >
+          <main className="min-w-0">
+            <Card aria-label="Fila de trabalho">
+              <CardHeader className="gap-4">
                 <ExamFilters filters={filters} onChange={handleFiltersChange} />
                 <ActiveFiltersBar
                   quickFilter={quickFilter}
@@ -443,24 +466,30 @@ export default function DashboardPage() {
                   onClearSearch={clearSearchFilter}
                   onClearAll={clearAllFilters}
                 />
-              </div>
+              </CardHeader>
 
-              {error || overviewError ? (
-                <EmptyState title="Erro ao carregar" message={error || overviewError} />
-              ) : null}
-              {isLoading ? (
-                <LoadingState message="Buscando exames..." />
-              ) : (
-                <ExamList
-                  exams={displayedExams}
-                  emptyTitle={emptyStateCopy.title}
-                  emptyMessage={emptyStateCopy.message}
-                />
-              )}
-            </section>
+              <CardContent className="flex flex-col gap-4">
+                {error || overviewError ? (
+                  <Alert variant="destructive">
+                    <CircleAlert aria-hidden="true" />
+                    <AlertTitle>Erro ao carregar</AlertTitle>
+                    <AlertDescription>{error || overviewError}</AlertDescription>
+                  </Alert>
+                ) : null}
+                {isLoading ? (
+                  <LoadingState message="Buscando exames..." />
+                ) : (
+                  <ExamList
+                    exams={exams}
+                    emptyTitle={emptyStateCopy.title}
+                    emptyMessage={emptyStateCopy.message}
+                  />
+                )}
+              </CardContent>
+            </Card>
           </main>
 
-          <aside className="summary-sidebar">
+          <div className="min-w-0 lg:sticky lg:top-4">
             <ValidationSummaryPanel
               stats={stats}
               collapsed={summaryCollapsed}
@@ -470,7 +499,7 @@ export default function DashboardPage() {
               onQuickFilter={applyQuickFilter}
               onRefinementFilter={applyRefinementFilter}
             />
-          </aside>
+          </div>
         </div>
       </div>
 
@@ -480,6 +509,7 @@ export default function DashboardPage() {
         onClose={() => setIsSupportOpen(false)}
       />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

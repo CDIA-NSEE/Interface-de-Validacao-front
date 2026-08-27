@@ -1,6 +1,8 @@
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import api from "../services/api.js";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
@@ -181,57 +183,43 @@ export default function EcgViewer({
   }
 
   return (
-    <div className="ecg-viewer">
-      <div className="viewer-toolbar" aria-label="Controles do ECG">
-        <button
-          className="icon-button zoom-control-button"
-          type="button"
-          onClick={() => changeZoom(0.15)}
-          aria-label="Zoom mais"
-          title="Zoom mais"
-        >
-          <Plus size={18} aria-hidden="true" />
-        </button>
-        <button
-          className="icon-button zoom-control-button"
-          type="button"
-          onClick={() => changeZoom(-0.15)}
-          aria-label="Zoom menos"
-          title="Zoom menos"
-        >
-          <Minus size={18} aria-hidden="true" />
-        </button>
-        <button
-          className="icon-button"
-          type="button"
-          onClick={() => setZoom(1)}
-          aria-label="Resetar zoom"
-          title="Resetar zoom"
-        >
-          <RotateCcw size={18} aria-hidden="true" />
-        </button>
-        <button
-          className="icon-button"
-          type="button"
-          onClick={() => setZoom(1)}
-          aria-label="Ajustar à tela"
-          title="Ajustar à tela"
-        >
-          <Maximize2 size={18} aria-hidden="true" />
-        </button>
-        {selectionLabel ? <span className="region-mode-chip">{selectionLabel}</span> : null}
-        {selectedRegion || selectionLabel ? (
-          <button
-            className="icon-button"
-            type="button"
-            onClick={clearSelection}
-            aria-label="Limpar seleção"
-            title="Limpar seleção"
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25">
+      <div
+        aria-label="Controles do ECG"
+        className="flex min-h-14 flex-wrap items-center justify-end gap-2 border-b border-primary/15 bg-accent/70 p-2"
+        role="toolbar"
+      >
+          <TooltipIconButton
+            disabled={zoom >= 2.4}
+            label="Zoom mais"
+            onClick={() => changeZoom(0.15)}
+            size="icon-lg"
+            variant="outline"
           >
-            <X size={18} aria-hidden="true" />
-          </button>
-        ) : null}
-        <span className="zoom-value">{Math.round(zoom * 100)}%</span>
+            <Plus aria-hidden="true" />
+          </TooltipIconButton>
+          <TooltipIconButton
+            disabled={zoom <= 0.6}
+            label="Zoom menos"
+            onClick={() => changeZoom(-0.15)}
+            size="icon-lg"
+            variant="outline"
+          >
+            <Minus aria-hidden="true" />
+          </TooltipIconButton>
+          <TooltipIconButton label="Resetar zoom" onClick={() => setZoom(1)} size="icon-lg" variant="outline">
+            <RotateCcw aria-hidden="true" />
+          </TooltipIconButton>
+          <TooltipIconButton label="Ajustar à tela" onClick={() => setZoom(1)} size="icon-lg" variant="outline">
+            <Maximize2 aria-hidden="true" />
+          </TooltipIconButton>
+          {selectionLabel ? <Badge variant="info">{selectionLabel}</Badge> : null}
+          {selectedRegion || selectionLabel ? (
+            <TooltipIconButton label="Limpar seleção" onClick={clearSelection} size="icon-lg" variant="outline">
+              <X aria-hidden="true" />
+            </TooltipIconButton>
+          ) : null}
+          <Badge variant="outline">{Math.round(zoom * 100)}%</Badge>
       </div>
 
       <div className="ecg-canvas" ref={canvasRef}>
