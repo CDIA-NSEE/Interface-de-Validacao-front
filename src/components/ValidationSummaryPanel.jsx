@@ -29,6 +29,17 @@ function selectedValue(key) {
   return key ? [key] : [];
 }
 
+const metricTones = {
+  all: "secondary",
+  completed: "success",
+  confirmed: "success",
+  rejected: "destructive",
+  start: "warning",
+  validated: "info",
+  with_region: "info",
+  without_region: "warning",
+};
+
 export default function ValidationSummaryPanel({
   stats,
   collapsed,
@@ -104,7 +115,7 @@ export default function ValidationSummaryPanel({
 
       <CollapsibleContent id="validation-summary-panel" className="w-full">
         <Card size="sm">
-          <CardHeader>
+          <CardHeader className="border-b bg-accent/60">
             <CardTitle>
               <h2 id="validation-summary-title">Resumo</h2>
             </CardTitle>
@@ -126,7 +137,6 @@ export default function ValidationSummaryPanel({
               </h3>
               <ToggleGroup
                 className="grid w-full grid-cols-2"
-                variant="outline"
                 size="sm"
                 value={selectedValue(quickFilter?.key || "all")}
                 onValueChange={handleQuickFilterChange}
@@ -140,6 +150,7 @@ export default function ValidationSummaryPanel({
                     count={count}
                     title={item.tooltip}
                     ariaLabel={`${item.label}: ${item.tooltip}`}
+                    tone={metricTones[item.key]}
                   />
                 ))}
               </ToggleGroup>
@@ -155,7 +166,6 @@ export default function ValidationSummaryPanel({
                 <span className="text-xs text-muted-foreground">Decisão</span>
                 <ToggleGroup
                   className="grid w-full grid-cols-2"
-                  variant="outline"
                   size="sm"
                   value={selectedValue(refinementFilters?.decision?.key)}
                   onValueChange={(values) => handleRefinementChange("decision", values)}
@@ -169,6 +179,7 @@ export default function ValidationSummaryPanel({
                       count={count}
                       title={item.tooltip}
                       ariaLabel={`${item.label}: ${item.tooltip}`}
+                      tone={metricTones[item.key]}
                     />
                   ))}
                 </ToggleGroup>
@@ -178,7 +189,6 @@ export default function ValidationSummaryPanel({
                 <span className="text-xs text-muted-foreground">Região no ECG</span>
                 <ToggleGroup
                   className="grid w-full grid-cols-2"
-                  variant="outline"
                   size="sm"
                   value={selectedValue(refinementFilters?.region?.key)}
                   onValueChange={(values) => handleRefinementChange("region", values)}
@@ -192,6 +202,7 @@ export default function ValidationSummaryPanel({
                       count={count}
                       title={item.tooltip}
                       ariaLabel={`${item.label}: ${item.tooltip}`}
+                      tone={metricTones[item.key]}
                     />
                   ))}
                 </ToggleGroup>

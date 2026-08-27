@@ -1,20 +1,37 @@
 import * as React from "react"
+import { cva } from "class-variance-authority";
 
 import { cn } from "@/lib/utils"
+
+const cardVariants = cva(
+  "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm ring-1 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+  {
+    variants: {
+      variant: {
+        default: "bg-card text-card-foreground ring-foreground/10",
+        highlight: "bg-accent/70 text-accent-foreground ring-primary/25",
+        info: "bg-info/8 text-card-foreground ring-info/25",
+        success: "bg-success/8 text-card-foreground ring-success/25",
+        warning: "bg-warning/10 text-card-foreground ring-warning/30",
+        destructive: "bg-destructive/8 text-card-foreground ring-destructive/25",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  },
+);
 
 function Card({
   className,
   size = "default",
+  variant = "default",
   ...props
 }) {
   return (
     <div
       data-slot="card"
       data-size={size}
-      className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
-        className
-      )}
+      data-variant={variant}
+      className={cn(cardVariants({ variant }), className)}
       {...props} />
   );
 }
@@ -111,4 +128,5 @@ export {
   CardAction,
   CardDescription,
   CardContent,
+  cardVariants,
 }

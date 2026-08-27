@@ -1,7 +1,32 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import DiagnosisPanel from "../src/components/DiagnosisPanel.jsx";
+
+function DiagnosisPanelHarness(props) {
+  const [reviewDrafts, setReviewDrafts] = useState({});
+
+  function handleReviewDraftChange(diagnosisId, draft) {
+    const key = String(diagnosisId);
+    setReviewDrafts((current) => {
+      if (!draft) {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      }
+      return { ...current, [key]: draft };
+    });
+  }
+
+  return (
+    <DiagnosisPanel
+      {...props}
+      onReviewDraftChange={handleReviewDraftChange}
+      reviewDrafts={reviewDrafts}
+    />
+  );
+}
 
 function createProps(overrides = {}) {
   return {
@@ -14,7 +39,6 @@ function createProps(overrides = {}) {
     onRemove: vi.fn(),
     onRemoveRegion: vi.fn(),
     onReview: vi.fn().mockResolvedValue(true),
-    onDisagreementPreviewChange: vi.fn(),
     onSecondaryToggle: vi.fn(),
     onStartRegion: vi.fn(),
     options: ["Fibrilação atrial"],
@@ -38,7 +62,7 @@ function originalDiagnosis(id, standardText, extra = {}) {
 describe("DiagnosisPanel", () => {
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
     render(
-      <DiagnosisPanel
+      <DiagnosisPanelHarness
         {...createProps()}
         dailyStandardDiagnosis="Ritmo sinusal"
         diagnoses={[
@@ -60,7 +84,7 @@ describe("DiagnosisPanel", () => {
 
   it("preserva todos os diagnósticos originais na revalidação geral", () => {
     render(
-      <DiagnosisPanel
+      <DiagnosisPanelHarness
         {...createProps({ options: [] })}
         diagnoses={[
           originalDiagnosis(1, "Ritmo sinusal"),
@@ -79,7 +103,7 @@ describe("DiagnosisPanel", () => {
   it("mantém decisões em ToggleGroup controlado e exige salvar a discordância", async () => {
     const onReview = vi.fn().mockResolvedValue(true);
     render(
-      <DiagnosisPanel
+      <DiagnosisPanelHarness
         {...createProps({ onReview, options: [] })}
         dailyStandardDiagnosis="Ritmo sinusal"
         diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
@@ -104,7 +128,7 @@ describe("DiagnosisPanel", () => {
     const onAdd = vi.fn().mockResolvedValue(true);
     const onRegionConsumed = vi.fn();
     render(
-      <DiagnosisPanel
+      <DiagnosisPanelHarness
         {...createProps({ onAdd, onRegionConsumed })}
         dailyStandardDiagnosis="Ritmo sinusal"
         diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}

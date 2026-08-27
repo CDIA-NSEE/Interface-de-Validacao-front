@@ -1,9 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ExamReviewPage from "../src/pages/ExamReviewPage.jsx";
-import { getDiagnosisOptions, getExamById, saveExamDraft } from "../src/services/examsService.js";
+import {
+  addDiagnosisRegion,
+  getDiagnosisOptions,
+  getExamById,
+  saveExamDraft,
+} from "../src/services/examsService.js";
 import { getValidationContext } from "../src/services/validationService.js";
 
 const navigate = vi.fn();
@@ -59,12 +64,24 @@ vi.mock("../src/services/supportService.js", () => ({
   getSupportContact: vi.fn(),
 }));
 
-function stubViewport(isCompact) {
-  window.matchMedia = vi.fn().mockImplementation(() => ({
-    matches: isCompact,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
+function stubViewport(initialCompact) {
+  let isCompact = initialCompact;
+  const listeners = new Set();
+  const mediaQuery = {
+    get matches() {
+      return isCompact;
+    },
+    addEventListener: (_event, listener) => listeners.add(listener),
+    removeEventListener: (_event, listener) => listeners.delete(listener),
+  };
+  window.matchMedia = vi.fn().mockImplementation(() => mediaQuery);
+
+  return {
+    setCompact(nextCompact) {
+      isCompact = nextCompact;
+      listeners.forEach((listener) => listener({ matches: isCompact }));
+    },
+  };
 }
 
 const exam = {
@@ -103,6 +120,11 @@ beforeEach(() => {
     is_configured: true,
     is_general_review_day: false,
   });
+  addDiagnosisRegion.mockResolvedValue({
+    ...exam.diagnoses[0],
+    region_required_missing: false,
+    regions: [{ id: 7, x: 10, y: 10, width: 30, height: 20 }],
+  });
   saveExamDraft.mockResolvedValue(exam);
 });
 
@@ -132,6 +154,110 @@ describe("ExamReviewPage", () => {
     expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getAllByRole("region", { name: "Diagnóstico do dia" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeVisible();
+  });
+
+  it("fecha o Sheet ao iniciar a marcação de uma área no ECG", async () => {
+    const user = userEvent.setup();
+    stubViewport(true);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+    await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar área" }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Diagnósticos e ações" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/Marcando D1\.1: Ritmo sinusal/)).toBeVisible();
+  });
+
+  it("reabre o Sheet ao cancelar a marcação no layout compacto", async () => {
+    const user = userEvent.setup();
+    stubViewport(true);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+    await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar área" }));
+    await user.click(screen.getByRole("button", { name: "Limpar seleção" }));
+
+    expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
+  });
+
+  it("reabre o Sheet depois de salvar uma região no layout compacto", async () => {
+    const user = userEvent.setup();
+    stubViewport(true);
+    const { container } = render(<ExamReviewPage />);
+
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+    await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar área" }));
+
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    vi.spyOn(stage, "getBoundingClientRect").mockReturnValue({
+      bottom: 100,
+      height: 100,
+      left: 0,
+      right: 100,
+      top: 0,
+      width: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerUp(stage, { button: 0, clientX: 40, clientY: 30, pointerId: 1 });
+
+    await waitFor(() => expect(addDiagnosisRegion).toHaveBeenCalledOnce());
+    expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
+  });
+
+  it("reabre o Sheet e exibe o erro quando uma região não pode ser salva", async () => {
+    const user = userEvent.setup();
+    addDiagnosisRegion.mockRejectedValueOnce({ response: { data: { detail: "Falha ao salvar área." } } });
+    stubViewport(true);
+    const { container } = render(<ExamReviewPage />);
+
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+    await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
+    await user.click(await screen.findByRole("button", { name: "Marcar área" }));
+
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    vi.spyOn(stage, "getBoundingClientRect").mockReturnValue({
+      bottom: 100,
+      height: 100,
+      left: 0,
+      right: 100,
+      top: 0,
+      width: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerUp(stage, { button: 0, clientX: 40, clientY: 30, pointerId: 1 });
+
+    expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
+    expect(await screen.findByText("Falha ao salvar área.")).toBeVisible();
+  });
+
+  it("preserva o rascunho de discordância ao alternar entre desktop e Sheet", async () => {
+    const user = userEvent.setup();
+    const viewport = stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+    await user.click(screen.getByRole("button", { name: "Discordo" }));
+    await user.type(screen.getByLabelText(/Motivo/), "Traçado incompatível");
+
+    act(() => viewport.setCompact(true));
+    await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
+
+    expect(await screen.findByLabelText(/Motivo/)).toHaveValue("Traçado incompatível");
   });
 
   it("preserva o payload do salvamento do rascunho", async () => {

@@ -2,13 +2,7 @@ import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import api from "../services/api.js";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
@@ -32,28 +26,6 @@ function regionFromPoints(start, end) {
     width: Math.abs(start.x - end.x),
     height: Math.abs(start.y - end.y),
   };
-}
-
-function ToolbarButton({ children, disabled = false, label, onClick }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            aria-label={label}
-            disabled={disabled}
-            onClick={onClick}
-            size="icon-lg"
-            type="button"
-            variant="outline"
-          />
-        }
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
 }
 
 export default function EcgViewer({
@@ -211,42 +183,44 @@ export default function EcgViewer({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
-      <TooltipProvider>
-        <div
-          aria-label="Controles do ECG"
-          className="flex min-h-14 flex-wrap items-center justify-end gap-2 border-b bg-muted/50 p-2"
-          role="toolbar"
-        >
-          <ToolbarButton
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25">
+      <div
+        aria-label="Controles do ECG"
+        className="flex min-h-14 flex-wrap items-center justify-end gap-2 border-b border-primary/15 bg-accent/70 p-2"
+        role="toolbar"
+      >
+          <TooltipIconButton
             disabled={zoom >= 2.4}
             label="Zoom mais"
             onClick={() => changeZoom(0.15)}
+            size="icon-lg"
+            variant="outline"
           >
             <Plus aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton
+          </TooltipIconButton>
+          <TooltipIconButton
             disabled={zoom <= 0.6}
             label="Zoom menos"
             onClick={() => changeZoom(-0.15)}
+            size="icon-lg"
+            variant="outline"
           >
             <Minus aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Resetar zoom" onClick={() => setZoom(1)}>
+          </TooltipIconButton>
+          <TooltipIconButton label="Resetar zoom" onClick={() => setZoom(1)} size="icon-lg" variant="outline">
             <RotateCcw aria-hidden="true" />
-          </ToolbarButton>
-          <ToolbarButton label="Ajustar à tela" onClick={() => setZoom(1)}>
+          </TooltipIconButton>
+          <TooltipIconButton label="Ajustar à tela" onClick={() => setZoom(1)} size="icon-lg" variant="outline">
             <Maximize2 aria-hidden="true" />
-          </ToolbarButton>
+          </TooltipIconButton>
           {selectionLabel ? <Badge variant="info">{selectionLabel}</Badge> : null}
           {selectedRegion || selectionLabel ? (
-            <ToolbarButton label="Limpar seleção" onClick={clearSelection}>
+            <TooltipIconButton label="Limpar seleção" onClick={clearSelection} size="icon-lg" variant="outline">
               <X aria-hidden="true" />
-            </ToolbarButton>
+            </TooltipIconButton>
           ) : null}
           <Badge variant="outline">{Math.round(zoom * 100)}%</Badge>
-        </div>
-      </TooltipProvider>
+      </div>
 
       <div className="ecg-canvas" ref={canvasRef}>
         <div

@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import ActiveFiltersBar from "../components/ActiveFiltersBar.jsx";
@@ -54,25 +55,21 @@ const quickFilterConfig = {
   all: {
     key: "all",
     label: QUEUE_STATE_META.all.label,
-    tone: QUEUE_STATE_META.all.tone,
     filters: { queue_state: "all" },
   },
   start: {
     key: "start",
     label: QUEUE_STATE_META.start.label,
-    tone: QUEUE_STATE_META.start.tone,
     filters: { queue_state: "start" },
   },
   validated: {
     key: "validated",
     label: QUEUE_STATE_META.validated.label,
-    tone: QUEUE_STATE_META.validated.tone,
     filters: { queue_state: "validated" },
   },
   completed: {
     key: "completed",
     label: QUEUE_STATE_META.completed.label,
-    tone: QUEUE_STATE_META.completed.tone,
     filters: { queue_state: "completed" },
   },
 };
@@ -149,6 +146,15 @@ function normalizeQueueProgress(progress, fallbackRemaining = 0) {
   };
 }
 
+function hasActiveExamFilters(filters) {
+  return Boolean(
+    filters.search.trim() ||
+      filters.queue_state !== "all" ||
+      filters.decision ||
+      filters.region,
+  );
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState(initialFilters);
@@ -209,22 +215,19 @@ export default function DashboardPage() {
       );
     }
 
-    try {
-      const allExamsData = await getExams();
-      setAllExams(allExamsData);
-    } catch {
-      setAllExams([]);
-    }
   }, []);
 
   const loadExams = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
+      const isFiltered = hasActiveExamFilters(filters);
       const examsData = await getExams(filters);
       setExams([...examsData].sort(actionQueueSort));
+      if (!isFiltered) setAllExams(examsData);
     } catch (requestError) {
       setExams([]);
+      if (!hasActiveExamFilters(filters)) setAllExams([]);
       setError(
         requestError?.response?.data?.detail ||
           "Não foi possível carregar os exames. Verifique se o back está rodando em http://localhost:8000.",
@@ -387,14 +390,21 @@ export default function DashboardPage() {
   }, [validationContext]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <TooltipProvider>
+      <div className="min-h-screen bg-muted/30">
       <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-5 px-3 py-4 sm:px-5 lg:px-8">
         <AppHeader onContact={openSupport} onTutorial={() => setIsTutorialOpen(true)} />
 
-        <Card aria-label="Fila de validação" className="[--card-spacing:--spacing(5)]">
-          <CardHeader>
+        <Card
+          aria-label="Fila de validação"
+          className="[--card-spacing:--spacing(5)] lg:grid lg:grid-cols-[minmax(15rem,0.8fr)_minmax(20rem,1.4fr)_auto] lg:items-stretch lg:gap-0 lg:py-0"
+          variant="highlight"
+        >
+          <CardHeader className="lg:self-center lg:py-5">
             <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="text-primary" aria-hidden="true" />
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+                <CalendarDays className="size-5" aria-hidden="true" />
+              </span>
               <h2>{contextTitle(validationContext)}</h2>
             </CardTitle>
             <CardDescription>{getHeroCopy(validationContext)}</CardDescription>
@@ -406,7 +416,7 @@ export default function DashboardPage() {
           </CardHeader>
 
           {showQueueProgress ? (
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="flex flex-col gap-2 lg:justify-center lg:border-l lg:py-5">
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="font-medium">Progresso da fila</span>
                 <strong className="tabular-nums">{queueProgressText}</strong>
@@ -420,7 +430,7 @@ export default function DashboardPage() {
             </CardContent>
           ) : null}
 
-          <CardFooter className="justify-end">
+          <CardFooter className="justify-end border-primary/15 bg-primary/8 lg:rounded-none lg:rounded-r-xl lg:border-t-0 lg:border-l">
             <Button
               type="button"
               size="lg"
@@ -499,6 +509,7 @@ export default function DashboardPage() {
         onClose={() => setIsSupportOpen(false)}
       />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

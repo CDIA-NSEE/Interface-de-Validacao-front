@@ -1,10 +1,8 @@
-import { Mail, MessageCircle, Phone, X } from "lucide-react";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert.jsx";
-import { Button } from "@/components/ui/button.jsx";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -30,7 +28,7 @@ export default function SupportContactModal({ contact, isOpen, onClose }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg" showCloseButton={false}>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader className="pr-10">
           <span className="text-xs font-medium tracking-wide text-primary uppercase">
             Contato direto
@@ -40,19 +38,6 @@ export default function SupportContactModal({ contact, isOpen, onClose }) {
             <DialogDescription>{contact.description}</DialogDescription>
           ) : null}
         </DialogHeader>
-        <DialogClose
-          render={
-            <Button
-              aria-label="Fechar"
-              className="absolute top-3 right-3"
-              size="icon-sm"
-              variant="ghost"
-            />
-          }
-        >
-          <X aria-hidden="true" />
-        </DialogClose>
-
         {channels.length ? (
           <ItemGroup className="gap-2">
             {channels.map((channel) => {

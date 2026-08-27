@@ -171,6 +171,33 @@ describe("DashboardPage", () => {
     expect(nextPage).toBeDisabled();
   });
 
+  it("mantém uma página efetiva válida quando a lista diminui", async () => {
+    const user = userEvent.setup();
+    const extendedExams = Array.from({ length: 10 }, (_, index) => ({
+      ...exams[index % exams.length],
+      id: index + 100,
+      exam_code: `ECG-${index + 100}`,
+    }));
+    const { rerender } = render(
+      <MemoryRouter>
+        <ExamList exams={extendedExams} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /próxima página/i }));
+    await user.click(screen.getByRole("button", { name: /próxima página/i }));
+    expect(screen.getByText("Página 3 de 3")).toBeVisible();
+
+    rerender(
+      <MemoryRouter>
+        <ExamList exams={extendedExams.slice(0, 5)} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText(/Página 3 de 2/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).not.toHaveLength(0);
+  });
+
   it("mantém o exame em validação no topo antes de paginar a fila", async () => {
     renderDashboard();
 
@@ -202,7 +229,12 @@ describe("DashboardPage", () => {
     });
     getValidationQueue.mockResolvedValue({ items: [], progress: null });
     getExams.mockImplementation((filters) => {
-      if (!filters) {
+      if (
+        filters?.queue_state === "all" &&
+        !filters.decision &&
+        !filters.region &&
+        !filters.search
+      ) {
         return Promise.resolve([
           makeExam(8),
           makeExam(9, "em_validacao"),

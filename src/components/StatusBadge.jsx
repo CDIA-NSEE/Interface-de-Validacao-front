@@ -4,8 +4,8 @@ import { getReviewResultMeta } from "@/utils/statusLabels.js";
 
 const QUEUE_BADGE_VARIANTS = {
   all: "secondary",
-  start: "info",
-  validated: "warning",
+  start: "warning",
+  validated: "info",
   completed: "success",
 };
 

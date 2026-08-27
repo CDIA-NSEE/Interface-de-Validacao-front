@@ -13,7 +13,6 @@ export function ThemeProvider({ children }) {
 
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    document.documentElement.removeAttribute("data-theme");
     window.localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 

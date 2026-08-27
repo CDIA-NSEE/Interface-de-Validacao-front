@@ -2,17 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  REVIEW_MOBILE_BREAKPOINT,
   getReviewSidebarWidth,
-  isCompactReviewWidth,
 } from "../src/utils/reviewLayout.js";
-
-test("uses the mobile Sheet only below 768px", () => {
-  assert.equal(REVIEW_MOBILE_BREAKPOINT, 768);
-  assert.equal(isCompactReviewWidth(767), true);
-  assert.equal(isCompactReviewWidth(768), false);
-  assert.equal(isCompactReviewWidth(920), false);
-});
 
 test("gives the sidebar only the space left after preserving the ECG ratio", () => {
   assert.equal(

@@ -1,9 +1,7 @@
-import { CheckCircle2, ListChecks, MousePointerClick, X } from "lucide-react";
+import { CheckCircle2, ListChecks, MousePointerClick } from "lucide-react";
 
-import { Button } from "@/components/ui/button.jsx";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -38,7 +36,7 @@ const STEPS = [
 export default function TutorialModal({ isOpen, onClose }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg" showCloseButton={false}>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader className="pr-10">
           <span className="text-xs font-medium tracking-wide text-primary uppercase">
             Tutorial rápido
@@ -48,19 +46,6 @@ export default function TutorialModal({ isOpen, onClose }) {
             Três passos para revisar a fila com segurança.
           </DialogDescription>
         </DialogHeader>
-        <DialogClose
-          render={
-            <Button
-              aria-label="Fechar"
-              className="absolute top-3 right-3"
-              size="icon-sm"
-              variant="ghost"
-            />
-          }
-        >
-          <X aria-hidden="true" />
-        </DialogClose>
-
         <ItemGroup className="gap-2">
           {STEPS.map((step) => {
             const Icon = step.icon;

@@ -39,7 +39,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import {
@@ -116,28 +117,6 @@ function useCompactReviewLayout() {
   return isCompact;
 }
 
-function UtilityAction({ children, disabled, label, onClick }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            aria-label={label}
-            disabled={disabled}
-            onClick={onClick}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          />
-        }
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -161,8 +140,7 @@ export default function ExamReviewPage() {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
   const [saveFeedback, setSaveFeedback] = useState("");
-  const [hasUnsavedDiagnosisReview, setHasUnsavedDiagnosisReview] = useState(false);
-  const [disagreementPreviewIds, setDisagreementPreviewIds] = useState(() => new Set());
+  const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [sidebarWidth, setSidebarWidth] = useState(null);
@@ -185,8 +163,7 @@ export default function ExamReviewPage() {
       setIsSecondaryPanelOpen(true);
       setOpenDetailSections(["notes"]);
       setIsReviewSheetOpen(false);
-      setHasUnsavedDiagnosisReview(false);
-      setDisagreementPreviewIds(new Set());
+      setDiagnosisReviewDrafts({});
       setIsExitConfirmOpen(false);
       setSaveFeedback("");
       if (examData.status_validation === "nao_validado") {
@@ -240,19 +217,22 @@ export default function ExamReviewPage() {
     return () => observer.disconnect();
   }, [imageAspectRatio, isCompactLayout]);
 
-  const handleDisagreementPreviewChange = useCallback((diagnosisId, isOpen) => {
+  const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
 
-    setDisagreementPreviewIds((current) => {
-      if (current.has(key) === isOpen) return current;
-
-      const next = new Set(current);
-      if (isOpen) {
-        next.add(key);
-      } else {
-        next.delete(key);
+    setDiagnosisReviewDrafts((current) => {
+      if (!draft) {
+        if (!(key in current)) return current;
+        const next = { ...current };
+        delete next[key];
+        return next;
       }
-      return next;
+
+      const currentDraft = current[key];
+      if (currentDraft?.isOpen === draft.isOpen && currentDraft?.note === draft.note) {
+        return current;
+      }
+      return { ...current, [key]: draft };
     });
   }, []);
 
@@ -321,11 +301,17 @@ export default function ExamReviewPage() {
       region,
     });
     setSelectedRegion(region || null);
+    if (isCompactLayout) {
+      setIsReviewSheetOpen(false);
+    }
   }
 
   function handleCancelRegionSelection() {
     setActiveRegionTarget(null);
     setSelectedRegion(null);
+    if (isCompactLayout) {
+      setIsReviewSheetOpen(true);
+    }
   }
 
   async function handleRegionChange(region) {
@@ -353,6 +339,10 @@ export default function ExamReviewPage() {
     if (wasSaved) {
       setActiveRegionTarget(null);
       setSelectedRegion(null);
+    }
+
+    if (isCompactLayout) {
+      setIsReviewSheetOpen(true);
     }
   }
 
@@ -498,7 +488,7 @@ export default function ExamReviewPage() {
             ...region,
             ...getDiagnosisRegionVisual(
               diagnosis,
-              disagreementPreviewIds.has(String(diagnosis.id)) ? "rejected" : null,
+              diagnosisReviewDrafts[String(diagnosis.id)]?.isOpen ? "rejected" : null,
             ),
             diagnosisId: diagnosis.id,
             diagnosisReference,
@@ -512,7 +502,7 @@ export default function ExamReviewPage() {
       activeRegionTarget?.diagnosisId,
       diagnosisGroups,
       diagnosisReferences,
-      disagreementPreviewIds,
+      diagnosisReviewDrafts,
     ],
   );
   const activeRegionDiagnosis = useMemo(
@@ -525,7 +515,7 @@ export default function ExamReviewPage() {
   const activeRegionVisual = activeRegionDiagnosis
     ? getDiagnosisRegionVisual(
         activeRegionDiagnosis,
-        disagreementPreviewIds.has(String(activeRegionDiagnosis.id)) ? "rejected" : null,
+        diagnosisReviewDrafts[String(activeRegionDiagnosis.id)]?.isOpen ? "rejected" : null,
       )
     : null;
   const activeRegionReference = useMemo(() => {
@@ -547,6 +537,15 @@ export default function ExamReviewPage() {
       (diagnosis) =>
         getDiagnosisReviewStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
+  const hasUnsavedDiagnosisReview = Object.entries(diagnosisReviewDrafts).some(
+    ([diagnosisId, draft]) => {
+      if (!draft?.isOpen) return false;
+      const diagnosis = (exam?.diagnoses || []).find(
+        (item) => String(item.id) === diagnosisId,
+      );
+      return (draft.note || "") !== (diagnosis?.review_notes || "");
+    },
+  );
   const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
@@ -579,13 +578,13 @@ export default function ExamReviewPage() {
       diagnoses={exam.diagnoses}
       diagnosisReferences={diagnosisReferences}
       options={diagnosisOptions}
+      reviewDrafts={diagnosisReviewDrafts}
       onAdd={handleAddDiagnosis}
       onEditRegion={handleStartRegion}
       onRemove={handleRemoveDiagnosis}
       onRemoveRegion={handleRemoveRegion}
       onReview={handleReviewDiagnosis}
-      onDisagreementPreviewChange={handleDisagreementPreviewChange}
-      onUnsavedChange={setHasUnsavedDiagnosisReview}
+      onReviewDraftChange={handleDiagnosisReviewDraftChange}
       onStartRegion={handleStartRegion}
       isBusy={isBusy}
       isGeneralReviewDay={validationContext?.is_general_review_day}
@@ -680,7 +679,7 @@ export default function ExamReviewPage() {
 
   const reviewFooter = (
     <div className="flex flex-col gap-3">
-      <Card size="sm">
+      <Card size="sm" variant="highlight">
         <CardHeader className="flex-row items-center justify-between gap-3">
           <CardTitle className="text-sm">Status atual</CardTitle>
           <StatusBadge
@@ -704,31 +703,31 @@ export default function ExamReviewPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-muted/30">
-      <header className="shrink-0 border-b bg-background">
+      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-secondary/40">
+      <header className="shrink-0 border-b border-brand bg-brand text-brand-foreground shadow-sm">
         <div className="flex min-h-14 items-center justify-between gap-3 px-3 py-2 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Button aria-label="Ir para o início" disabled={isBusy} onClick={handleReturnHome} size="icon-sm" type="button" variant="ghost">
+            <Button aria-label="Ir para o início" disabled={isBusy} onClick={handleReturnHome} size="icon-sm" type="button" variant="brandGhost">
               <House aria-hidden="true" />
             </Button>
             <div className="min-w-0">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Validação médica</p>
+              <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">Validação médica</p>
               <h1 className="truncate font-heading text-base font-medium sm:text-lg">Exame {exam.exam_code}</h1>
             </div>
           </div>
           <div className="flex items-center gap-1" role="group" aria-label="Ações globais">
-            <UtilityAction label="Tutorial" onClick={() => setIsTutorialOpen(true)}><HelpCircle aria-hidden="true" /></UtilityAction>
-            <UtilityAction label="Contato" onClick={openSupport}><LifeBuoy aria-hidden="true" /></UtilityAction>
-            <UtilityAction label={isDark ? "Ativar modo claro" : "Ativar modo escuro"} onClick={toggleTheme}>
+            <TooltipIconButton label="Tutorial" onClick={() => setIsTutorialOpen(true)} size="icon-sm" variant="brandGhost"><HelpCircle aria-hidden="true" /></TooltipIconButton>
+            <TooltipIconButton label="Contato" onClick={openSupport} size="icon-sm" variant="brandGhost"><LifeBuoy aria-hidden="true" /></TooltipIconButton>
+            <TooltipIconButton label={isDark ? "Ativar modo claro" : "Ativar modo escuro"} onClick={toggleTheme} size="icon-sm" variant="brandGhost">
               {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-            </UtilityAction>
-            <div className="hidden items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-xs text-muted-foreground sm:flex" aria-label={`Sessão ativa: ${doctorName}`} title={`Sessão ativa: ${doctorName}`}>
+            </TooltipIconButton>
+            <div className="hidden items-center gap-1.5 rounded-lg bg-brand-foreground/10 px-2.5 py-1.5 text-xs text-brand-foreground/80 sm:flex" aria-label={`Sessão ativa: ${doctorName}`} title={`Sessão ativa: ${doctorName}`}>
               <UserRound aria-hidden="true" />
               <span className="max-w-36 truncate">{doctorName}</span>
             </div>
           </div>
         </div>
-        <dl className="hidden grid-cols-3 gap-px border-t bg-border *:bg-background *:px-4 *:py-2 [&_dd]:mt-0.5 [&_dd]:truncate [&_dd]:text-sm [&_dd]:font-medium [&_dt]:text-xs [&_dt]:text-muted-foreground md:grid md:grid-cols-5">
+        <dl className="hidden grid-cols-3 gap-px border-t border-brand-foreground/15 bg-brand-foreground/15 *:bg-brand *:px-4 *:py-2 [&_dd]:mt-0.5 [&_dd]:truncate [&_dd]:text-sm [&_dd]:font-medium [&_dt]:text-xs [&_dt]:text-brand-foreground/65 md:grid md:grid-cols-5">
           <div>
             <dt>Diagnóstico do dia</dt>
             <dd>{dailyLabel}</dd>
@@ -796,8 +795,11 @@ export default function ExamReviewPage() {
               Diagnósticos e ações
             </SheetTrigger>
           </div>
-          <SheetContent className="w-[min(94vw,30rem)] gap-0 sm:max-w-none" side="right">
-            <SheetHeader className="border-b pr-12">
+          <SheetContent
+            className="gap-0 data-[side=right]:w-[min(94vw,30rem)] data-[side=right]:sm:max-w-none"
+            side="right"
+          >
+            <SheetHeader className="border-b bg-accent/60 pr-12">
               <SheetTitle>Diagnósticos e ações</SheetTitle>
               <SheetDescription>Revise os achados e conclua este ECG.</SheetDescription>
             </SheetHeader>

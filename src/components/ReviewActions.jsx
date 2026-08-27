@@ -14,46 +14,48 @@ export default function ReviewActions({
   primaryLabel = "Validar",
 }) {
   return (
-    <div
-      aria-label="Ações da validação"
-      className={cn(
-        "grid w-full grid-cols-1 gap-2 min-[28rem]:grid-cols-2",
-        onSave && "xl:grid-cols-3",
-      )}
-      role="group"
-    >
-      <Button
-        className="h-[42px] w-full min-w-0"
-        disabled={isBusy}
-        onClick={onBack}
-        type="button"
-        variant="outline"
+    <div className="@container/actions w-full">
+      <div
+        aria-label="Ações da validação"
+        className={cn(
+          "grid w-full grid-cols-1 gap-2 @min-[18rem]/actions:grid-cols-2",
+          onSave && "@min-[28rem]/actions:grid-cols-3",
+        )}
+        role="group"
       >
-        <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-        Voltar
-      </Button>
-      {onSave ? (
         <Button
           className="h-[42px] w-full min-w-0"
           disabled={isBusy}
-          onClick={onSave}
+          onClick={onBack}
           type="button"
-          variant="secondary"
+          variant="outline"
         >
-          <Save aria-hidden="true" data-icon="inline-start" />
-          {saveLabel}
+          <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+          Voltar
         </Button>
-      ) : null}
-      <Button
-        className="h-[42px] w-full min-w-0"
-        disabled={isBusy || isValid || !canValidate}
-        onClick={onValidate}
-        type="button"
-        variant="success"
-      >
-        <CheckCircle2 aria-hidden="true" data-icon="inline-start" />
-        {primaryLabel}
-      </Button>
+        {onSave ? (
+          <Button
+            className="h-[42px] w-full min-w-0"
+            disabled={isBusy}
+            onClick={onSave}
+            type="button"
+            variant="secondary"
+          >
+            <Save aria-hidden="true" data-icon="inline-start" />
+            {saveLabel}
+          </Button>
+        ) : null}
+        <Button
+          className="h-[42px] w-full min-w-0"
+          disabled={isBusy || isValid || !canValidate}
+          onClick={onValidate}
+          type="button"
+          variant="success"
+        >
+          <CheckCircle2 aria-hidden="true" data-icon="inline-start" />
+          {primaryLabel}
+        </Button>
+      </div>
     </div>
   );
 }

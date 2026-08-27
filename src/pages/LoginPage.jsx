@@ -99,7 +99,7 @@ export default function LoginPage() {
     <main className="relative isolate flex min-h-svh items-center justify-center overflow-hidden bg-muted/30 px-4 py-8 sm:px-6 lg:px-8">
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 w-full -translate-y-1/2 text-border/60"
+        className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 w-full -translate-y-1/2 text-primary/20"
         fill="none"
         focusable="false"
         stroke="currentColor"
@@ -112,8 +112,8 @@ export default function LoginPage() {
 
       <div className="flex w-full max-w-5xl flex-col gap-4">
         <Card aria-labelledby="login-title" className="overflow-hidden py-0">
-          <div className="grid md:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
-            <form className="flex flex-col" noValidate onSubmit={handleSubmit}>
+          <div className="grid md:grid-cols-[minmax(20rem,0.92fr)_minmax(0,1.08fr)]">
+            <form className="flex flex-col md:order-2" noValidate onSubmit={handleSubmit}>
               <CardHeader className="gap-3 px-6 pt-8 sm:px-10 sm:pt-10">
                 <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                   ACESSO MÉDICO
@@ -268,7 +268,7 @@ export default function LoginPage() {
 
             <section
               aria-label="Identidade da plataforma de validação de ECG"
-              className="relative flex min-h-80 flex-col justify-between overflow-hidden bg-primary px-8 py-10 text-primary-foreground sm:px-10 md:min-h-full"
+              className="relative flex min-h-80 flex-col justify-between overflow-hidden bg-brand px-8 py-10 text-brand-foreground sm:px-10 md:order-1 md:min-h-full"
             >
               <div className="relative flex items-center justify-center gap-5" aria-label="Marcas BP e NSEE">
                 <span className="grid min-h-16 min-w-28 place-items-center rounded-lg bg-background p-3">
@@ -282,7 +282,7 @@ export default function LoginPage() {
 
               <svg
                 aria-hidden="true"
-                className="absolute inset-x-0 top-1/2 w-full -translate-y-1/2 text-primary-foreground/30"
+                className="absolute inset-x-0 top-1/2 w-full -translate-y-1/2 text-brand-foreground/30"
                 fill="none"
                 focusable="false"
                 stroke="currentColor"
@@ -294,14 +294,14 @@ export default function LoginPage() {
               </svg>
 
               <div className="relative flex flex-col items-center gap-4 text-center">
-                <span className="grid size-12 place-items-center rounded-full bg-primary-foreground/15">
+                <span className="grid size-12 place-items-center rounded-full bg-brand-foreground/15">
                   <ShieldCheck className="size-6" aria-hidden="true" />
                 </span>
                 <div className="flex flex-col gap-2">
                   <p className="text-lg leading-snug">
                     Plataforma segura para <strong>validação de exames de ECG</strong>
                   </p>
-                  <p className="text-sm text-primary-foreground/75">
+                  <p className="text-sm text-brand-foreground/75">
                     Precisão, confiabilidade e suporte à decisão clínica.
                   </p>
                 </div>

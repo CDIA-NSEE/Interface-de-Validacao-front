@@ -47,6 +47,7 @@ function DialogOverlay({
 function DialogContent({
   className,
   children,
+  closeLabel = "Fechar",
   showCloseButton = true,
   ...props
 }) {
@@ -68,7 +69,7 @@ function DialogContent({
               <Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />
             }>
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -90,6 +91,7 @@ function DialogHeader({
 
 function DialogFooter({
   className,
+  closeLabel = "Fechar",
   showCloseButton = false,
   children,
   ...props
@@ -105,7 +107,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          {closeLabel}
         </DialogPrimitive.Close>
       )}
     </div>

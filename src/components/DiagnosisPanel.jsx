@@ -1,5 +1,5 @@
 import { Check, ChevronDown, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -59,8 +59,8 @@ function DiagnosisCard({
   onRemove,
   onRemoveRegion,
   onReview,
+  reviewDraft,
   onReviewDraftChange,
-  onDisagreementPreviewChange,
   onStartRegion,
 }) {
   const status = getDiagnosisReviewStatus(diagnosis);
@@ -70,35 +70,31 @@ function DiagnosisCard({
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const originalPreview = getOriginalTextPreview(originalText);
   const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText);
-  const [isDisagreementOpen, setIsDisagreementOpen] = useState(false);
-  const [reviewNoteDraft, setReviewNoteDraft] = useState(diagnosis.review_notes || "");
+  const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
+  const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
   const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
   const canSaveDisagreement = hasDisagreementNote(reviewNoteDraft);
   const decisionValue = visualStatus === "pending" ? [] : [visualStatus];
-
-  useEffect(() => {
-    setReviewNoteDraft(diagnosis.review_notes || "");
-  }, [diagnosis.review_notes]);
-
-  useEffect(() => {
-    const hasUnsavedNote = isDisagreementOpen && reviewNoteDraft !== (diagnosis.review_notes || "");
-    onReviewDraftChange?.(diagnosis.id, hasUnsavedNote);
-    return () => onReviewDraftChange?.(diagnosis.id, false);
-  }, [diagnosis.id, diagnosis.review_notes, isDisagreementOpen, onReviewDraftChange, reviewNoteDraft]);
-
-  useEffect(
-    () => () => onDisagreementPreviewChange?.(diagnosis.id, false),
-    [diagnosis.id, onDisagreementPreviewChange],
-  );
+  const cardVariant = isRegionTarget
+    ? "info"
+    : visualStatus === "confirmed"
+      ? "success"
+      : visualStatus === "rejected"
+        ? "destructive"
+        : "default";
 
   function setDisagreementPanelOpen(isOpen) {
-    setIsDisagreementOpen(isOpen);
-    onDisagreementPreviewChange?.(diagnosis.id, isOpen);
+    onReviewDraftChange?.(
+      diagnosis.id,
+      isOpen ? { isOpen: true, note: reviewNoteDraft } : null,
+    );
   }
 
   function openDisagreementPanel() {
-    setReviewNoteDraft(diagnosis.review_notes || "");
-    setDisagreementPanelOpen(true);
+    onReviewDraftChange?.(diagnosis.id, {
+      isOpen: true,
+      note: diagnosis.review_notes || "",
+    });
   }
 
   async function submitDisagreement(note) {
@@ -119,14 +115,10 @@ function DiagnosisCard({
 
   return (
     <Card
-      className={cn(
-        "gap-3 overflow-visible",
-        visualStatus === "confirmed" && "ring-success/35",
-        visualStatus === "rejected" && "ring-destructive/35",
-        isRegionTarget && "ring-2 ring-info/50",
-      )}
+      className={cn("gap-3 overflow-visible", isRegionTarget && "ring-2")}
       data-testid="diagnosis-card"
       size="sm"
+      variant={cardVariant}
     >
       <CardHeader>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -176,7 +168,7 @@ function DiagnosisCard({
         ) : null}
 
         {status === "rejected" && diagnosis.review_notes ? (
-          <Alert variant="warning">
+          <Alert variant="destructive">
             <AlertTitle>Observação</AlertTitle>
             <AlertDescription className="break-words">{diagnosis.review_notes}</AlertDescription>
             <Button className="mt-2 w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar observação</Button>
@@ -209,14 +201,14 @@ function DiagnosisCard({
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button aria-pressed={isRegionTarget} className="sm:w-auto" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
+        <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,11.5rem),1fr))]">
+          <Button aria-pressed={isRegionTarget} className="w-full" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
             <MapPinned aria-hidden="true" data-icon="inline-start" />
             Marcar área
           </Button>
-          <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid flex-1 grid-cols-2" disabled={isBusy || diagnosis.source === "doctor_added"} onValueChange={handleDecisionChange} spacing={1} value={decisionValue} variant="outline">
-            <ToggleGroupItem className="w-full" value="confirmed"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-            <ToggleGroupItem className="w-full" value="rejected"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+          <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy || diagnosis.source === "doctor_added"} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
+            <ToggleGroupItem className="w-full min-w-0 px-1.5" value="confirmed" variant="success"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+            <ToggleGroupItem className="w-full min-w-0 px-1.5" value="rejected" variant="destructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
           </ToggleGroup>
         </div>
 
@@ -225,7 +217,7 @@ function DiagnosisCard({
         ) : null}
 
         {isDisagreementOpen ? (
-          <Alert variant="warning">
+          <Alert variant="destructive">
             <AlertTitle className="flex items-center justify-between gap-2">
               Observação da discordância
               <Button aria-label="Cancelar observação" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
@@ -233,7 +225,7 @@ function DiagnosisCard({
             <AlertDescription className="mt-2 flex flex-col gap-2">
               <Field>
                 <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Motivo <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
-                <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => setReviewNoteDraft(event.target.value)} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
+                <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
               </Field>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button disabled={isBusy || !canSaveDisagreement} onClick={() => submitDisagreement(reviewNoteDraft)} size="sm" type="button">Salvar discordância</Button>
@@ -262,27 +254,15 @@ export default function DiagnosisPanel({
   onRemove,
   onRemoveRegion,
   onReview,
-  onDisagreementPreviewChange,
-  onUnsavedChange,
+  onReviewDraftChange,
   onSecondaryToggle,
   onStartRegion,
   options = [],
+  reviewDrafts = {},
   selectedRegion,
 }) {
   const [name, setName] = useState("");
-  const [unsavedReviewNotes, setUnsavedReviewNotes] = useState({});
   const aiRecommendationText = typeof aiRecommendation === "string" ? aiRecommendation.trim() : "";
-
-  useEffect(() => {
-    onUnsavedChange?.(Object.values(unsavedReviewNotes).some(Boolean));
-  }, [onUnsavedChange, unsavedReviewNotes]);
-
-  const handleReviewDraftChange = useCallback((diagnosisId, isDirty) => {
-    setUnsavedReviewNotes((current) => {
-      if (current[diagnosisId] === isDirty) return current;
-      return { ...current, [diagnosisId]: isDirty };
-    });
-  }, []);
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
     () => getDiagnosisDisplayGroups(diagnoses, { dailyStandardDiagnosis, isGeneralReviewDay }),
@@ -316,8 +296,7 @@ export default function DiagnosisPanel({
     onRemove,
     onRemoveRegion,
     onReview,
-    onReviewDraftChange: handleReviewDraftChange,
-    onDisagreementPreviewChange,
+    onReviewDraftChange,
     onStartRegion,
   };
 
@@ -330,6 +309,7 @@ export default function DiagnosisPanel({
       <Card
         aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"}
         role="region"
+        variant="highlight"
       >
         <CardHeader className="border-b">
           <CardTitle>{isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"}</CardTitle>
@@ -337,7 +317,7 @@ export default function DiagnosisPanel({
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {requiredDiagnoses.length ? requiredDiagnoses.map((diagnosis) => (
-            <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired key={diagnosis.id} />
+            <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
           )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}
         </CardContent>
       </Card>
@@ -356,7 +336,7 @@ export default function DiagnosisPanel({
             </CardHeader>
             <CollapsibleContent>
               <CardContent className="flex flex-col gap-3 border-t pt-4">
-                {optionalDiagnoses.map((diagnosis) => <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired={false} key={diagnosis.id} />)}
+                {optionalDiagnoses.map((diagnosis) => <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired={false} key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />)}
                 {options.length ? (
                   <Field>
                     <FieldLabel htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
@@ -367,7 +347,7 @@ export default function DiagnosisPanel({
                   </Field>
                 ) : null}
                 {selectedRegion ? <Alert variant="info"><MapPinned aria-hidden="true" /><AlertTitle>Região selecionada</AlertTitle><AlertDescription>O próximo diagnóstico adicionado será associado a esta área.</AlertDescription></Alert> : null}
-                {doctorDiagnoses.map((diagnosis) => <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired={false} key={diagnosis.id} />)}
+                {doctorDiagnoses.map((diagnosis) => <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired={false} key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />)}
               </CardContent>
             </CollapsibleContent>
           </Card>

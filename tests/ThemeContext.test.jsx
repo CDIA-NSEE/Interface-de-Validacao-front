@@ -17,7 +17,6 @@ function ThemeProbe() {
 describe("ThemeContext", () => {
   beforeEach(() => {
     document.documentElement.classList.remove("dark");
-    document.documentElement.removeAttribute("data-theme");
   });
 
   it("restores the persisted dark theme through the public context contract", () => {
@@ -31,7 +30,6 @@ describe("ThemeContext", () => {
 
     expect(screen.getByRole("button", { name: "dark:true" })).toBeInTheDocument();
     expect(document.documentElement).toHaveClass("dark");
-    expect(document.documentElement).not.toHaveAttribute("data-theme");
   });
 
   it("toggles and persists light/dark without changing the public API", async () => {
