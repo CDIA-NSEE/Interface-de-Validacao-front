@@ -1,5 +1,5 @@
-import { Check, ChevronDown, MapPinned, Pencil, Sparkles, Trash2, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Bot, Check, ChevronDown, MapPinned, Pencil, Trash2, X } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -45,12 +45,42 @@ const REVIEW_LABELS = {
   rejected: "Discordo",
 };
 
+const AI_SUGGESTION_DESCRIPTION =
+  "A IA sugeriu este diagnóstico. A avaliação médica continua obrigatória";
+
+function AiSuggestionBadge() {
+  const descriptionId = useId();
+
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Badge
+              aria-describedby={descriptionId}
+              aria-label="Sugerido pela IA"
+              tabIndex={0}
+              variant="info"
+            />
+          }
+        >
+          <Bot aria-hidden="true" data-icon="inline-start" />
+          Sugerido pela IA
+        </TooltipTrigger>
+        <TooltipContent>{AI_SUGGESTION_DESCRIPTION}</TooltipContent>
+      </Tooltip>
+      <span className="sr-only" id={descriptionId}>{AI_SUGGESTION_DESCRIPTION}</span>
+    </>
+  );
+}
+
 function regionCountLabel(count) {
   return count === 1 ? "1 área" : `${count} áreas`;
 }
 
 function DiagnosisCard({
   activeRegionTarget,
+  aiModeEnabled,
   diagnosis,
   diagnosisReference,
   isBusy,
@@ -123,6 +153,7 @@ function DiagnosisCard({
       <CardHeader>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           {isRequired ? <Badge variant="info">Diagnóstico do dia</Badge> : null}
+          {aiModeEnabled && diagnosis.ai_suggested ? <AiSuggestionBadge /> : null}
           {diagnosis.source === "doctor_added" ? <Badge variant="secondary">Adicionado</Badge> : null}
           {diagnosis.is_grouped ? <Badge variant="outline">Agrupado</Badge> : null}
           {diagnosis.region_required_missing ? <Badge variant="warning">Área obrigatória</Badge> : null}
@@ -241,7 +272,7 @@ function DiagnosisCard({
 
 export default function DiagnosisPanel({
   activeRegionTarget,
-  aiRecommendation,
+  aiModeEnabled = false,
   dailyStandardDiagnosis,
   diagnoses = [],
   diagnosisReferences = {},
@@ -262,7 +293,6 @@ export default function DiagnosisPanel({
   selectedRegion,
 }) {
   const [name, setName] = useState("");
-  const aiRecommendationText = typeof aiRecommendation === "string" ? aiRecommendation.trim() : "";
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
     () => getDiagnosisDisplayGroups(diagnoses, { dailyStandardDiagnosis, isGeneralReviewDay }),
@@ -291,6 +321,7 @@ export default function DiagnosisPanel({
   const secondarySummary = `${optionalDiagnoses.length} no ECG · ${doctorDiagnoses.length} adicionados`;
   const sharedCardProps = {
     activeRegionTarget,
+    aiModeEnabled,
     isBusy,
     onEditRegion,
     onRemove,
@@ -302,10 +333,6 @@ export default function DiagnosisPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {aiRecommendationText ? (
-        <Alert variant="info"><Sparkles aria-hidden="true" /><AlertTitle>Recomendação da IA</AlertTitle><AlertDescription>{aiRecommendationText}</AlertDescription></Alert>
-      ) : null}
-
       <Card
         aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"}
         role="region"

@@ -574,6 +574,7 @@ export default function ExamReviewPage() {
   const diagnosisPanel = (
     <DiagnosisPanel
       activeRegionTarget={activeRegionTarget}
+      aiModeEnabled={Boolean(validationContext?.ai_mode_enabled)}
       dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
       diagnoses={exam.diagnoses}
       diagnosisReferences={diagnosisReferences}

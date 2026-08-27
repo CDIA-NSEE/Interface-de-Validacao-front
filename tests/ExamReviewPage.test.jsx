@@ -140,8 +140,54 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("button", { name: "Dados clínicos completos" })).toBeVisible();
   });
 
+  it("encaminha o modo IA do contexto para o diagnóstico sugerido", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
+    });
+    getValidationContext.mockResolvedValue({
+      active_standard_diagnosis: "Ritmo sinusal",
+      ai_mode_enabled: true,
+      is_configured: true,
+      is_general_review_day: false,
+    });
+    stubViewport(false);
+
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByText("Sugerido pela IA")).toBeVisible();
+  });
+
+  it("oculta a sugestão quando o backend antigo não informa o modo IA", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
+    });
+    getValidationContext.mockResolvedValue({
+      active_standard_diagnosis: "Ritmo sinusal",
+      is_configured: true,
+      is_general_review_day: false,
+    });
+    stubViewport(false);
+
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
+    expect(screen.queryByText("Sugerido pela IA")).not.toBeInTheDocument();
+  });
+
   it("usa uma única composição de revisão dentro do Sheet abaixo de 768px", async () => {
     const user = userEvent.setup();
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
+    });
+    getValidationContext.mockResolvedValue({
+      active_standard_diagnosis: "Ritmo sinusal",
+      ai_mode_enabled: true,
+      is_configured: true,
+      is_general_review_day: false,
+    });
     stubViewport(true);
     render(<ExamReviewPage />);
 
@@ -153,6 +199,7 @@ describe("ExamReviewPage", () => {
 
     expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getAllByRole("region", { name: "Diagnóstico do dia" })).toHaveLength(1);
+    expect(screen.getByText("Sugerido pela IA")).toBeVisible();
     expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeVisible();
   });
 
