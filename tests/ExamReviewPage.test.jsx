@@ -129,19 +129,95 @@ beforeEach(() => {
 });
 
 describe("ExamReviewPage", () => {
-  it("mantém a revisão lateral e o ECG lado a lado no desktop", async () => {
+  it("mantém a revisão compacta e o ECG lado a lado no desktop", async () => {
     stubViewport(false);
-    render(<ExamReviewPage />);
+    const { container } = render(<ExamReviewPage />);
 
     expect(await screen.findByRole("heading", { name: "Exame ECG-42" })).toBeVisible();
     expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Dados clínicos completos" })).toBeVisible();
+    expect(container.querySelector("header dl")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mais informações" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("textbox", { name: "Observações gerais" })).toBeVisible();
+    expect(screen.getByRole("toolbar", { name: "Controles do ECG" })).toBeVisible();
+    expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
+    expect(screen.getByText("Iniciar")).toBeVisible();
+  });
+
+  it("revela os dados removidos da barra somente em Mais informações", async () => {
+    const user = userEvent.setup();
+    getExamById.mockResolvedValue({
+      ...exam,
+      comments: "Ritmo regular no laudo original.",
+      source_notes: "Traçado recebido sem intercorrências.",
+    });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const trigger = await screen.findByRole("button", { name: "Mais informações" });
+    expect(screen.queryByText("ECG 12 derivações")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ritmo regular no laudo original.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Traçado recebido sem intercorrências.")).not.toBeInTheDocument();
+
+    await user.click(trigger);
+
+    expect(screen.getByText("Data e hora")).toBeVisible();
+    expect(screen.getByText("26/08/2026 as 08:30")).toBeVisible();
+    expect(screen.getByText("ECG 12 derivações")).toBeVisible();
+    expect(screen.getByText("Feminino")).toBeVisible();
+    expect(screen.getByText("Ritmo regular no laudo original.")).toBeVisible();
+    expect(screen.getByText("Traçado recebido sem intercorrências.")).toBeVisible();
+  });
+
+  it("encaminha o modo IA do contexto para o diagnóstico com concordância", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
+    });
+    getValidationContext.mockResolvedValue({
+      active_standard_diagnosis: "Ritmo sinusal",
+      ai_mode_enabled: true,
+      is_configured: true,
+      is_general_review_day: false,
+    });
+    stubViewport(false);
+
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByText("IA concordou")).toBeVisible();
+  });
+
+  it("oculta a concordância quando o backend antigo não informa o modo IA", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
+    });
+    getValidationContext.mockResolvedValue({
+      active_standard_diagnosis: "Ritmo sinusal",
+      is_configured: true,
+      is_general_review_day: false,
+    });
+    stubViewport(false);
+
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
+    expect(screen.queryByText("IA concordou")).not.toBeInTheDocument();
   });
 
   it("usa uma única composição de revisão dentro do Sheet abaixo de 768px", async () => {
     const user = userEvent.setup();
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
+    });
+    getValidationContext.mockResolvedValue({
+      active_standard_diagnosis: "Ritmo sinusal",
+      ai_mode_enabled: true,
+      is_configured: true,
+      is_general_review_day: false,
+    });
     stubViewport(true);
     render(<ExamReviewPage />);
 
@@ -153,6 +229,7 @@ describe("ExamReviewPage", () => {
 
     expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getAllByRole("region", { name: "Diagnóstico do dia" })).toHaveLength(1);
+    expect(screen.getByText("IA concordou")).toBeVisible();
     expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeVisible();
   });
 

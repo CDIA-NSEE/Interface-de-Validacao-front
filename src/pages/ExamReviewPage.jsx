@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  ChevronDown,
   FileText,
   HelpCircle,
   House,
@@ -24,11 +25,18 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
 import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -134,7 +142,7 @@ export default function ExamReviewPage() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
-  const [openDetailSections, setOpenDetailSections] = useState(["notes"]);
+  const [isMoreInformationOpen, setIsMoreInformationOpen] = useState(false);
   const [isReviewSheetOpen, setIsReviewSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -161,7 +169,7 @@ export default function ExamReviewPage() {
       setActiveRegionTarget(null);
       setSelectedRegion(null);
       setIsSecondaryPanelOpen(true);
-      setOpenDetailSections(["notes"]);
+      setIsMoreInformationOpen(false);
       setIsReviewSheetOpen(false);
       setDiagnosisReviewDrafts({});
       setIsExitConfirmOpen(false);
@@ -196,10 +204,12 @@ export default function ExamReviewPage() {
         imageAspectRatio,
         layoutHeight: layout.clientHeight,
         layoutWidth: layout.clientWidth,
-        maximumSidebarRatio: usesIntermediateLayout ? 0.46 : 0.5,
-        minimumSidebarWidth: usesIntermediateLayout ? 300 : 340,
-        viewerHorizontalChrome: 30,
-        viewerVerticalChrome: 72,
+        maximumSidebarRatio: usesIntermediateLayout ? 0.42 : 0.32,
+        minimumSidebarWidth: usesIntermediateLayout
+          ? 300
+          : Math.round(layout.clientWidth * 0.3),
+        viewerHorizontalChrome: 24,
+        viewerVerticalChrome: 150,
       });
 
       setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
@@ -550,9 +560,6 @@ export default function ExamReviewPage() {
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
   const doctorName = user?.full_name || "Usuário";
-  const dailyLabel = validationContext?.is_general_review_day
-    ? "Dia 30 - revalidação geral"
-    : validationContext?.active_standard_diagnosis || "Agenda não configurada";
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
 
   if (isLoading) {
@@ -574,6 +581,7 @@ export default function ExamReviewPage() {
   const diagnosisPanel = (
     <DiagnosisPanel
       activeRegionTarget={activeRegionTarget}
+      aiModeEnabled={Boolean(validationContext?.ai_mode_enabled)}
       dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
       diagnoses={exam.diagnoses}
       diagnosisReferences={diagnosisReferences}
@@ -595,67 +603,79 @@ export default function ExamReviewPage() {
     />
   );
 
-  const detailSections = (
-    <Accordion
-      className="rounded-xl bg-card px-4 ring-1 ring-foreground/10"
-      multiple
-      onValueChange={setOpenDetailSections}
-      value={openDetailSections}
-    >
-      <AccordionItem value="clinical">
-        <AccordionTrigger>
-          <span className="flex items-center gap-2">
-            <Stethoscope aria-hidden="true" data-icon="inline-start" />
-            Dados clínicos completos
-          </span>
-        </AccordionTrigger>
-        <AccordionContent><PatientInfo patient={exam.patient} /></AccordionContent>
-      </AccordionItem>
-      {exam.comments || exam.source_notes ? (
-        <AccordionItem value="report">
-          <AccordionTrigger>
+  const moreInformation = (
+    <Collapsible onOpenChange={setIsMoreInformationOpen} open={isMoreInformationOpen}>
+      <Card className="gap-0 overflow-hidden" size="sm">
+        <CardHeader className="p-0">
+          <CollapsibleTrigger
+            render={
+              <Button
+                className="h-auto w-full justify-between rounded-none px-3 py-3"
+                type="button"
+                variant="ghost"
+              />
+            }
+          >
             <span className="flex items-center gap-2">
-              <FileText aria-hidden="true" data-icon="inline-start" />
-              Informações do laudo original
+              <Stethoscope aria-hidden="true" data-icon="inline-start" />
+              Mais informações
             </span>
-          </AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-3">
-            {exam.comments ? (
+            <ChevronDown
+              aria-hidden="true"
+              className={isMoreInformationOpen ? "rotate-180 transition-transform" : "transition-transform"}
+              data-icon="inline-end"
+            />
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <Separator />
+          <CardContent className="flex flex-col gap-4 pt-3">
+            <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
               <div className="rounded-lg bg-muted/50 p-3">
-                <strong className="text-xs font-medium text-muted-foreground">Comentários</strong>
-                <p className="mt-1 break-words text-sm text-foreground">{exam.comments}</p>
+                <dt className="text-xs font-medium text-muted-foreground">Data e hora</dt>
+                <dd className="mt-1 font-medium text-foreground">
+                  {formatDate(exam.exam_date)}
+                  {exam.exam_time ? ` as ${exam.exam_time}` : ""}
+                </dd>
               </div>
-            ) : null}
-            {exam.source_notes ? (
               <div className="rounded-lg bg-muted/50 p-3">
-                <strong className="text-xs font-medium text-muted-foreground">Notas</strong>
-                <p className="mt-1 break-words text-sm text-foreground">{exam.source_notes}</p>
+                <dt className="text-xs font-medium text-muted-foreground">Tipo</dt>
+                <dd className="mt-1 font-medium text-foreground">{exam.exam_type}</dd>
               </div>
+            </dl>
+
+            <section className="flex flex-col gap-2" aria-labelledby="clinical-information-title">
+              <h3 className="flex items-center gap-2 text-sm font-medium" id="clinical-information-title">
+                <Stethoscope aria-hidden="true" data-icon="inline-start" />
+                Dados clínicos
+              </h3>
+              <PatientInfo patient={exam.patient} />
+            </section>
+
+            {exam.comments || exam.source_notes ? (
+              <section className="flex flex-col gap-2" aria-labelledby="original-report-title">
+                <h3 className="flex items-center gap-2 text-sm font-medium" id="original-report-title">
+                  <FileText aria-hidden="true" data-icon="inline-start" />
+                  Laudo original
+                </h3>
+                {exam.comments ? (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <strong className="text-xs font-medium text-muted-foreground">Comentários</strong>
+                    <p className="mt-1 break-words text-sm text-foreground">{exam.comments}</p>
+                  </div>
+                ) : null}
+                {exam.source_notes ? (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <strong className="text-xs font-medium text-muted-foreground">Notas</strong>
+                    <p className="mt-1 break-words text-sm text-foreground">{exam.source_notes}</p>
+                  </div>
+                ) : null}
+              </section>
             ) : null}
-          </AccordionContent>
-        </AccordionItem>
-      ) : null}
-      <AccordionItem value="notes">
-        <AccordionTrigger>
-          <span className="flex items-center gap-2">
-            <NotebookPen aria-hidden="true" data-icon="inline-start" />
-            Observações gerais
-          </span>
-        </AccordionTrigger>
-        <AccordionContent>
-          <Textarea
-            aria-label="Observações gerais"
-            value={notes}
-            onChange={(event) => {
-              setNotes(event.target.value);
-              setSaveFeedback("");
-            }}
-            placeholder="Registre comentários gerais sobre o exame"
-            rows={3}
-          />
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 
   const reviewBody = (
@@ -673,14 +693,14 @@ export default function ExamReviewPage() {
         </Alert>
       ) : null}
       {diagnosisPanel}
-      {detailSections}
+      {moreInformation}
     </div>
   );
 
   const reviewFooter = (
     <div className="flex flex-col gap-3">
       <Card size="sm" variant="highlight">
-        <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardHeader className="flex flex-row items-center justify-between gap-3" data-testid="current-status">
           <CardTitle className="text-sm">Status atual</CardTitle>
           <StatusBadge
             status={exam.status_validation}
@@ -727,35 +747,6 @@ export default function ExamReviewPage() {
             </div>
           </div>
         </div>
-        <dl className="hidden grid-cols-3 gap-px border-t border-brand-foreground/15 bg-brand-foreground/15 *:bg-brand *:px-4 *:py-2 [&_dd]:mt-0.5 [&_dd]:truncate [&_dd]:text-sm [&_dd]:font-medium [&_dt]:text-xs [&_dt]:text-brand-foreground/65 md:grid md:grid-cols-5">
-          <div>
-            <dt>Diagnóstico do dia</dt>
-            <dd>{dailyLabel}</dd>
-          </div>
-          <div>
-            <dt>Data e hora</dt>
-            <dd>
-              {formatDate(exam.exam_date)}
-              {exam.exam_time ? ` as ${exam.exam_time}` : ""}
-            </dd>
-          </div>
-          <div>
-            <dt>Tipo</dt>
-            <dd>{exam.exam_type}</dd>
-          </div>
-          {exam.patient?.age ? (
-            <div>
-              <dt>Idade</dt>
-              <dd>{exam.patient.age} anos</dd>
-            </div>
-          ) : null}
-          {exam.patient?.sex ? (
-            <div>
-              <dt>Sexo</dt>
-              <dd>{exam.patient.sex}</dd>
-            </div>
-          ) : null}
-        </dl>
       </header>
 
       <main
@@ -772,18 +763,40 @@ export default function ExamReviewPage() {
           </aside>
         ) : null}
 
-        <section className="flex min-h-0 min-w-0 flex-1 p-2 pb-20 md:p-4" aria-label="Visualizador de ECG">
-          <EcgViewer
-            imageUrl={exam.image_endpoint || exam.image_url}
-            onImageAspectRatioChange={setImageAspectRatio}
-            onRegionCancel={handleCancelRegionSelection}
-            selectedRegion={selectedRegion}
-            onRegionChange={handleRegionChange}
-            regions={viewerRegions}
-            selectionLabel={activeSelectionLabel}
-            selectionReference={activeRegionReference}
-            selectionVisual={activeRegionVisual}
-          />
+        <section className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:p-3 md:pb-3" aria-label="Visualizador de ECG">
+          <div className="flex min-h-full w-full flex-col gap-3">
+            <EcgViewer
+              imageUrl={exam.image_endpoint || exam.image_url}
+              onImageAspectRatioChange={setImageAspectRatio}
+              onRegionCancel={handleCancelRegionSelection}
+              selectedRegion={selectedRegion}
+              onRegionChange={handleRegionChange}
+              regions={viewerRegions}
+              selectionLabel={activeSelectionLabel}
+              selectionReference={activeRegionReference}
+              selectionVisual={activeRegionVisual}
+            />
+            <Field className="shrink-0 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
+              <div className="flex items-center gap-2">
+                <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
+                  <NotebookPen aria-hidden="true" data-icon="inline-start" />
+                  Observações gerais
+                </FieldLabel>
+                <Badge variant="outline">Opcional</Badge>
+              </div>
+              <Textarea
+                aria-label="Observações gerais"
+                id="general-observations"
+                value={notes}
+                onChange={(event) => {
+                  setNotes(event.target.value);
+                  setSaveFeedback("");
+                }}
+                placeholder="Registre comentários gerais sobre o exame"
+                rows={2}
+              />
+            </Field>
+          </div>
         </section>
       </main>
 

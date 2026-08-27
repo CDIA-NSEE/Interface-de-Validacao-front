@@ -29,7 +29,7 @@ const STEPS = [
   {
     icon: CheckCircle2,
     title: "Opcionais",
-    text: "Abra a seção Opcionais e adicionar para revisar outros diagnósticos.",
+    text: "Expanda um diagnóstico opcional para decidir ou marcar uma área no ECG.",
   },
 ];
 
