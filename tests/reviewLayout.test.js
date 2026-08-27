@@ -48,18 +48,31 @@ test("calculates an adaptive width between the sidebar limits", () => {
   );
 });
 
-test("limits the sidebar to half of the layout on exceptionally wide screens", () => {
+test("keeps the desktop sidebar between thirty and thirty-two percent", () => {
   assert.equal(
     getReviewSidebarWidth({
-      imageAspectRatio: 1,
-      layoutHeight: 600,
+      imageAspectRatio: 1.8,
+      layoutHeight: 800,
       layoutWidth: 1920,
-      maximumSidebarRatio: 0.5,
-      minimumSidebarWidth: 340,
-      viewerHorizontalChrome: 30,
-      viewerVerticalChrome: 72,
+      maximumSidebarRatio: 0.32,
+      minimumSidebarWidth: 576,
+      viewerHorizontalChrome: 24,
+      viewerVerticalChrome: 150,
     }),
-    960,
+    614,
+  );
+
+  assert.equal(
+    getReviewSidebarWidth({
+      imageAspectRatio: 1.8,
+      layoutHeight: 800,
+      layoutWidth: 1500,
+      maximumSidebarRatio: 0.32,
+      minimumSidebarWidth: 450,
+      viewerHorizontalChrome: 24,
+      viewerVerticalChrome: 150,
+    }),
+    450,
   );
 });
 

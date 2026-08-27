@@ -19,12 +19,12 @@ export default function ReviewActions({
         aria-label="Ações da validação"
         className={cn(
           "grid w-full grid-cols-1 gap-2 @min-[18rem]/actions:grid-cols-2",
-          onSave && "@min-[28rem]/actions:grid-cols-3",
+          onSave && "@min-[24rem]/actions:grid-cols-3",
         )}
         role="group"
       >
         <Button
-          className="h-[42px] w-full min-w-0"
+          className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
           disabled={isBusy}
           onClick={onBack}
           type="button"
@@ -35,7 +35,7 @@ export default function ReviewActions({
         </Button>
         {onSave ? (
           <Button
-            className="h-[42px] w-full min-w-0"
+            className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
             disabled={isBusy}
             onClick={onSave}
             type="button"
@@ -46,7 +46,7 @@ export default function ReviewActions({
           </Button>
         ) : null}
         <Button
-          className="h-[42px] w-full min-w-0"
+          className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
           disabled={isBusy || isValid || !canValidate}
           onClick={onValidate}
           type="button"

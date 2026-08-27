@@ -13,6 +13,19 @@ afterEach(() => {
 });
 
 describe("EcgViewer", () => {
+  it("conecta os controles a um dock abaixo da imagem do ECG", () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+
+    const canvas = container.querySelector(".ecg-canvas");
+    const dock = screen.getByTestId("ecg-controls-dock");
+    const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
+
+    expect(container.firstChild).toHaveClass("min-h-72", "sm:min-h-88");
+    expect(dock).toContainElement(toolbar);
+    expect(toolbar).toHaveTextContent("Controles do ECG");
+    expect(canvas.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("usa a proporção natural da imagem e a informa ao layout", async () => {
     const onImageAspectRatioChange = vi.fn();
     let resizeCallback;
@@ -86,6 +99,12 @@ describe("EcgViewer", () => {
     expect(screen.getByText("100%")).toBeVisible();
     fireEvent.click(zoomIn);
     expect(screen.getByText("115%")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Resetar zoom" }));
+    expect(screen.getByText("100%")).toBeVisible();
+    fireEvent.click(zoomIn);
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar à tela" }));
+    expect(screen.getByText("100%")).toBeVisible();
+    fireEvent.click(zoomIn);
 
     for (let index = 0; index < 20; index += 1) {
       fireEvent.click(screen.getByRole("button", { name: "Zoom mais" }));
