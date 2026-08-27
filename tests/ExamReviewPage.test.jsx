@@ -140,7 +140,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("button", { name: "Dados clínicos completos" })).toBeVisible();
   });
 
-  it("encaminha o modo IA do contexto para o diagnóstico sugerido", async () => {
+  it("encaminha o modo IA do contexto para o diagnóstico com concordância", async () => {
     getExamById.mockResolvedValue({
       ...exam,
       diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
@@ -155,10 +155,10 @@ describe("ExamReviewPage", () => {
 
     render(<ExamReviewPage />);
 
-    expect(await screen.findByText("Sugerido pela IA")).toBeVisible();
+    expect(await screen.findByText("IA concordou")).toBeVisible();
   });
 
-  it("oculta a sugestão quando o backend antigo não informa o modo IA", async () => {
+  it("oculta a concordância quando o backend antigo não informa o modo IA", async () => {
     getExamById.mockResolvedValue({
       ...exam,
       diagnoses: [{ ...exam.diagnoses[0], ai_suggested: true }],
@@ -173,7 +173,7 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     expect(await screen.findByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
-    expect(screen.queryByText("Sugerido pela IA")).not.toBeInTheDocument();
+    expect(screen.queryByText("IA concordou")).not.toBeInTheDocument();
   });
 
   it("usa uma única composição de revisão dentro do Sheet abaixo de 768px", async () => {
@@ -199,7 +199,7 @@ describe("ExamReviewPage", () => {
 
     expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getAllByRole("region", { name: "Diagnóstico do dia" })).toHaveLength(1);
-    expect(screen.getByText("Sugerido pela IA")).toBeVisible();
+    expect(screen.getByText("IA concordou")).toBeVisible();
     expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeVisible();
   });
 

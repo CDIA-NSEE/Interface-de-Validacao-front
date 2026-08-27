@@ -45,10 +45,10 @@ const REVIEW_LABELS = {
   rejected: "Discordo",
 };
 
-const AI_SUGGESTION_DESCRIPTION =
-  "A IA sugeriu este diagnóstico. A avaliação médica continua obrigatória";
+const AI_AGREEMENT_DESCRIPTION =
+  "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.";
 
-function AiSuggestionBadge() {
+function AiAgreementBadge() {
   const descriptionId = useId();
 
   return (
@@ -58,18 +58,18 @@ function AiSuggestionBadge() {
           render={
             <Badge
               aria-describedby={descriptionId}
-              aria-label="Sugerido pela IA"
+              aria-label="IA concordou"
               tabIndex={0}
               variant="info"
             />
           }
         >
           <Bot aria-hidden="true" data-icon="inline-start" />
-          Sugerido pela IA
+          IA concordou
         </TooltipTrigger>
-        <TooltipContent>{AI_SUGGESTION_DESCRIPTION}</TooltipContent>
+        <TooltipContent>{AI_AGREEMENT_DESCRIPTION}</TooltipContent>
       </Tooltip>
-      <span className="sr-only" id={descriptionId}>{AI_SUGGESTION_DESCRIPTION}</span>
+      <span className="sr-only" id={descriptionId}>{AI_AGREEMENT_DESCRIPTION}</span>
     </>
   );
 }
@@ -153,7 +153,7 @@ function DiagnosisCard({
       <CardHeader>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           {isRequired ? <Badge variant="info">Diagnóstico do dia</Badge> : null}
-          {aiModeEnabled && diagnosis.ai_suggested ? <AiSuggestionBadge /> : null}
+          {aiModeEnabled && diagnosis.ai_suggested ? <AiAgreementBadge /> : null}
           {diagnosis.source === "doctor_added" ? <Badge variant="secondary">Adicionado</Badge> : null}
           {diagnosis.is_grouped ? <Badge variant="outline">Agrupado</Badge> : null}
           {diagnosis.region_required_missing ? <Badge variant="warning">Área obrigatória</Badge> : null}

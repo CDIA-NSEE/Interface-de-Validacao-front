@@ -74,7 +74,7 @@ function originalDiagnosis(id, standardText, extra = {}) {
 }
 
 describe("DiagnosisPanel", () => {
-  it("destaca a sugestão da IA no diagnóstico diário sem tomar a decisão médica", async () => {
+  it("destaca a concordância da IA no diagnóstico diário sem tomar a decisão médica", async () => {
     const onReview = vi.fn().mockResolvedValue(true);
     render(
       <DiagnosisPanelHarness
@@ -87,12 +87,12 @@ describe("DiagnosisPanel", () => {
     );
 
     const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
-    const aiBadge = within(dailyPanel).getByLabelText("Sugerido pela IA");
+    const aiBadge = within(dailyPanel).getByLabelText("IA concordou");
 
     expect(aiBadge).toBeVisible();
-    expect(aiBadge).toHaveAccessibleName("Sugerido pela IA");
+    expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge).toHaveAccessibleDescription(
-      "A IA sugeriu este diagnóstico. A avaliação médica continua obrigatória",
+      "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.",
     );
     expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "false");
     expect(within(dailyPanel).getByRole("button", { name: "Discordo" })).toHaveAttribute("aria-pressed", "false");
@@ -102,12 +102,12 @@ describe("DiagnosisPanel", () => {
     fireEvent.focus(aiBadge);
     await waitFor(() => {
       expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
-        "A IA sugeriu este diagnóstico. A avaliação médica continua obrigatória",
+        "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.",
       );
     });
   });
 
-  it("oculta sugestões quando o modo está desligado ou o campo não é verdadeiro", () => {
+  it("oculta concordâncias quando o modo está desligado ou o campo não é verdadeiro", () => {
     const { rerender } = render(
       <DiagnosisPanelHarness
         {...createProps({ options: [] })}
@@ -120,7 +120,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.queryByText("Sugerido pela IA")).not.toBeInTheDocument();
+    expect(screen.queryByText("IA concordou")).not.toBeInTheDocument();
 
     rerender(
       <DiagnosisPanelHarness
@@ -134,10 +134,10 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.queryByText("Sugerido pela IA")).not.toBeInTheDocument();
+    expect(screen.queryByText("IA concordou")).not.toBeInTheDocument();
   });
 
-  it("exibe sugestões em diagnósticos opcionais e na revalidação geral", () => {
+  it("exibe concordâncias em diagnósticos opcionais e na revalidação geral", () => {
     const { rerender } = render(
       <DiagnosisPanelHarness
         {...createProps({ options: [] })}
@@ -151,8 +151,8 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.getAllByText("Sugerido pela IA")).toHaveLength(1);
-    expect(screen.getByText("Bloqueio de ramo direito").closest('[data-slot="card"]')).toHaveTextContent("Sugerido pela IA");
+    expect(screen.getAllByText("IA concordou")).toHaveLength(1);
+    expect(screen.getByText("Bloqueio de ramo direito").closest('[data-slot="card"]')).toHaveTextContent("IA concordou");
 
     rerender(
       <DiagnosisPanelHarness
@@ -167,7 +167,7 @@ describe("DiagnosisPanel", () => {
     );
 
     const generalPanel = screen.getByRole("region", { name: "Revalidação geral" });
-    expect(within(generalPanel).getAllByText("Sugerido pela IA")).toHaveLength(2);
+    expect(within(generalPanel).getAllByText("IA concordou")).toHaveLength(2);
   });
 
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
