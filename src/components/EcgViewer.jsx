@@ -1,5 +1,6 @@
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Badge } from "@/components/ui/badge";
 import TooltipIconButton from "@/components/TooltipIconButton.jsx";
@@ -29,6 +30,7 @@ function regionFromPoints(start, end) {
 }
 
 export default function EcgViewer({
+  controlsTarget,
   imageUrl,
   onImageAspectRatioChange,
   onRegionCancel,
@@ -182,17 +184,57 @@ export default function EcgViewer({
     onRegionChange?.(null);
   }
 
+  const controls = (
+    <div
+      aria-label="Controles do ECG"
+      className="flex flex-wrap items-center justify-end gap-1.5 rounded-lg bg-accent/70 p-1 ring-1 ring-primary/15"
+      role="toolbar"
+    >
+      <TooltipIconButton
+        disabled={zoom >= 2.4}
+        label="Zoom mais"
+        onClick={() => changeZoom(0.15)}
+        size="icon-sm"
+        variant="outline"
+      >
+        <Plus aria-hidden="true" />
+      </TooltipIconButton>
+      <TooltipIconButton
+        disabled={zoom <= 0.6}
+        label="Zoom menos"
+        onClick={() => changeZoom(-0.15)}
+        size="icon-sm"
+        variant="outline"
+      >
+        <Minus aria-hidden="true" />
+      </TooltipIconButton>
+      <TooltipIconButton label="Resetar zoom" onClick={() => setZoom(1)} size="icon-sm" variant="outline">
+        <RotateCcw aria-hidden="true" />
+      </TooltipIconButton>
+      <TooltipIconButton label="Ajustar à tela" onClick={() => setZoom(1)} size="icon-sm" variant="outline">
+        <Maximize2 aria-hidden="true" />
+      </TooltipIconButton>
+      {selectedRegion || selectionLabel ? (
+        <TooltipIconButton label="Limpar seleção" onClick={clearSelection} size="icon-sm" variant="outline">
+          <X aria-hidden="true" />
+        </TooltipIconButton>
+      ) : null}
+      <Badge variant="outline">{Math.round(zoom * 100)}%</Badge>
+    </div>
+  );
+
   return (
-    <div className="flex min-h-72 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 sm:min-h-88">
-      <div className="ecg-canvas" ref={canvasRef}>
-        <div
-          className="ecg-image-stage"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-          style={{ ...stageStyle, aspectRatio: imageAspectRatio }}
-        >
+    <>
+      <div className="relative flex min-h-72 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 sm:min-h-88">
+        <div className="ecg-canvas" ref={canvasRef}>
+          <div
+            className="ecg-image-stage"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            style={{ ...stageStyle, aspectRatio: imageAspectRatio }}
+          >
           <img
             src={resolvedSource}
             alt="Traçado do ECG"
@@ -237,51 +279,18 @@ export default function EcgViewer({
               ) : null}
             </span>
           ) : null}
+          </div>
         </div>
+        {selectionLabel ? (
+          <Badge className="pointer-events-none absolute top-2 left-2 z-10 max-w-[calc(100%-1rem)] truncate" variant="info">
+            {selectionLabel}
+          </Badge>
+        ) : null}
+        {!controlsTarget ? (
+          <div className="absolute right-2 bottom-2 z-10">{controls}</div>
+        ) : null}
       </div>
-
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 p-2" data-testid="ecg-controls-dock">
-        {selectionLabel ? <Badge variant="info">{selectionLabel}</Badge> : <span />}
-        <div
-          aria-label="Controles do ECG"
-          className="flex flex-wrap items-center justify-end gap-1.5 rounded-lg bg-accent/70 p-1 ring-1 ring-primary/15"
-          role="toolbar"
-        >
-          <span className="hidden px-1 text-xs font-medium text-muted-foreground lg:inline">
-            Controles do ECG
-          </span>
-          <TooltipIconButton
-            disabled={zoom >= 2.4}
-            label="Zoom mais"
-            onClick={() => changeZoom(0.15)}
-            size="icon-sm"
-            variant="outline"
-          >
-            <Plus aria-hidden="true" />
-          </TooltipIconButton>
-          <TooltipIconButton
-            disabled={zoom <= 0.6}
-            label="Zoom menos"
-            onClick={() => changeZoom(-0.15)}
-            size="icon-sm"
-            variant="outline"
-          >
-            <Minus aria-hidden="true" />
-          </TooltipIconButton>
-          <TooltipIconButton label="Resetar zoom" onClick={() => setZoom(1)} size="icon-sm" variant="outline">
-            <RotateCcw aria-hidden="true" />
-          </TooltipIconButton>
-          <TooltipIconButton label="Ajustar à tela" onClick={() => setZoom(1)} size="icon-sm" variant="outline">
-            <Maximize2 aria-hidden="true" />
-          </TooltipIconButton>
-          {selectedRegion || selectionLabel ? (
-            <TooltipIconButton label="Limpar seleção" onClick={clearSelection} size="icon-sm" variant="outline">
-              <X aria-hidden="true" />
-            </TooltipIconButton>
-          ) : null}
-          <Badge variant="outline">{Math.round(zoom * 100)}%</Badge>
-        </div>
-      </div>
-    </div>
+      {controlsTarget ? createPortal(controls, controlsTarget) : null}
+    </>
   );
 }

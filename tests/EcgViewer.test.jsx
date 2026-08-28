@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 
 import EcgViewer from "../src/components/EcgViewer.jsx";
 import { TooltipProvider } from "../src/components/ui/tooltip.jsx";
@@ -8,22 +9,33 @@ function renderWithTooltips(component) {
   return render(<TooltipProvider>{component}</TooltipProvider>);
 }
 
+function ViewerHarness(props) {
+  const [controlsTarget, setControlsTarget] = useState(null);
+
+  return (
+    <>
+      <div data-testid="ecg-controls-target" ref={setControlsTarget} />
+      <EcgViewer {...props} controlsTarget={controlsTarget} />
+    </>
+  );
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("EcgViewer", () => {
-  it("conecta os controles a um dock abaixo da imagem do ECG", () => {
-    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+  it("renderiza os controles no alvo externo sem faixa ou rótulo visível", () => {
+    const { container } = renderWithTooltips(<ViewerHarness imageUrl="/ecg-real.png" />);
 
     const canvas = container.querySelector(".ecg-canvas");
-    const dock = screen.getByTestId("ecg-controls-dock");
+    const controlsTarget = screen.getByTestId("ecg-controls-target");
     const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
 
-    expect(container.firstChild).toHaveClass("min-h-72", "sm:min-h-88");
-    expect(dock).toContainElement(toolbar);
-    expect(toolbar).toHaveTextContent("Controles do ECG");
-    expect(canvas.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector("[data-testid='ecg-controls-dock']")).not.toBeInTheDocument();
+    expect(controlsTarget).toContainElement(toolbar);
+    expect(toolbar).not.toHaveTextContent("Controles do ECG");
+    expect(canvas.parentElement).toHaveClass("min-h-72", "sm:min-h-88");
   });
 
   it("usa a proporção natural da imagem e a informa ao layout", async () => {

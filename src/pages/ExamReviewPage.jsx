@@ -152,6 +152,7 @@ export default function ExamReviewPage() {
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [sidebarWidth, setSidebarWidth] = useState(null);
+  const [ecgControlsTarget, setEcgControlsTarget] = useState(null);
 
   const loadExam = useCallback(async () => {
     setIsLoading(true);
@@ -764,8 +765,9 @@ export default function ExamReviewPage() {
         ) : null}
 
         <section className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:p-3 md:pb-3" aria-label="Visualizador de ECG">
-          <div className="flex min-h-full w-full flex-col gap-3">
+          <div className="flex min-h-full w-full flex-col gap-2">
             <EcgViewer
+              controlsTarget={ecgControlsTarget}
               imageUrl={exam.image_endpoint || exam.image_url}
               onImageAspectRatioChange={setImageAspectRatio}
               onRegionCancel={handleCancelRegionSelection}
@@ -777,12 +779,18 @@ export default function ExamReviewPage() {
               selectionVisual={activeRegionVisual}
             />
             <Field className="shrink-0 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
-              <div className="flex items-center gap-2">
-                <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
-                  <NotebookPen aria-hidden="true" data-icon="inline-start" />
-                  Observações gerais
-                </FieldLabel>
-                <Badge variant="outline">Opcional</Badge>
+              <div
+                className="flex flex-wrap items-center justify-between gap-2"
+                data-testid="general-observations-header"
+              >
+                <div className="flex items-center gap-2">
+                  <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
+                    <NotebookPen aria-hidden="true" data-icon="inline-start" />
+                    Observações gerais
+                  </FieldLabel>
+                  <Badge variant="outline">Opcional</Badge>
+                </div>
+                <div className="ml-auto" ref={setEcgControlsTarget} />
               </div>
               <Textarea
                 aria-label="Observações gerais"

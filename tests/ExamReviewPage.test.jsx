@@ -140,7 +140,10 @@ describe("ExamReviewPage", () => {
     expect(container.querySelector("header dl")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mais informações" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("textbox", { name: "Observações gerais" })).toBeVisible();
-    expect(screen.getByRole("toolbar", { name: "Controles do ECG" })).toBeVisible();
+    const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
+    expect(screen.getByTestId("general-observations-header")).toContainElement(ecgToolbar);
+    expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
+    expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
     expect(screen.getByText("Iniciar")).toBeVisible();
   });
