@@ -5,24 +5,22 @@ import {
   LifeBuoy,
   LogOut,
   Moon,
-  PanelLeftClose,
   Sun,
-  UserRound,
 } from "lucide-react";
 
-import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import { Badge } from "@/components/ui/badge.jsx";
 import { Button } from "@/components/ui/button.jsx";
 import { Separator } from "@/components/ui/separator.jsx";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet.jsx";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
+import { cn } from "@/lib/utils.js";
 
 function getInitials(name) {
   return name
@@ -34,23 +32,248 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-function NavigationAction({ description, disabled, icon: Icon, label, onClick }) {
+function CompactTooltip({ children, label }) {
   return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function NavigationAction({
+  compact,
+  compactLabel,
+  description,
+  disabled,
+  icon: Icon,
+  itemKey,
+  label,
+  onClick,
+}) {
+  const accessibleLabel = compactLabel || label;
+  const button = (
     <Button
-      className="h-auto w-full justify-start whitespace-normal px-3 py-2.5 text-left"
+      aria-label={compact ? accessibleLabel : undefined}
+      className={cn(
+        "grid w-full grid-cols-[4rem_minmax(0,1fr)] items-center gap-0 rounded-none px-0 py-2 text-left",
+        description ? "min-h-14" : "min-h-10",
+      )}
+      data-navigation-item={itemKey}
       disabled={disabled}
       onClick={onClick}
       type="button"
       variant="brandGhost"
     >
-      <Icon aria-hidden="true" data-icon="inline-start" />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span>{label}</span>
-        {description ? (
-          <span className="text-xs font-normal text-brand-foreground/70">{description}</span>
-        ) : null}
-      </span>
+      <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
+      {compact ? null : (
+        <span className="flex min-w-0 flex-col gap-0.5 pr-4 transition-opacity duration-150">
+          <span>{label}</span>
+          {description ? (
+            <span className="text-xs font-normal text-brand-foreground/70">{description}</span>
+          ) : null}
+        </span>
+      )}
     </Button>
+  );
+
+  return compact ? (
+    <CompactTooltip label={accessibleLabel}>{button}</CompactTooltip>
+  ) : button;
+}
+
+function NavigationHeader({ compact, onToggle }) {
+  const toggleLabel = compact ? "Expandir navegação" : "Recolher navegação";
+  const brandButton = (
+    <Button
+      aria-label={toggleLabel}
+      className="justify-self-center bg-brand-foreground/15 hover:bg-brand-foreground/20"
+      data-navigation-item="brand"
+      onClick={onToggle}
+      size="icon-lg"
+      type="button"
+      variant="brandGhost"
+    >
+      <Activity aria-hidden="true" />
+    </Button>
+  );
+  const content = (
+    <div className="grid min-h-20 grid-cols-[4rem_minmax(0,1fr)] items-center">
+      {compact ? (
+        <CompactTooltip label={toggleLabel}>{brandButton}</CompactTooltip>
+      ) : brandButton}
+      {compact ? null : (
+        <div className="min-w-0 pr-4">
+          <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
+            Validação médica
+          </p>
+          <SheetTitle className="text-brand-foreground">
+            Navegação da validação
+          </SheetTitle>
+        </div>
+      )}
+    </div>
+  );
+
+  return compact ? (
+    <div className="border-b border-brand-foreground/20">{content}</div>
+  ) : (
+    <SheetHeader className="border-b border-brand-foreground/20 p-0">{content}</SheetHeader>
+  );
+}
+
+function SectionTitle({ children, compact, id }) {
+  return (
+    <div className="min-h-4 pr-4 pl-16">
+      {compact ? null : (
+        <h2
+          className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
+          id={id}
+        >
+          {children}
+        </h2>
+      )}
+    </div>
+  );
+}
+
+function AccountIdentity({ compact, doctorName }) {
+  const identity = (
+    <div
+      aria-label={compact ? doctorName : undefined}
+      className="grid min-h-14 grid-cols-[4rem_minmax(0,1fr)] items-center"
+      data-navigation-item="account"
+      role={compact ? "img" : undefined}
+      tabIndex={compact ? 0 : undefined}
+    >
+      <Badge
+        className="size-10 justify-center justify-self-center rounded-full bg-brand-foreground/15 text-brand-foreground"
+        variant="secondary"
+      >
+        {getInitials(doctorName)}
+      </Badge>
+      {compact ? null : (
+        <div className="min-w-0 pr-4">
+          <p className="truncate text-sm font-medium">{doctorName}</p>
+          <p className="text-xs text-brand-foreground/70">Médico revisor</p>
+        </div>
+      )}
+    </div>
+  );
+
+  return compact ? (
+    <CompactTooltip label={doctorName}>{identity}</CompactTooltip>
+  ) : identity;
+}
+
+function NavigationPanel({
+  compact = false,
+  doctorName,
+  isBusy,
+  isDark,
+  onClose,
+  onHome,
+  onLogout,
+  onOpen,
+  onSupport,
+  onTheme,
+  onTutorial,
+}) {
+  return (
+    <div className="flex h-full w-80 flex-col">
+      <NavigationHeader compact={compact} onToggle={compact ? onOpen : onClose} />
+
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto py-3">
+        <section
+          aria-labelledby={compact ? undefined : "validation-navigation-section"}
+          className="flex flex-col gap-1"
+        >
+          <SectionTitle compact={compact} id="validation-navigation-section">
+            Navegação
+          </SectionTitle>
+          <NavigationAction
+            compact={compact}
+            compactLabel="Ir para o início"
+            description="Voltar para a tela inicial"
+            disabled={isBusy}
+            icon={House}
+            itemKey="home"
+            label="Início"
+            onClick={onHome}
+          />
+        </section>
+
+        <Separator className="mx-4 w-auto bg-brand-foreground/20" />
+
+        <section
+          aria-labelledby={compact ? undefined : "validation-help-section"}
+          className="flex flex-col gap-1"
+        >
+          <SectionTitle compact={compact} id="validation-help-section">
+            Ajuda e suporte
+          </SectionTitle>
+          <NavigationAction
+            compact={compact}
+            compactLabel="Abrir tutorial"
+            description="Guia rápido de utilização"
+            icon={HelpCircle}
+            itemKey="tutorial"
+            label="Tutorial rápido"
+            onClick={onTutorial}
+          />
+          <NavigationAction
+            compact={compact}
+            compactLabel="Entrar em contato"
+            description="Fale com o suporte"
+            icon={LifeBuoy}
+            itemKey="support"
+            label="Central de ajuda / Contato"
+            onClick={onSupport}
+          />
+        </section>
+
+        <Separator className="mx-4 w-auto bg-brand-foreground/20" />
+
+        <section
+          aria-labelledby={compact ? undefined : "validation-appearance-section"}
+          className="flex flex-col gap-1"
+        >
+          <SectionTitle compact={compact} id="validation-appearance-section">
+            Aparência
+          </SectionTitle>
+          <NavigationAction
+            compact={compact}
+            compactLabel={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+            description={isDark ? "Tema escuro ativo" : "Tema claro ativo"}
+            icon={isDark ? Sun : Moon}
+            itemKey="theme"
+            label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+            onClick={onTheme}
+          />
+        </section>
+
+        <div className="mt-auto flex flex-col gap-2">
+          <Separator className="mx-4 w-auto bg-brand-foreground/20" />
+          <section
+            aria-labelledby={compact ? undefined : "validation-account-section"}
+            className="flex flex-col gap-1"
+          >
+            <SectionTitle compact={compact} id="validation-account-section">
+              Conta
+            </SectionTitle>
+            <AccountIdentity compact={compact} doctorName={doctorName} />
+            <NavigationAction
+              compact={compact}
+              compactLabel="Sair da sessão"
+              icon={LogOut}
+              itemKey="logout"
+              label="Sair da sessão"
+              onClick={onLogout}
+            />
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -75,11 +298,7 @@ export default function ValidationSidebar({
   function openFromRail(event) {
     if (expanded) return;
 
-    const focusedElement =
-      event.type === "focus"
-        ? event.relatedTarget
-        : document.activeElement;
-
+    const focusedElement = event?.type === "focus" ? event.relatedTarget : document.activeElement;
     triggerRef.current = focusedElement instanceof HTMLElement ? focusedElement : null;
     onOpenChange(true);
   }
@@ -88,195 +307,43 @@ export default function ValidationSidebar({
     <>
       <nav
         aria-label="Navegação recolhida"
-        className="flex h-svh min-h-0 w-16 flex-col items-center gap-2 border-r border-brand bg-brand px-2 py-3 text-brand-foreground"
+        className="h-svh min-h-0 w-16 overflow-hidden border-r border-brand bg-brand text-brand-foreground"
         onFocusCapture={openFromRail}
         onPointerEnter={openFromRail}
       >
-        <span
-          aria-label="Validação médica"
-          className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-foreground/15"
-          role="img"
-        >
-          <Activity aria-hidden="true" />
-        </span>
-
-        <Separator className="bg-brand-foreground/20" />
-
-        <TooltipIconButton
-          disabled={isBusy}
-          label="Ir para o início"
-          onClick={onHome}
-          size="icon"
-          variant="brandGhost"
-        >
-          <House aria-hidden="true" />
-        </TooltipIconButton>
-        <TooltipIconButton
-          label="Abrir tutorial"
-          onClick={onTutorial}
-          size="icon"
-          variant="brandGhost"
-        >
-          <HelpCircle aria-hidden="true" />
-        </TooltipIconButton>
-        <TooltipIconButton
-          label="Entrar em contato"
-          onClick={onSupport}
-          size="icon"
-          variant="brandGhost"
-        >
-          <LifeBuoy aria-hidden="true" />
-        </TooltipIconButton>
-        <TooltipIconButton
-          label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-          onClick={toggleTheme}
-          size="icon"
-          variant="brandGhost"
-        >
-          {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-        </TooltipIconButton>
-
-        <div className="mt-auto flex flex-col items-center gap-2">
-          <TooltipIconButton
-            label={`Abrir conta de ${doctorName}`}
-            onClick={openFromRail}
-            size="icon"
-            variant="brandGhost"
-          >
-            <UserRound aria-hidden="true" />
-          </TooltipIconButton>
-          <TooltipIconButton
-            label="Sair da sessão"
-            onClick={logout}
-            size="icon"
-            variant="brandGhost"
-          >
-            <LogOut aria-hidden="true" />
-          </TooltipIconButton>
-        </div>
+        <NavigationPanel
+          compact
+          doctorName={doctorName}
+          isBusy={isBusy}
+          isDark={isDark}
+          onHome={onHome}
+          onLogout={logout}
+          onOpen={() => onOpenChange(true)}
+          onSupport={onSupport}
+          onTheme={toggleTheme}
+          onTutorial={onTutorial}
+        />
       </nav>
 
       <Sheet open={expanded} onOpenChange={onOpenChange}>
         <SheetContent
-          aria-describedby="validation-navigation-description"
-          className="gap-0 border-brand bg-brand text-brand-foreground data-[side=left]:w-72 data-[side=left]:sm:max-w-none"
+          className="overflow-hidden border-brand bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-80 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
           onPointerLeave={() => onOpenChange(false)}
           overlayClassName="bg-black/30 supports-backdrop-filter:backdrop-blur-[1px]"
           showCloseButton={false}
           side="left"
         >
-          <SheetHeader className="border-b border-brand-foreground/20 pr-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
-                  Validação médica
-                </p>
-                <SheetTitle className="text-brand-foreground">
-                  Navegação da validação
-                </SheetTitle>
-              </div>
-              <Button
-                aria-label="Recolher navegação"
-                onClick={() => onOpenChange(false)}
-                size="icon-sm"
-                type="button"
-                variant="brandGhost"
-              >
-                <PanelLeftClose aria-hidden="true" />
-              </Button>
-            </div>
-            <SheetDescription
-              className="text-brand-foreground/70"
-              id="validation-navigation-description"
-            >
-              A validação fica pausada enquanto este painel estiver aberto.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-            <section className="flex flex-col gap-1" aria-labelledby="validation-navigation-section">
-              <h2
-                className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
-                id="validation-navigation-section"
-              >
-                Navegação
-              </h2>
-              <NavigationAction
-                description="Voltar para a tela inicial"
-                disabled={isBusy}
-                icon={House}
-                label="Início"
-                onClick={() => closeThen(onHome)}
-              />
-            </section>
-
-            <Separator className="bg-brand-foreground/20" />
-
-            <section className="flex flex-col gap-1" aria-labelledby="validation-help-section">
-              <h2
-                className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
-                id="validation-help-section"
-              >
-                Ajuda e suporte
-              </h2>
-              <NavigationAction
-                icon={HelpCircle}
-                label="Tutorial rápido"
-                onClick={() => closeThen(onTutorial)}
-              />
-              <NavigationAction
-                icon={LifeBuoy}
-                label="Central de ajuda / Contato"
-                onClick={() => closeThen(onSupport)}
-              />
-            </section>
-
-            <Separator className="bg-brand-foreground/20" />
-
-            <section className="flex flex-col gap-1" aria-labelledby="validation-appearance-section">
-              <h2
-                className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
-                id="validation-appearance-section"
-              >
-                Aparência
-              </h2>
-              <NavigationAction
-                description={isDark ? "Tema escuro ativo" : "Tema claro ativo"}
-                icon={isDark ? Sun : Moon}
-                label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-                onClick={toggleTheme}
-              />
-            </section>
-
-            <div className="mt-auto flex flex-col gap-3">
-              <Separator className="bg-brand-foreground/20" />
-              <section className="flex flex-col gap-2" aria-labelledby="validation-account-section">
-                <h2
-                  className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
-                  id="validation-account-section"
-                >
-                  Conta
-                </h2>
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <Badge
-                    className="size-10 justify-center rounded-full bg-brand-foreground/15 text-brand-foreground"
-                    variant="secondary"
-                  >
-                    {getInitials(doctorName)}
-                  </Badge>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{doctorName}</p>
-                    <p className="text-xs text-brand-foreground/70">Médico revisor</p>
-                  </div>
-                </div>
-                <NavigationAction
-                  icon={LogOut}
-                  label="Sair da sessão"
-                  onClick={() => closeThen(logout)}
-                />
-              </section>
-            </div>
-          </div>
+          <NavigationPanel
+            doctorName={doctorName}
+            isBusy={isBusy}
+            isDark={isDark}
+            onClose={() => onOpenChange(false)}
+            onHome={() => closeThen(onHome)}
+            onLogout={() => closeThen(logout)}
+            onSupport={() => closeThen(onSupport)}
+            onTheme={toggleTheme}
+            onTutorial={() => closeThen(onTutorial)}
+          />
         </SheetContent>
       </Sheet>
     </>

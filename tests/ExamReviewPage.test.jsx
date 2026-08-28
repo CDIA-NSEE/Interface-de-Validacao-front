@@ -162,13 +162,34 @@ describe("ExamReviewPage", () => {
     agreeButton.focus();
     const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
     expect(collapsedNavigation).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Expandir navegação" })).not.toBeInTheDocument();
+    expect(collapsedNavigation.querySelector('[data-navigation-item="brand"]')).toHaveAccessibleName(
+      "Expandir navegação",
+    );
     expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    expect(
+      [...collapsedNavigation.querySelectorAll("[data-navigation-item]")].map(
+        (item) => item.dataset.navigationItem,
+      ),
+    ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
 
     fireEvent.pointerEnter(collapsedNavigation);
 
-    expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
+    const expandedNavigation = await screen.findByRole("dialog", {
+      name: "Navegação da validação",
+    });
+    expect(expandedNavigation).toBeVisible();
+    expect(
+      [...expandedNavigation.querySelectorAll("[data-navigation-item]")].map(
+        (item) => item.dataset.navigationItem,
+      ),
+    ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
+    expect(screen.getByText("Voltar para a tela inicial")).toBeVisible();
+    expect(screen.getByText("Guia rápido de utilização")).toBeVisible();
+    expect(screen.getByText("Fale com o suporte")).toBeVisible();
+    expect(
+      screen.queryByText("A validação fica pausada enquanto este painel estiver aberto."),
+    ).not.toBeInTheDocument();
     expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
