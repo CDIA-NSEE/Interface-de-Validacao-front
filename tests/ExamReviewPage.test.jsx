@@ -9,9 +9,13 @@ import {
   getExamById,
   saveExamDraft,
 } from "../src/services/examsService.js";
-import { getValidationContext } from "../src/services/validationService.js";
+import {
+  getValidationContext,
+  reviewDailyDiagnosis,
+} from "../src/services/validationService.js";
 
 const navigate = vi.fn();
+const logout = vi.fn();
 
 beforeAll(() => {
   Object.defineProperty(Element.prototype, "getAnimations", {
@@ -34,7 +38,7 @@ vi.mock("react-router-dom", async () => {
 });
 
 vi.mock("../src/context/AuthContext.jsx", () => ({
-  useAuth: () => ({ user: { full_name: "Dra. Ana" } }),
+  useAuth: () => ({ logout, user: { full_name: "Dra. Ana" } }),
 }));
 
 vi.mock("../src/context/ThemeContext.jsx", () => ({
@@ -109,6 +113,7 @@ const exam = {
 
 beforeEach(() => {
   navigate.mockReset();
+  logout.mockReset();
   vi.stubGlobal("ResizeObserver", class ResizeObserver {
     observe() {}
     disconnect() {}
@@ -146,6 +151,42 @@ describe("ExamReviewPage", () => {
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
     expect(screen.getByText("Iniciar")).toBeVisible();
+  });
+
+  it("abre a navegação lateral sobre a validação e fecha com Escape", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+    expect(screen.getByRole("navigation", { name: "Navegação recolhida" })).toBeVisible();
+    expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expandir navegação" }));
+
+    expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
+    expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Expandir navegação" })).toHaveFocus();
+  });
+
+  it("bloqueia uma ação clínica enquanto a navegação lateral está aberta", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    await user.click(screen.getByRole("button", { name: "Expandir navegação" }));
+
+    fireEvent.click(agreeButton);
+
+    expect(reviewDailyDiagnosis).not.toHaveBeenCalled();
   });
 
   it("revela os dados removidos da barra somente em Mais informações", async () => {

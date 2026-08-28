@@ -48,13 +48,14 @@ function SheetContent({
   className,
   children,
   closeLabel = "Fechar",
+  overlayClassName,
   side = "right",
   showCloseButton = true,
   ...props
 }) {
   return (
     <SheetPortal>
-      <SheetOverlay />
+      <SheetOverlay className={overlayClassName} />
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}
