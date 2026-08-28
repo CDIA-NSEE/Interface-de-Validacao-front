@@ -317,6 +317,9 @@ describe("DiagnosisPanel", () => {
 
     const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
 
+    expect(within(dailyPanel).queryByRole("heading", { name: "Diagnóstico do dia" })).not.toBeInTheDocument();
+    expect(within(dailyPanel).queryByText("Um único diagnóstico obrigatório para esta validação.")).not.toBeInTheDocument();
+    expect(within(dailyPanel).getByText("Diagnóstico do dia")).toBeVisible();
     expect(within(dailyPanel).getAllByTestId("diagnosis-card")).toHaveLength(1);
     expect(within(dailyPanel).getByText("Ritmo sinusal")).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
@@ -337,6 +340,8 @@ describe("DiagnosisPanel", () => {
     );
 
     const generalPanel = screen.getByRole("region", { name: "Revalidação geral" });
+    expect(within(generalPanel).getByRole("heading", { name: "Revalidação geral" })).toBeVisible();
+    expect(within(generalPanel).getByText("Revise todos os diagnósticos originais deste exame.")).toBeVisible();
     expect(within(generalPanel).getAllByTestId("diagnosis-card")).toHaveLength(2);
     expect(within(generalPanel).getByText("Ritmo sinusal")).toBeVisible();
     expect(within(generalPanel).getByText("Bloqueio de ramo direito")).toBeVisible();

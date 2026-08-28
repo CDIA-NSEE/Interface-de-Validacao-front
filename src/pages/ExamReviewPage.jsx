@@ -2,15 +2,9 @@ import {
   ArrowLeft,
   ChevronDown,
   FileText,
-  HelpCircle,
-  House,
-  LifeBuoy,
-  Moon,
   NotebookPen,
   PanelRightOpen,
   Stethoscope,
-  Sun,
-  UserRound,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,6 +19,7 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
 import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
+import ValidationSidebar from "../components/ValidationSidebar.jsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,9 +43,6 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import TooltipIconButton from "@/components/TooltipIconButton.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
-import { useTheme } from "../context/ThemeContext.jsx";
 import {
   addDiagnosis,
   addDiagnosisRegion,
@@ -128,9 +120,11 @@ function useCompactReviewLayout() {
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
   const reviewLayoutRef = useRef(null);
+  const sidebarTriggerRef = useRef(null);
+  const shouldRestoreSidebarFocusRef = useRef(true);
+  const validationWorkspaceRef = useRef(null);
+  const wasSidebarExpandedRef = useRef(false);
   const isCompactLayout = useCompactReviewLayout();
   const [exam, setExam] = useState(null);
   const [notes, setNotes] = useState("");
@@ -152,6 +146,8 @@ export default function ExamReviewPage() {
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [sidebarWidth, setSidebarWidth] = useState(null);
+  const [ecgControlsTarget, setEcgControlsTarget] = useState(null);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const loadExam = useCallback(async () => {
     setIsLoading(true);
@@ -193,6 +189,29 @@ export default function ExamReviewPage() {
   useEffect(() => {
     loadExam();
   }, [loadExam]);
+
+  useEffect(() => {
+    const workspace = validationWorkspaceRef.current;
+    if (workspace) {
+      workspace.inert = isSidebarExpanded;
+    }
+
+    let focusTimer;
+    if (
+      wasSidebarExpandedRef.current &&
+      !isSidebarExpanded &&
+      shouldRestoreSidebarFocusRef.current
+    ) {
+      focusTimer = window.setTimeout(() => sidebarTriggerRef.current?.focus(), 0);
+    }
+    if (!isSidebarExpanded) shouldRestoreSidebarFocusRef.current = true;
+    wasSidebarExpandedRef.current = isSidebarExpanded;
+
+    return () => {
+      if (focusTimer) window.clearTimeout(focusTimer);
+      if (workspace) workspace.inert = false;
+    };
+  }, [isSidebarExpanded]);
 
   useEffect(() => {
     const layout = reviewLayoutRef.current;
@@ -559,8 +578,20 @@ export default function ExamReviewPage() {
   const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
-  const doctorName = user?.full_name || "Usuário";
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
+
+  function blockValidationInteraction(event) {
+    if (!isSidebarExpanded) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function handleSidebarOpenChange(open, options = {}) {
+    if (!open) {
+      shouldRestoreSidebarFocusRef.current = options.restoreFocus ?? true;
+    }
+    setIsSidebarExpanded(open);
+  }
 
   if (isLoading) {
     return <LoadingState message="Abrindo exame..." />;
@@ -601,6 +632,20 @@ export default function ExamReviewPage() {
       selectedRegion={selectedRegion}
       onRegionConsumed={() => setSelectedRegion(null)}
     />
+  );
+
+  const clinicalInformation = (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Stethoscope aria-hidden="true" data-icon="inline-start" />
+          <h2>Dados clínicos</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <PatientInfo patient={exam.patient} />
+      </CardContent>
+    </Card>
   );
 
   const moreInformation = (
@@ -644,14 +689,6 @@ export default function ExamReviewPage() {
               </div>
             </dl>
 
-            <section className="flex flex-col gap-2" aria-labelledby="clinical-information-title">
-              <h3 className="flex items-center gap-2 text-sm font-medium" id="clinical-information-title">
-                <Stethoscope aria-hidden="true" data-icon="inline-start" />
-                Dados clínicos
-              </h3>
-              <PatientInfo patient={exam.patient} />
-            </section>
-
             {exam.comments || exam.source_notes ? (
               <section className="flex flex-col gap-2" aria-labelledby="original-report-title">
                 <h3 className="flex items-center gap-2 text-sm font-medium" id="original-report-title">
@@ -693,6 +730,7 @@ export default function ExamReviewPage() {
         </Alert>
       ) : null}
       {diagnosisPanel}
+      {clinicalInformation}
       {moreInformation}
     </div>
   );
@@ -723,118 +761,127 @@ export default function ExamReviewPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-secondary/40">
-      <header className="shrink-0 border-b border-brand bg-brand text-brand-foreground shadow-sm">
-        <div className="flex min-h-14 items-center justify-between gap-3 px-3 py-2 sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <Button aria-label="Ir para o início" disabled={isBusy} onClick={handleReturnHome} size="icon-sm" type="button" variant="brandGhost">
-              <House aria-hidden="true" />
-            </Button>
-            <div className="min-w-0">
-              <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">Validação médica</p>
-              <h1 className="truncate font-heading text-base font-medium sm:text-lg">Exame {exam.exam_code}</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-1" role="group" aria-label="Ações globais">
-            <TooltipIconButton label="Tutorial" onClick={() => setIsTutorialOpen(true)} size="icon-sm" variant="brandGhost"><HelpCircle aria-hidden="true" /></TooltipIconButton>
-            <TooltipIconButton label="Contato" onClick={openSupport} size="icon-sm" variant="brandGhost"><LifeBuoy aria-hidden="true" /></TooltipIconButton>
-            <TooltipIconButton label={isDark ? "Ativar modo claro" : "Ativar modo escuro"} onClick={toggleTheme} size="icon-sm" variant="brandGhost">
-              {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-            </TooltipIconButton>
-            <div className="hidden items-center gap-1.5 rounded-lg bg-brand-foreground/10 px-2.5 py-1.5 text-xs text-brand-foreground/80 sm:flex" aria-label={`Sessão ativa: ${doctorName}`} title={`Sessão ativa: ${doctorName}`}>
-              <UserRound aria-hidden="true" />
-              <span className="max-w-36 truncate">{doctorName}</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <div className="grid h-svh min-h-0 grid-cols-[4rem_minmax(0,1fr)] overflow-hidden bg-secondary/40">
+        <ValidationSidebar
+          expanded={isSidebarExpanded}
+          isBusy={isBusy}
+          onHome={handleReturnHome}
+          onOpenChange={handleSidebarOpenChange}
+          onSupport={openSupport}
+          onTutorial={() => setIsTutorialOpen(true)}
+          triggerRef={sidebarTriggerRef}
+        />
 
-      <main
-        className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]"
-        ref={reviewLayoutRef}
-        style={{ "--review-sidebar-width": `${sidebarWidth || 360}px` }}
-      >
-        {!isCompactLayout ? (
-          <aside className="flex min-h-0 min-w-0 flex-col border-r bg-background" aria-label="Diagnósticos e ações">
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="p-4">{reviewBody}</div>
-            </ScrollArea>
-            <div className="shrink-0 border-t bg-background p-4">{reviewFooter}</div>
-          </aside>
-        ) : null}
-
-        <section className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:p-3 md:pb-3" aria-label="Visualizador de ECG">
-          <div className="flex min-h-full w-full flex-col gap-3">
-            <EcgViewer
-              imageUrl={exam.image_endpoint || exam.image_url}
-              onImageAspectRatioChange={setImageAspectRatio}
-              onRegionCancel={handleCancelRegionSelection}
-              selectedRegion={selectedRegion}
-              onRegionChange={handleRegionChange}
-              regions={viewerRegions}
-              selectionLabel={activeSelectionLabel}
-              selectionReference={activeRegionReference}
-              selectionVisual={activeRegionVisual}
-            />
-            <Field className="shrink-0 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
-              <div className="flex items-center gap-2">
-                <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
-                  <NotebookPen aria-hidden="true" data-icon="inline-start" />
-                  Observações gerais
-                </FieldLabel>
-                <Badge variant="outline">Opcional</Badge>
-              </div>
-              <Textarea
-                aria-label="Observações gerais"
-                id="general-observations"
-                value={notes}
-                onChange={(event) => {
-                  setNotes(event.target.value);
-                  setSaveFeedback("");
-                }}
-                placeholder="Registre comentários gerais sobre o exame"
-                rows={2}
-              />
-            </Field>
-          </div>
-        </section>
-      </main>
-
-      {isCompactLayout ? (
-        <Sheet open={isReviewSheetOpen} onOpenChange={setIsReviewSheetOpen}>
-          <div className="fixed inset-x-0 bottom-0 flex justify-center border-t bg-background/95 p-3 backdrop-blur">
-            <SheetTrigger render={<Button className="w-full max-w-sm" size="lg" type="button" />}>
-              <PanelRightOpen aria-hidden="true" data-icon="inline-start" />
-              Diagnósticos e ações
-            </SheetTrigger>
-          </div>
-          <SheetContent
-            className="gap-0 data-[side=right]:w-[min(94vw,30rem)] data-[side=right]:sm:max-w-none"
-            side="right"
+        <div
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+          onClickCapture={blockValidationInteraction}
+          onKeyDownCapture={blockValidationInteraction}
+          onPointerDownCapture={blockValidationInteraction}
+          ref={validationWorkspaceRef}
+        >
+          <h1 className="sr-only">Exame {exam.exam_code}</h1>
+          <main
+            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]"
+            ref={reviewLayoutRef}
+            style={{ "--review-sidebar-width": `${sidebarWidth || 360}px` }}
           >
-            <SheetHeader className="border-b bg-accent/60 pr-12">
-              <SheetTitle>Diagnósticos e ações</SheetTitle>
-              <SheetDescription>Revise os achados e conclua este ECG.</SheetDescription>
-            </SheetHeader>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="p-4">{reviewBody}</div>
-            </ScrollArea>
-            <SheetFooter className="shrink-0 border-t bg-background">{reviewFooter}</SheetFooter>
-          </SheetContent>
-        </Sheet>
-      ) : null}
+            {!isCompactLayout ? (
+              <aside
+                aria-label="Diagnósticos e ações"
+                className="flex min-h-0 min-w-0 flex-col border-r bg-background"
+              >
+                <ScrollArea className="min-h-0 flex-1">
+                  <div className="p-4">{reviewBody}</div>
+                </ScrollArea>
+                <div className="shrink-0 border-t bg-background p-4">{reviewFooter}</div>
+              </aside>
+            ) : null}
 
-      <SupportContactModal
-        contact={supportContact}
-        isOpen={isSupportOpen}
-        onClose={() => setIsSupportOpen(false)}
-      />
-      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <UnsavedChangesModal
-        isOpen={isExitConfirmOpen}
-        onDiscard={handleDiscardAndBack}
-        onStay={() => setIsExitConfirmOpen(false)}
-      />
+            <section
+              aria-label="Visualizador de ECG"
+              className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:p-3 md:pb-3"
+            >
+              <div className="flex min-h-full w-full flex-col gap-2">
+                <EcgViewer
+                  controlsTarget={ecgControlsTarget}
+                  imageUrl={exam.image_endpoint || exam.image_url}
+                  onImageAspectRatioChange={setImageAspectRatio}
+                  onRegionCancel={handleCancelRegionSelection}
+                  selectedRegion={selectedRegion}
+                  onRegionChange={handleRegionChange}
+                  regions={viewerRegions}
+                  selectionLabel={activeSelectionLabel}
+                  selectionReference={activeRegionReference}
+                  selectionVisual={activeRegionVisual}
+                />
+                <Field className="shrink-0 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
+                  <div
+                    className="flex flex-wrap items-center justify-between gap-2"
+                    data-testid="general-observations-header"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
+                        <NotebookPen aria-hidden="true" data-icon="inline-start" />
+                        Observações gerais
+                      </FieldLabel>
+                      <Badge variant="outline">Opcional</Badge>
+                    </div>
+                    <div className="ml-auto" ref={setEcgControlsTarget} />
+                  </div>
+                  <Textarea
+                    aria-label="Observações gerais"
+                    id="general-observations"
+                    value={notes}
+                    onChange={(event) => {
+                      setNotes(event.target.value);
+                      setSaveFeedback("");
+                    }}
+                    placeholder="Registre comentários gerais sobre o exame"
+                    rows={2}
+                  />
+                </Field>
+              </div>
+            </section>
+          </main>
+
+          {isCompactLayout ? (
+            <Sheet open={isReviewSheetOpen} onOpenChange={setIsReviewSheetOpen}>
+              <div className="fixed inset-x-0 bottom-0 flex justify-center border-t bg-background/95 p-3 backdrop-blur">
+                <SheetTrigger render={<Button className="w-full max-w-sm" size="lg" type="button" />}>
+                  <PanelRightOpen aria-hidden="true" data-icon="inline-start" />
+                  Diagnósticos e ações
+                </SheetTrigger>
+              </div>
+              <SheetContent
+                className="gap-0 data-[side=right]:w-[min(94vw,30rem)] data-[side=right]:sm:max-w-none"
+                side="right"
+              >
+                <SheetHeader className="border-b bg-accent/60 pr-12">
+                  <SheetTitle>Diagnósticos e ações</SheetTitle>
+                  <SheetDescription>Revise os achados e conclua este ECG.</SheetDescription>
+                </SheetHeader>
+                <ScrollArea className="min-h-0 flex-1">
+                  <div className="p-4">{reviewBody}</div>
+                </ScrollArea>
+                <SheetFooter className="shrink-0 border-t bg-background">
+                  {reviewFooter}
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+          ) : null}
+        </div>
+
+        <SupportContactModal
+          contact={supportContact}
+          isOpen={isSupportOpen}
+          onClose={() => setIsSupportOpen(false)}
+        />
+        <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+        <UnsavedChangesModal
+          isOpen={isExitConfirmOpen}
+          onDiscard={handleDiscardAndBack}
+          onStay={() => setIsExitConfirmOpen(false)}
+        />
       </div>
     </TooltipProvider>
   );

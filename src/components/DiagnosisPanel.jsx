@@ -418,10 +418,12 @@ export default function DiagnosisPanel({
   return (
     <div className="flex flex-col gap-3">
       <section aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"} className="flex flex-col gap-2" role="region">
-        <div className="px-0.5">
-          <h2 className="font-heading text-base font-medium">{isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"}</h2>
-          <p className="text-xs text-muted-foreground">{isGeneralReviewDay ? "Revise todos os diagnósticos originais deste exame." : "Um único diagnóstico obrigatório para esta validação."}</p>
-        </div>
+        {isGeneralReviewDay ? (
+          <div className="px-0.5">
+            <h2 className="font-heading text-base font-medium">Revalidação geral</h2>
+            <p className="text-xs text-muted-foreground">Revise todos os diagnósticos originais deste exame.</p>
+          </div>
+        ) : null}
         {requiredDiagnoses.length ? requiredDiagnoses.map((diagnosis) => (
           <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
         )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}

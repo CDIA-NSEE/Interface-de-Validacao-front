@@ -9,9 +9,13 @@ import {
   getExamById,
   saveExamDraft,
 } from "../src/services/examsService.js";
-import { getValidationContext } from "../src/services/validationService.js";
+import {
+  getValidationContext,
+  reviewDailyDiagnosis,
+} from "../src/services/validationService.js";
 
 const navigate = vi.fn();
+const logout = vi.fn();
 
 beforeAll(() => {
   Object.defineProperty(Element.prototype, "getAnimations", {
@@ -34,7 +38,7 @@ vi.mock("react-router-dom", async () => {
 });
 
 vi.mock("../src/context/AuthContext.jsx", () => ({
-  useAuth: () => ({ user: { full_name: "Dra. Ana" } }),
+  useAuth: () => ({ logout, user: { full_name: "Dra. Ana" } }),
 }));
 
 vi.mock("../src/context/ThemeContext.jsx", () => ({
@@ -109,6 +113,7 @@ const exam = {
 
 beforeEach(() => {
   navigate.mockReset();
+  logout.mockReset();
   vi.stubGlobal("ResizeObserver", class ResizeObserver {
     observe() {}
     disconnect() {}
@@ -140,22 +145,91 @@ describe("ExamReviewPage", () => {
     expect(container.querySelector("header dl")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mais informações" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("textbox", { name: "Observações gerais" })).toBeVisible();
-    expect(screen.getByRole("toolbar", { name: "Controles do ECG" })).toBeVisible();
+    const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
+    expect(screen.getByTestId("general-observations-header")).toContainElement(ecgToolbar);
+    expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
+    expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
     expect(screen.getByText("Iniciar")).toBeVisible();
   });
 
-  it("revela os dados removidos da barra somente em Mais informações", async () => {
+  it("expande a navegação ao passar o ponteiro pela faixa azul e fecha com Escape", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    agreeButton.focus();
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
+    expect(collapsedNavigation).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Expandir navegação" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+
+    fireEvent.pointerEnter(collapsedNavigation);
+
+    expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
+    expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    });
+    expect(agreeButton).toHaveFocus();
+
+    screen.getByRole("button", { name: "Ir para o início" }).focus();
+    expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    });
+    expect(agreeButton).toHaveFocus();
+  });
+
+  it("bloqueia uma ação clínica enquanto a navegação lateral está aberta", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
+    await screen.findByRole("dialog", { name: "Navegação da validação" });
+
+    fireEvent.click(agreeButton);
+
+    expect(reviewDailyDiagnosis).not.toHaveBeenCalled();
+  });
+
+  it("mantém os dados clínicos visíveis e recolhe apenas metadados e laudo", async () => {
     const user = userEvent.setup();
     getExamById.mockResolvedValue({
       ...exam,
       comments: "Ritmo regular no laudo original.",
+      patient: {
+        age: 58,
+        birth_date: "17/05/1968",
+        bmi: "24,2",
+        height: 1.65,
+        sex: "Feminino",
+        weight: 66,
+      },
       source_notes: "Traçado recebido sem intercorrências.",
     });
     stubViewport(false);
     render(<ExamReviewPage />);
 
     const trigger = await screen.findByRole("button", { name: "Mais informações" });
+    expect(screen.getByRole("heading", { name: "Dados clínicos" })).toBeVisible();
+    expect(screen.getByText("Nascimento")).toBeVisible();
+    expect(screen.getByText("17/05/1968")).toBeVisible();
+    expect(screen.getByText("58 anos")).toBeVisible();
+    expect(screen.getByText("Feminino")).toBeVisible();
+    expect(screen.getByText("66 kg")).toBeVisible();
+    expect(screen.getByText("1.65 m")).toBeVisible();
+    expect(screen.getByText("24,2")).toBeVisible();
+    expect(screen.queryByText("Data e hora")).not.toBeInTheDocument();
     expect(screen.queryByText("ECG 12 derivações")).not.toBeInTheDocument();
     expect(screen.queryByText("Ritmo regular no laudo original.")).not.toBeInTheDocument();
     expect(screen.queryByText("Traçado recebido sem intercorrências.")).not.toBeInTheDocument();
@@ -165,7 +239,6 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Data e hora")).toBeVisible();
     expect(screen.getByText("26/08/2026 as 08:30")).toBeVisible();
     expect(screen.getByText("ECG 12 derivações")).toBeVisible();
-    expect(screen.getByText("Feminino")).toBeVisible();
     expect(screen.getByText("Ritmo regular no laudo original.")).toBeVisible();
     expect(screen.getByText("Traçado recebido sem intercorrências.")).toBeVisible();
   });
