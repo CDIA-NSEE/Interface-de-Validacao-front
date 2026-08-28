@@ -153,17 +153,20 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Iniciar")).toBeVisible();
   });
 
-  it("abre a navegação lateral sobre a validação e fecha com Escape", async () => {
+  it("expande a navegação ao passar o ponteiro pela faixa azul e fecha com Escape", async () => {
     const user = userEvent.setup();
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    await screen.findByRole("heading", { name: "Exame ECG-42" });
-    expect(screen.getByRole("navigation", { name: "Navegação recolhida" })).toBeVisible();
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    agreeButton.focus();
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
+    expect(collapsedNavigation).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Expandir navegação" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Expandir navegação" }));
+    fireEvent.pointerEnter(collapsedNavigation);
 
     expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
     expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
@@ -173,16 +176,26 @@ describe("ExamReviewPage", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "Expandir navegação" })).toHaveFocus();
+    expect(agreeButton).toHaveFocus();
+
+    screen.getByRole("button", { name: "Ir para o início" }).focus();
+    expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    });
+    expect(agreeButton).toHaveFocus();
   });
 
   it("bloqueia uma ação clínica enquanto a navegação lateral está aberta", async () => {
-    const user = userEvent.setup();
     stubViewport(false);
     render(<ExamReviewPage />);
 
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
-    await user.click(screen.getByRole("button", { name: "Expandir navegação" }));
+    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
+    await screen.findByRole("dialog", { name: "Navegação da validação" });
 
     fireEvent.click(agreeButton);
 

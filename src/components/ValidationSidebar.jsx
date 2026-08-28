@@ -6,7 +6,6 @@ import {
   LogOut,
   Moon,
   PanelLeftClose,
-  PanelLeftOpen,
   Sun,
   UserRound,
 } from "lucide-react";
@@ -22,7 +21,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet.jsx";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
 
@@ -43,13 +41,13 @@ function NavigationAction({ description, disabled, icon: Icon, label, onClick })
       disabled={disabled}
       onClick={onClick}
       type="button"
-      variant="ghost"
+      variant="brandGhost"
     >
       <Icon aria-hidden="true" data-icon="inline-start" />
       <span className="flex min-w-0 flex-col gap-0.5">
         <span>{label}</span>
         {description ? (
-          <span className="text-xs font-normal text-muted-foreground">{description}</span>
+          <span className="text-xs font-normal text-brand-foreground/70">{description}</span>
         ) : null}
       </span>
     </Button>
@@ -74,8 +72,15 @@ export default function ValidationSidebar({
     queueMicrotask(action);
   }
 
-  function openFrom(event) {
-    triggerRef.current = event.currentTarget;
+  function openFromRail(event) {
+    if (expanded) return;
+
+    const focusedElement =
+      event.type === "focus"
+        ? event.relatedTarget
+        : document.activeElement;
+
+    triggerRef.current = focusedElement instanceof HTMLElement ? focusedElement : null;
     onOpenChange(true);
   }
 
@@ -84,6 +89,8 @@ export default function ValidationSidebar({
       <nav
         aria-label="Navegação recolhida"
         className="flex h-svh min-h-0 w-16 flex-col items-center gap-2 border-r border-brand bg-brand px-2 py-3 text-brand-foreground"
+        onFocusCapture={openFromRail}
+        onPointerEnter={openFromRail}
       >
         <span
           aria-label="Validação médica"
@@ -92,25 +99,6 @@ export default function ValidationSidebar({
         >
           <Activity aria-hidden="true" />
         </span>
-
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                aria-label="Expandir navegação"
-                aria-expanded={expanded}
-                onClick={openFrom}
-                ref={triggerRef}
-                size="icon"
-                type="button"
-                variant="brandGhost"
-              />
-            }
-          >
-            <PanelLeftOpen aria-hidden="true" />
-          </TooltipTrigger>
-          <TooltipContent side="right">Expandir navegação</TooltipContent>
-        </Tooltip>
 
         <Separator className="bg-brand-foreground/20" />
 
@@ -151,7 +139,7 @@ export default function ValidationSidebar({
         <div className="mt-auto flex flex-col items-center gap-2">
           <TooltipIconButton
             label={`Abrir conta de ${doctorName}`}
-            onClick={openFrom}
+            onClick={openFromRail}
             size="icon"
             variant="brandGhost"
           >
@@ -171,30 +159,36 @@ export default function ValidationSidebar({
       <Sheet open={expanded} onOpenChange={onOpenChange}>
         <SheetContent
           aria-describedby="validation-navigation-description"
-          className="gap-0 data-[side=left]:w-72 data-[side=left]:sm:max-w-none"
+          className="gap-0 border-brand bg-brand text-brand-foreground data-[side=left]:w-72 data-[side=left]:sm:max-w-none"
+          onPointerLeave={() => onOpenChange(false)}
           overlayClassName="bg-black/30 supports-backdrop-filter:backdrop-blur-[1px]"
           showCloseButton={false}
           side="left"
         >
-          <SheetHeader className="border-b pr-3">
+          <SheetHeader className="border-b border-brand-foreground/20 pr-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-medium tracking-wide text-primary uppercase">
+                <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
                   Validação médica
                 </p>
-                <SheetTitle>Navegação da validação</SheetTitle>
+                <SheetTitle className="text-brand-foreground">
+                  Navegação da validação
+                </SheetTitle>
               </div>
               <Button
                 aria-label="Recolher navegação"
                 onClick={() => onOpenChange(false)}
                 size="icon-sm"
                 type="button"
-                variant="ghost"
+                variant="brandGhost"
               >
                 <PanelLeftClose aria-hidden="true" />
               </Button>
             </div>
-            <SheetDescription id="validation-navigation-description">
+            <SheetDescription
+              className="text-brand-foreground/70"
+              id="validation-navigation-description"
+            >
               A validação fica pausada enquanto este painel estiver aberto.
             </SheetDescription>
           </SheetHeader>
@@ -202,7 +196,7 @@ export default function ValidationSidebar({
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
             <section className="flex flex-col gap-1" aria-labelledby="validation-navigation-section">
               <h2
-                className="px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
                 id="validation-navigation-section"
               >
                 Navegação
@@ -216,11 +210,11 @@ export default function ValidationSidebar({
               />
             </section>
 
-            <Separator />
+            <Separator className="bg-brand-foreground/20" />
 
             <section className="flex flex-col gap-1" aria-labelledby="validation-help-section">
               <h2
-                className="px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
                 id="validation-help-section"
               >
                 Ajuda e suporte
@@ -237,11 +231,11 @@ export default function ValidationSidebar({
               />
             </section>
 
-            <Separator />
+            <Separator className="bg-brand-foreground/20" />
 
             <section className="flex flex-col gap-1" aria-labelledby="validation-appearance-section">
               <h2
-                className="px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
                 id="validation-appearance-section"
               >
                 Aparência
@@ -255,21 +249,24 @@ export default function ValidationSidebar({
             </section>
 
             <div className="mt-auto flex flex-col gap-3">
-              <Separator />
+              <Separator className="bg-brand-foreground/20" />
               <section className="flex flex-col gap-2" aria-labelledby="validation-account-section">
                 <h2
-                  className="px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                  className="px-3 text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
                   id="validation-account-section"
                 >
                   Conta
                 </h2>
                 <div className="flex items-center gap-3 px-3 py-2">
-                  <Badge className="size-10 justify-center rounded-full" variant="secondary">
+                  <Badge
+                    className="size-10 justify-center rounded-full bg-brand-foreground/15 text-brand-foreground"
+                    variant="secondary"
+                  >
                     {getInitials(doctorName)}
                   </Badge>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{doctorName}</p>
-                    <p className="text-xs text-muted-foreground">Médico revisor</p>
+                    <p className="text-xs text-brand-foreground/70">Médico revisor</p>
                   </div>
                 </div>
                 <NavigationAction
