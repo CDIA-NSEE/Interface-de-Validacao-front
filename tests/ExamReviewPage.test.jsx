@@ -184,9 +184,15 @@ describe("ExamReviewPage", () => {
         (item) => item.dataset.navigationItem,
       ),
     ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
-    expect(screen.getByText("Voltar para a tela inicial")).toBeVisible();
-    expect(screen.getByText("Guia rápido de utilização")).toBeVisible();
-    expect(screen.getByText("Fale com o suporte")).toBeVisible();
+    expect(screen.getByText("Início")).toBeVisible();
+    expect(screen.getByText("Tutorial rápido")).toBeVisible();
+    expect(screen.getByText("Central de ajuda / Contato")).toBeVisible();
+    expect(screen.getByText("Modo escuro")).toBeVisible();
+    expect(screen.queryByText("Voltar para a tela inicial")).not.toBeInTheDocument();
+    expect(screen.queryByText("Guia rápido de utilização")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fale com o suporte")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tema claro ativo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tema escuro ativo")).not.toBeInTheDocument();
     expect(
       screen.queryByText("A validação fica pausada enquanto este painel estiver aberto."),
     ).not.toBeInTheDocument();
@@ -199,7 +205,7 @@ describe("ExamReviewPage", () => {
     });
     expect(agreeButton).toHaveFocus();
 
-    screen.getByRole("button", { name: "Ir para o início" }).focus();
+    screen.getByRole("button", { name: "Início" }).focus();
     expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
 
     await user.keyboard("{Escape}");

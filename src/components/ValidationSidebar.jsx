@@ -10,7 +10,6 @@ import {
 
 import { Badge } from "@/components/ui/badge.jsx";
 import { Button } from "@/components/ui/button.jsx";
-import { Separator } from "@/components/ui/separator.jsx";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +19,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
-import { cn } from "@/lib/utils.js";
 
 function getInitials(name) {
   return name
@@ -43,23 +41,17 @@ function CompactTooltip({ children, label }) {
 
 function NavigationAction({
   compact,
-  compactLabel,
-  description,
   disabled,
   icon: Icon,
   itemKey,
   label,
   onClick,
+  sectionTitle,
 }) {
-  const accessibleLabel = compactLabel || label;
   const button = (
     <Button
-      aria-label={compact ? accessibleLabel : undefined}
-      className={cn(
-        "grid w-full grid-cols-[4rem_minmax(0,1fr)] items-center gap-0 rounded-none px-0 py-2 text-left",
-        description ? "min-h-14" : "min-h-10",
-      )}
-      data-navigation-item={itemKey}
+      aria-label={label}
+      className="grid h-12 w-full grid-cols-[4rem_minmax(0,1fr)] items-center gap-0 rounded-none px-0 text-left"
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -67,19 +59,27 @@ function NavigationAction({
     >
       <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
       {compact ? null : (
-        <span className="flex min-w-0 flex-col gap-0.5 pr-4 transition-opacity duration-150">
-          <span>{label}</span>
-          {description ? (
-            <span className="text-xs font-normal text-brand-foreground/70">{description}</span>
+        <span className="flex min-w-0 flex-col pr-4 transition-opacity duration-150">
+          {sectionTitle ? (
+            <span className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
+              {sectionTitle}
+            </span>
           ) : null}
+          <span>{label}</span>
         </span>
       )}
     </Button>
   );
 
-  return compact ? (
-    <CompactTooltip label={accessibleLabel}>{button}</CompactTooltip>
+  const control = compact ? (
+    <CompactTooltip label={label}>{button}</CompactTooltip>
   ) : button;
+
+  return (
+    <div className="flex h-16 items-center" data-navigation-item={itemKey}>
+      {control}
+    </div>
+  );
 }
 
 function NavigationHeader({ compact, onToggle }) {
@@ -98,7 +98,7 @@ function NavigationHeader({ compact, onToggle }) {
     </Button>
   );
   const content = (
-    <div className="grid min-h-20 grid-cols-[4rem_minmax(0,1fr)] items-center">
+    <div className="grid h-16 grid-cols-[4rem_minmax(0,1fr)] items-center">
       {compact ? (
         <CompactTooltip label={toggleLabel}>{brandButton}</CompactTooltip>
       ) : brandButton}
@@ -116,24 +116,9 @@ function NavigationHeader({ compact, onToggle }) {
   );
 
   return compact ? (
-    <div className="border-b border-brand-foreground/20">{content}</div>
+    content
   ) : (
-    <SheetHeader className="border-b border-brand-foreground/20 p-0">{content}</SheetHeader>
-  );
-}
-
-function SectionTitle({ children, compact, id }) {
-  return (
-    <div className="min-h-4 pr-4 pl-16">
-      {compact ? null : (
-        <h2
-          className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase"
-          id={id}
-        >
-          {children}
-        </h2>
-      )}
-    </div>
+    <SheetHeader className="p-0">{content}</SheetHeader>
   );
 }
 
@@ -141,7 +126,7 @@ function AccountIdentity({ compact, doctorName }) {
   const identity = (
     <div
       aria-label={compact ? doctorName : undefined}
-      className="grid min-h-14 grid-cols-[4rem_minmax(0,1fr)] items-center"
+      className="grid h-16 grid-cols-[4rem_minmax(0,1fr)] items-center"
       data-navigation-item="account"
       role={compact ? "img" : undefined}
       tabIndex={compact ? 0 : undefined}
@@ -154,8 +139,10 @@ function AccountIdentity({ compact, doctorName }) {
       </Badge>
       {compact ? null : (
         <div className="min-w-0 pr-4">
+          <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
+            Conta
+          </p>
           <p className="truncate text-sm font-medium">{doctorName}</p>
-          <p className="text-xs text-brand-foreground/70">Médico revisor</p>
         </div>
       )}
     </div>
@@ -183,94 +170,51 @@ function NavigationPanel({
     <div className="flex h-full w-80 flex-col">
       <NavigationHeader compact={compact} onToggle={compact ? onOpen : onClose} />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto py-3">
-        <section
-          aria-labelledby={compact ? undefined : "validation-navigation-section"}
-          className="flex flex-col gap-1"
-        >
-          <SectionTitle compact={compact} id="validation-navigation-section">
-            Navegação
-          </SectionTitle>
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col">
           <NavigationAction
             compact={compact}
-            compactLabel="Ir para o início"
-            description="Voltar para a tela inicial"
             disabled={isBusy}
             icon={House}
             itemKey="home"
             label="Início"
             onClick={onHome}
+            sectionTitle="Navegação"
           />
-        </section>
-
-        <Separator className="mx-4 w-auto bg-brand-foreground/20" />
-
-        <section
-          aria-labelledby={compact ? undefined : "validation-help-section"}
-          className="flex flex-col gap-1"
-        >
-          <SectionTitle compact={compact} id="validation-help-section">
-            Ajuda e suporte
-          </SectionTitle>
           <NavigationAction
             compact={compact}
-            compactLabel="Abrir tutorial"
-            description="Guia rápido de utilização"
             icon={HelpCircle}
             itemKey="tutorial"
             label="Tutorial rápido"
             onClick={onTutorial}
+            sectionTitle="Ajuda e suporte"
           />
           <NavigationAction
             compact={compact}
-            compactLabel="Entrar em contato"
-            description="Fale com o suporte"
             icon={LifeBuoy}
             itemKey="support"
             label="Central de ajuda / Contato"
             onClick={onSupport}
           />
-        </section>
-
-        <Separator className="mx-4 w-auto bg-brand-foreground/20" />
-
-        <section
-          aria-labelledby={compact ? undefined : "validation-appearance-section"}
-          className="flex flex-col gap-1"
-        >
-          <SectionTitle compact={compact} id="validation-appearance-section">
-            Aparência
-          </SectionTitle>
           <NavigationAction
             compact={compact}
-            compactLabel={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-            description={isDark ? "Tema escuro ativo" : "Tema claro ativo"}
             icon={isDark ? Sun : Moon}
             itemKey="theme"
-            label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+            label={isDark ? "Modo claro" : "Modo escuro"}
             onClick={onTheme}
+            sectionTitle="Aparência"
           />
-        </section>
+        </div>
 
-        <div className="mt-auto flex flex-col gap-2">
-          <Separator className="mx-4 w-auto bg-brand-foreground/20" />
-          <section
-            aria-labelledby={compact ? undefined : "validation-account-section"}
-            className="flex flex-col gap-1"
-          >
-            <SectionTitle compact={compact} id="validation-account-section">
-              Conta
-            </SectionTitle>
-            <AccountIdentity compact={compact} doctorName={doctorName} />
-            <NavigationAction
-              compact={compact}
-              compactLabel="Sair da sessão"
-              icon={LogOut}
-              itemKey="logout"
-              label="Sair da sessão"
-              onClick={onLogout}
-            />
-          </section>
+        <div className="mt-auto flex flex-col">
+          <AccountIdentity compact={compact} doctorName={doctorName} />
+          <NavigationAction
+            compact={compact}
+            icon={LogOut}
+            itemKey="logout"
+            label="Sair da sessão"
+            onClick={onLogout}
+          />
         </div>
       </div>
     </div>
@@ -307,7 +251,7 @@ export default function ValidationSidebar({
     <>
       <nav
         aria-label="Navegação recolhida"
-        className="h-svh min-h-0 w-16 overflow-hidden border-r border-brand bg-brand text-brand-foreground"
+        className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand bg-brand text-brand-foreground"
         onFocusCapture={openFromRail}
         onPointerEnter={openFromRail}
       >
