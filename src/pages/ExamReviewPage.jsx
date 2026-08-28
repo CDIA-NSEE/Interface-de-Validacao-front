@@ -634,6 +634,20 @@ export default function ExamReviewPage() {
     />
   );
 
+  const clinicalInformation = (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Stethoscope aria-hidden="true" data-icon="inline-start" />
+          <h2>Dados clínicos</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <PatientInfo patient={exam.patient} />
+      </CardContent>
+    </Card>
+  );
+
   const moreInformation = (
     <Collapsible onOpenChange={setIsMoreInformationOpen} open={isMoreInformationOpen}>
       <Card className="gap-0 overflow-hidden" size="sm">
@@ -674,14 +688,6 @@ export default function ExamReviewPage() {
                 <dd className="mt-1 font-medium text-foreground">{exam.exam_type}</dd>
               </div>
             </dl>
-
-            <section className="flex flex-col gap-2" aria-labelledby="clinical-information-title">
-              <h3 className="flex items-center gap-2 text-sm font-medium" id="clinical-information-title">
-                <Stethoscope aria-hidden="true" data-icon="inline-start" />
-                Dados clínicos
-              </h3>
-              <PatientInfo patient={exam.patient} />
-            </section>
 
             {exam.comments || exam.source_notes ? (
               <section className="flex flex-col gap-2" aria-labelledby="original-report-title">
@@ -724,6 +730,7 @@ export default function ExamReviewPage() {
         </Alert>
       ) : null}
       {diagnosisPanel}
+      {clinicalInformation}
       {moreInformation}
     </div>
   );

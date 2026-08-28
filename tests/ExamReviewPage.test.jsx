@@ -202,17 +202,34 @@ describe("ExamReviewPage", () => {
     expect(reviewDailyDiagnosis).not.toHaveBeenCalled();
   });
 
-  it("revela os dados removidos da barra somente em Mais informações", async () => {
+  it("mantém os dados clínicos visíveis e recolhe apenas metadados e laudo", async () => {
     const user = userEvent.setup();
     getExamById.mockResolvedValue({
       ...exam,
       comments: "Ritmo regular no laudo original.",
+      patient: {
+        age: 58,
+        birth_date: "17/05/1968",
+        bmi: "24,2",
+        height: 1.65,
+        sex: "Feminino",
+        weight: 66,
+      },
       source_notes: "Traçado recebido sem intercorrências.",
     });
     stubViewport(false);
     render(<ExamReviewPage />);
 
     const trigger = await screen.findByRole("button", { name: "Mais informações" });
+    expect(screen.getByRole("heading", { name: "Dados clínicos" })).toBeVisible();
+    expect(screen.getByText("Nascimento")).toBeVisible();
+    expect(screen.getByText("17/05/1968")).toBeVisible();
+    expect(screen.getByText("58 anos")).toBeVisible();
+    expect(screen.getByText("Feminino")).toBeVisible();
+    expect(screen.getByText("66 kg")).toBeVisible();
+    expect(screen.getByText("1.65 m")).toBeVisible();
+    expect(screen.getByText("24,2")).toBeVisible();
+    expect(screen.queryByText("Data e hora")).not.toBeInTheDocument();
     expect(screen.queryByText("ECG 12 derivações")).not.toBeInTheDocument();
     expect(screen.queryByText("Ritmo regular no laudo original.")).not.toBeInTheDocument();
     expect(screen.queryByText("Traçado recebido sem intercorrências.")).not.toBeInTheDocument();
@@ -222,7 +239,6 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Data e hora")).toBeVisible();
     expect(screen.getByText("26/08/2026 as 08:30")).toBeVisible();
     expect(screen.getByText("ECG 12 derivações")).toBeVisible();
-    expect(screen.getByText("Feminino")).toBeVisible();
     expect(screen.getByText("Ritmo regular no laudo original.")).toBeVisible();
     expect(screen.getByText("Traçado recebido sem intercorrências.")).toBeVisible();
   });
