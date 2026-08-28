@@ -38,7 +38,7 @@ vi.mock("react-router-dom", async () => {
 });
 
 vi.mock("../src/context/AuthContext.jsx", () => ({
-  useAuth: () => ({ logout, user: { full_name: "Dra. Ana" } }),
+  useAuth: () => ({ logout, user: { full_name: "Dra. Ana", role: "doctor" } }),
 }));
 
 vi.mock("../src/context/ThemeContext.jsx", () => ({
@@ -165,7 +165,7 @@ describe("ExamReviewPage", () => {
     expect(collapsedNavigation.querySelector('[data-navigation-item="brand"]')).toHaveAccessibleName(
       "Expandir navegação",
     );
-    expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     expect(
       [...collapsedNavigation.querySelectorAll("[data-navigation-item]")].map(
@@ -176,7 +176,7 @@ describe("ExamReviewPage", () => {
     fireEvent.pointerEnter(collapsedNavigation);
 
     const expandedNavigation = await screen.findByRole("dialog", {
-      name: "Navegação da validação",
+      name: "Validação médica",
     });
     expect(expandedNavigation).toBeVisible();
     expect(
@@ -188,6 +188,13 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Tutorial rápido")).toBeVisible();
     expect(screen.getByText("Central de ajuda / Contato")).toBeVisible();
     expect(screen.getByText("Modo escuro")).toBeVisible();
+    expect(screen.getByText("Dra. Ana")).toBeVisible();
+    expect(screen.getByText("Médico avaliador")).toBeVisible();
+    expect(screen.queryByText("Navegação da validação")).not.toBeInTheDocument();
+    expect(screen.queryByText("Navegação")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ajuda e suporte")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aparência")).not.toBeInTheDocument();
+    expect(screen.queryByText("Conta")).not.toBeInTheDocument();
     expect(screen.queryByText("Voltar para a tela inicial")).not.toBeInTheDocument();
     expect(screen.queryByText("Guia rápido de utilização")).not.toBeInTheDocument();
     expect(screen.queryByText("Fale com o suporte")).not.toBeInTheDocument();
@@ -201,17 +208,17 @@ describe("ExamReviewPage", () => {
     await user.keyboard("{Escape}");
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
     });
     expect(agreeButton).toHaveFocus();
 
     screen.getByRole("button", { name: "Início" }).focus();
-    expect(await screen.findByRole("dialog", { name: "Navegação da validação" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Validação médica" })).toBeVisible();
 
     await user.keyboard("{Escape}");
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Navegação da validação" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
     });
     expect(agreeButton).toHaveFocus();
   });
@@ -222,7 +229,7 @@ describe("ExamReviewPage", () => {
 
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
     fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
-    await screen.findByRole("dialog", { name: "Navegação da validação" });
+    await screen.findByRole("dialog", { name: "Validação médica" });
 
     fireEvent.click(agreeButton);
 

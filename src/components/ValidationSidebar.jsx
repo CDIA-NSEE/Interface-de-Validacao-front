@@ -30,6 +30,17 @@ function getInitials(name) {
     .toUpperCase();
 }
 
+function getUserRoleLabel(user) {
+  if (user?.job_title) return user.job_title;
+
+  const roleLabels = {
+    admin: "Administrador",
+    doctor: "Médico avaliador",
+  };
+
+  return roleLabels[user?.role] || user?.role || "Médico avaliador";
+}
+
 function CompactTooltip({ children, label }) {
   return (
     <Tooltip>
@@ -46,7 +57,6 @@ function NavigationAction({
   itemKey,
   label,
   onClick,
-  sectionTitle,
 }) {
   const button = (
     <Button
@@ -59,13 +69,8 @@ function NavigationAction({
     >
       <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
       {compact ? null : (
-        <span className="flex min-w-0 flex-col pr-4 transition-opacity duration-150">
-          {sectionTitle ? (
-            <span className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
-              {sectionTitle}
-            </span>
-          ) : null}
-          <span>{label}</span>
+        <span className="min-w-0 truncate pr-4 transition-opacity duration-150">
+          {label}
         </span>
       )}
     </Button>
@@ -76,7 +81,7 @@ function NavigationAction({
   ) : button;
 
   return (
-    <div className="flex h-16 items-center" data-navigation-item={itemKey}>
+    <div className="flex h-13 items-center" data-navigation-item={itemKey}>
       {control}
     </div>
   );
@@ -103,14 +108,9 @@ function NavigationHeader({ compact, onToggle }) {
         <CompactTooltip label={toggleLabel}>{brandButton}</CompactTooltip>
       ) : brandButton}
       {compact ? null : (
-        <div className="min-w-0 pr-4">
-          <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
-            Validação médica
-          </p>
-          <SheetTitle className="text-brand-foreground">
-            Navegação da validação
-          </SheetTitle>
-        </div>
+        <SheetTitle className="min-w-0 truncate pr-4 text-sm font-semibold tracking-wide text-brand-foreground uppercase">
+          Validação médica
+        </SheetTitle>
       )}
     </div>
   );
@@ -122,7 +122,7 @@ function NavigationHeader({ compact, onToggle }) {
   );
 }
 
-function AccountIdentity({ compact, doctorName }) {
+function AccountIdentity({ compact, doctorName, doctorRole }) {
   const identity = (
     <div
       aria-label={compact ? doctorName : undefined}
@@ -139,10 +139,8 @@ function AccountIdentity({ compact, doctorName }) {
       </Badge>
       {compact ? null : (
         <div className="min-w-0 pr-4">
-          <p className="text-xs font-medium tracking-wide text-brand-foreground/70 uppercase">
-            Conta
-          </p>
-          <p className="truncate text-sm font-medium">{doctorName}</p>
+          <p className="truncate text-sm font-semibold">{doctorName}</p>
+          <p className="truncate text-xs text-brand-foreground/70">{doctorRole}</p>
         </div>
       )}
     </div>
@@ -156,6 +154,7 @@ function AccountIdentity({ compact, doctorName }) {
 function NavigationPanel({
   compact = false,
   doctorName,
+  doctorRole,
   isBusy,
   isDark,
   onClose,
@@ -167,7 +166,7 @@ function NavigationPanel({
   onTutorial,
 }) {
   return (
-    <div className="flex h-full w-80 flex-col">
+    <div className="flex h-full w-72 flex-col">
       <NavigationHeader compact={compact} onToggle={compact ? onOpen : onClose} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
@@ -179,7 +178,6 @@ function NavigationPanel({
             itemKey="home"
             label="Início"
             onClick={onHome}
-            sectionTitle="Navegação"
           />
           <NavigationAction
             compact={compact}
@@ -187,7 +185,6 @@ function NavigationPanel({
             itemKey="tutorial"
             label="Tutorial rápido"
             onClick={onTutorial}
-            sectionTitle="Ajuda e suporte"
           />
           <NavigationAction
             compact={compact}
@@ -202,12 +199,11 @@ function NavigationPanel({
             itemKey="theme"
             label={isDark ? "Modo claro" : "Modo escuro"}
             onClick={onTheme}
-            sectionTitle="Aparência"
           />
         </div>
 
         <div className="mt-auto flex flex-col">
-          <AccountIdentity compact={compact} doctorName={doctorName} />
+          <AccountIdentity compact={compact} doctorName={doctorName} doctorRole={doctorRole} />
           <NavigationAction
             compact={compact}
             icon={LogOut}
@@ -233,6 +229,7 @@ export default function ValidationSidebar({
   const { logout, user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const doctorName = user?.full_name || "Usuário";
+  const doctorRole = getUserRoleLabel(user);
 
   function closeThen(action) {
     onOpenChange(false, { restoreFocus: false });
@@ -258,6 +255,7 @@ export default function ValidationSidebar({
         <NavigationPanel
           compact
           doctorName={doctorName}
+          doctorRole={doctorRole}
           isBusy={isBusy}
           isDark={isDark}
           onHome={onHome}
@@ -271,7 +269,7 @@ export default function ValidationSidebar({
 
       <Sheet open={expanded} onOpenChange={onOpenChange}>
         <SheetContent
-          className="overflow-hidden border-brand bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-80 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
+          className="gap-0 overflow-hidden border-brand bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
           onPointerLeave={() => onOpenChange(false)}
           overlayClassName="bg-black/30 supports-backdrop-filter:backdrop-blur-[1px]"
           showCloseButton={false}
@@ -279,6 +277,7 @@ export default function ValidationSidebar({
         >
           <NavigationPanel
             doctorName={doctorName}
+            doctorRole={doctorRole}
             isBusy={isBusy}
             isDark={isDark}
             onClose={() => onOpenChange(false)}
