@@ -323,8 +323,29 @@ describe("DiagnosisPanel", () => {
     expect(within(dailyPanel).getAllByTestId("diagnosis-card")).toHaveLength(1);
     expect(within(dailyPanel).getByText("Ritmo sinusal")).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
+    expect(screen.getByText("Diagnósticos adicionais")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toBeVisible();
+    expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
+  });
+
+  it("comunica a decisão somente pelo botão selecionado e destaca região obrigatória", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", {
+          region_required_missing: true,
+          review_status: "confirmed",
+        })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
+    expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(dailyPanel).getAllByText("Concordo")).toHaveLength(1);
+    expect(within(dailyPanel).getByText("Área no ECG")).toBeVisible();
+    expect(within(dailyPanel).getByText("Obrigatória para este diagnóstico.")).toBeVisible();
   });
 
   it("preserva todos os diagnósticos originais na revalidação geral", () => {
@@ -362,10 +383,10 @@ describe("DiagnosisPanel", () => {
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
 
     fireEvent.click(screen.getByRole("button", { name: "Discordo" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Observação da discordância");
+    expect(screen.getByRole("alert")).toHaveTextContent("Justificativa (opcional)");
     expect(screen.getByRole("button", { name: "Salvar discordância" })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText(/Motivo/), { target: { value: "Traçado incompatível" } });
+    fireEvent.change(screen.getByLabelText(/Justificativa/), { target: { value: "Traçado incompatível" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar discordância" }));
 
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível"));
@@ -384,6 +405,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
     const select = screen.getByRole("combobox", { name: "Adicionar diagnóstico" });
     fireEvent.click(select);
     fireEvent.click(await screen.findByRole("option", { name: "Fibrilação atrial" }));

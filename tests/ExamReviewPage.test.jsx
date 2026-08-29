@@ -507,12 +507,12 @@ describe("ExamReviewPage", () => {
 
     await screen.findByRole("heading", { name: "Exame ECG-42" });
     await user.click(screen.getByRole("button", { name: "Discordo" }));
-    await user.type(screen.getByLabelText(/Motivo/), "Traçado incompatível");
+    await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
 
     act(() => viewport.setCompact(true));
     await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
 
-    expect(await screen.findByLabelText(/Motivo/)).toHaveValue("Traçado incompatível");
+    expect(await screen.findByLabelText(/Justificativa/)).toHaveValue("Traçado incompatível");
   });
 
   it("preserva o payload do salvamento do rascunho", async () => {

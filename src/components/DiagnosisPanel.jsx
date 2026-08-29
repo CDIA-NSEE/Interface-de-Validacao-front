@@ -1,4 +1,4 @@
-import { Bot, Check, ChevronDown, MapPinned, Pencil, Trash2, X } from "lucide-react";
+import { Bot, Check, ChevronDown, MapPinned, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import {
@@ -92,10 +92,8 @@ function reviewBadgeVariant(status) {
   return "secondary";
 }
 
-function diagnosisCardVariant({ isRegionTarget, isRequired, visualStatus }) {
+function diagnosisCardVariant({ isRegionTarget, isRequired }) {
   if (isRegionTarget) return "info";
-  if (visualStatus === "confirmed") return "success";
-  if (visualStatus === "rejected") return "destructive";
   if (isRequired) return "highlight";
   return "default";
 }
@@ -169,7 +167,7 @@ function DiagnosisDetails({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {shouldShowOriginal ? (
         <Tooltip>
           <TooltipTrigger
@@ -189,10 +187,10 @@ function DiagnosisDetails({
       ) : null}
 
       {status === "rejected" && diagnosis.review_notes ? (
-        <Alert variant="destructive">
-          <AlertTitle>Observação</AlertTitle>
+        <Alert>
+          <AlertTitle>Justificativa registrada</AlertTitle>
           <AlertDescription className="break-words">{diagnosis.review_notes}</AlertDescription>
-          <Button className="mt-2 w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar observação</Button>
+          <Button className="mt-2 w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar justificativa</Button>
         </Alert>
       ) : null}
 
@@ -223,16 +221,28 @@ function DiagnosisDetails({
       ) : null}
 
       <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy || diagnosis.source === "doctor_added"} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
-        <ToggleGroupItem className="w-full min-w-0 px-1.5" value="confirmed" variant="success"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-        <ToggleGroupItem className="w-full min-w-0 px-1.5" value="rejected" variant="destructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+        <ToggleGroupItem className="w-full min-w-0 px-1.5" value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+        <ToggleGroupItem className="w-full min-w-0 px-1.5" value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
       </ToggleGroup>
 
-      <Separator />
-
-      <Button aria-pressed={isRegionTarget} className="w-full" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
-        <MapPinned aria-hidden="true" data-icon="inline-start" />
-        Marcar área
-      </Button>
+      {diagnosis.region_required_missing ? (
+        <Alert variant="warning">
+          <MapPinned aria-hidden="true" />
+          <AlertTitle>Área no ECG</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>Obrigatória para este diagnóstico.</span>
+            <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
+              <MapPinned aria-hidden="true" data-icon="inline-start" />
+              Marcar área
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Button aria-pressed={isRegionTarget} className="w-fit" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+          <MapPinned aria-hidden="true" data-icon="inline-start" />
+          Marcar área
+        </Button>
+      )}
 
       {diagnosis.source === "doctor_added" ? (
         <Button className="w-full" disabled={isBusy} onClick={() => onRemove(diagnosis.id)} size="sm" type="button" variant="destructive">
@@ -242,23 +252,23 @@ function DiagnosisDetails({
       ) : null}
 
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
-        <Button className="w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Adicionar observação</Button>
+        <Button className="w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Justificativa (opcional)</Button>
       ) : null}
 
       {isDisagreementOpen ? (
         <Alert variant="destructive">
           <AlertTitle className="flex items-center justify-between gap-2">
-            Observação da discordância
-            <Button aria-label="Cancelar observação" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
+            Justificativa (opcional)
+            <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
           </AlertTitle>
           <AlertDescription className="mt-2 flex flex-col gap-2">
             <Field>
-              <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Motivo <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
+              <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Justificativa <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
               <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button disabled={isBusy || !canSaveDisagreement} onClick={() => submitDisagreement(reviewNoteDraft)} size="sm" type="button">Salvar discordância</Button>
-              <Button disabled={isBusy} onClick={() => submitDisagreement("")} size="sm" type="button" variant="outline">Discordar sem observação</Button>
+              <Button disabled={isBusy} onClick={() => submitDisagreement("")} size="sm" type="button" variant="outline">Discordar sem justificativa</Button>
             </div>
           </AlertDescription>
         </Alert>
@@ -286,8 +296,12 @@ function DiagnosisCard({
   const standardText = diagnosis.standard_text || diagnosis.name;
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
-  const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
-  const cardVariant = diagnosisCardVariant({ isRegionTarget, isRequired, visualStatus });
+  const cardVariant = diagnosisCardVariant({ isRegionTarget, isRequired });
+  const statusDescription = isDisagreementOpen
+    ? "Discordância em edição"
+    : status === "pending"
+      ? REVIEW_LABELS.pending
+      : null;
 
   return (
     <Card className={cn("gap-3 overflow-visible", isRegionTarget && "ring-2")} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
@@ -297,7 +311,7 @@ function DiagnosisCard({
           {diagnosisReference ? <Badge className="mt-0.5" variant="outline">{diagnosisReference}</Badge> : null}
           <span className="min-w-0 break-words" title={`Texto padrão: ${standardText}`}>{standardText}</span>
         </CardTitle>
-        <CardDescription>{isDisagreementOpen ? "Discordância em edição" : REVIEW_LABELS[status] || REVIEW_LABELS.pending}</CardDescription>
+        {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
       </CardHeader>
       <CardContent>
         <DiagnosisDetails
@@ -341,6 +355,7 @@ export default function DiagnosisPanel({
   selectedRegion,
 }) {
   const [name, setName] = useState("");
+  const [isAddDiagnosisOpen, setIsAddDiagnosisOpen] = useState(false);
   const [expandedDiagnosisId, setExpandedDiagnosisId] = useState(null);
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
@@ -429,11 +444,11 @@ export default function DiagnosisPanel({
         )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}
       </section>
 
-      {secondaryDiagnoses.length ? (
+      {secondaryDiagnoses.length || options.length ? (
         <Collapsible onOpenChange={onSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden" size="sm">
             <CardHeader>
-              <CardTitle>Diagnósticos opcionais</CardTitle>
+              <CardTitle>Diagnósticos adicionais</CardTitle>
               <CardDescription>{secondarySummary}</CardDescription>
               <CardAction>
                 <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} size="icon-sm" type="button" variant="ghost" />}>
@@ -443,61 +458,66 @@ export default function DiagnosisPanel({
             </CardHeader>
             <CollapsibleContent>
               <CardContent className="border-t px-0 py-0">
-                <div className="grid max-h-[min(32svh,20rem)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
-                  <ScrollArea className="min-h-0" data-testid="optional-diagnoses-scroll">
-                    <Accordion
-                      onValueChange={(values) => setExpandedDiagnosisId(values.at(-1) || null)}
-                      value={(forcedExpandedDiagnosisId ?? expandedDiagnosisId) ? [String(forcedExpandedDiagnosisId ?? expandedDiagnosisId)] : []}
-                    >
-                    {secondaryDiagnoses.map((diagnosis) => {
-                      const diagnosisId = String(diagnosis.id);
-                      const diagnosisReference = getDiagnosisReference(diagnosisReferences, diagnosis.id);
-                      const status = getDiagnosisReviewStatus(diagnosis);
-                      const standardText = diagnosis.standard_text || diagnosis.name;
-                      return (
-                        <AccordionItem className="px-3" key={diagnosis.id} value={diagnosisId}>
-                          <AccordionTrigger className="gap-2 py-3 hover:no-underline">
-                            <span className="flex min-w-0 flex-1 flex-col gap-1">
-                              <span className="flex min-w-0 items-start gap-2">
-                                {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
-                                <span className="min-w-0 break-words text-left">{standardText}</span>
+                {secondaryDiagnoses.length ? (
+                  <div className="grid max-h-[min(32svh,20rem)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
+                    <ScrollArea className="min-h-0" data-testid="optional-diagnoses-scroll">
+                      <Accordion
+                        onValueChange={(values) => setExpandedDiagnosisId(values.at(-1) || null)}
+                        value={(forcedExpandedDiagnosisId ?? expandedDiagnosisId) ? [String(forcedExpandedDiagnosisId ?? expandedDiagnosisId)] : []}
+                      >
+                      {secondaryDiagnoses.map((diagnosis) => {
+                        const diagnosisId = String(diagnosis.id);
+                        const diagnosisReference = getDiagnosisReference(diagnosisReferences, diagnosis.id);
+                        const status = getDiagnosisReviewStatus(diagnosis);
+                        const standardText = diagnosis.standard_text || diagnosis.name;
+                        return (
+                          <AccordionItem className="px-3" key={diagnosis.id} value={diagnosisId}>
+                            <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                                <span className="flex min-w-0 items-start gap-2">
+                                  {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
+                                  <span className="min-w-0 break-words text-left">{standardText}</span>
+                                </span>
+                                <Badge className="w-fit" variant={reviewBadgeVariant(status)}>{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</Badge>
                               </span>
-                              <Badge className="w-fit" variant={reviewBadgeVariant(status)}>{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</Badge>
-                            </span>
-                          </AccordionTrigger>
-                          <AccordionContent className="flex flex-col gap-3 border-t pt-3">
-                            <DiagnosisBadges
-                              aiModeEnabled={aiModeEnabled}
-                              diagnosis={diagnosis}
-                              isRequired={false}
-                            />
-                            <DiagnosisDetails
-                              {...sharedCardProps}
-                              diagnosis={diagnosis}
-                              diagnosisReference={diagnosisReference}
-                              reviewDraft={reviewDrafts[diagnosisId]}
-                            />
-                          </AccordionContent>
-                        </AccordionItem>
-                      );
-                    })}
-                    </Accordion>
-                  </ScrollArea>
-                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="flex flex-col gap-3 border-t pt-3">
+                              <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
+                              <DiagnosisDetails {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={diagnosisReference} reviewDraft={reviewDrafts[diagnosisId]} />
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                      </Accordion>
+                    </ScrollArea>
+                  </div>
+                ) : null}
+
+                {secondaryDiagnoses.length && options.length ? <Separator /> : null}
+
+                {options.length ? (
+                  <Collapsible onOpenChange={setIsAddDiagnosisOpen} open={isAddDiagnosisOpen}>
+                    <div className="p-2">
+                      <CollapsibleTrigger render={<Button aria-label="Adicionar diagnóstico" className="w-fit" size="sm" type="button" variant="ghost" />}>
+                        <Plus aria-hidden="true" data-icon="inline-start" />
+                        Adicionar diagnóstico
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <Field className="pt-2">
+                          <FieldLabel className="sr-only" htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
+                          <Select disabled={isBusy} items={selectItems} onValueChange={handleSelectDiagnosis} value={name || null}>
+                            <SelectTrigger className="w-full" id="new-diagnosis-select"><SelectValue placeholder="Selecione um diagnóstico padronizado" /></SelectTrigger>
+                            <SelectContent align="start"><SelectGroup>{selectItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
+                          </Select>
+                        </Field>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                ) : null}
               </CardContent>
             </CollapsibleContent>
           </Card>
         </Collapsible>
-      ) : null}
-
-      {options.length ? (
-        <Field className="rounded-xl border bg-card p-3">
-          <FieldLabel htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
-          <Select disabled={isBusy} items={selectItems} onValueChange={handleSelectDiagnosis} value={name || null}>
-            <SelectTrigger className="w-full" id="new-diagnosis-select"><SelectValue placeholder="Selecione um diagnóstico" /></SelectTrigger>
-            <SelectContent align="start"><SelectGroup>{selectItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
-          </Select>
-        </Field>
       ) : null}
 
       {selectedRegion ? <Alert variant="info"><MapPinned aria-hidden="true" /><AlertTitle>Região selecionada</AlertTitle><AlertDescription>O próximo diagnóstico adicionado será associado a esta área.</AlertDescription></Alert> : null}
