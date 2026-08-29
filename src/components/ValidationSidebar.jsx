@@ -20,6 +20,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
+import { cn } from "@/lib/utils.js";
 
 const SIDEBAR_OPEN_DELAY_MS = 200;
 const SIDEBAR_CLOSE_DELAY_MS = 200;
@@ -65,16 +66,19 @@ function NavigationAction({
   const button = (
     <Button
       aria-label={label}
-      className="grid h-12 w-full grid-cols-[4rem_minmax(0,1fr)] items-center gap-0 rounded-none border-0 px-0 text-left"
+      className={cn(
+        "mx-2 grid h-full grid-cols-[3rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
+        compact ? "w-12" : "w-[calc(100%-1rem)]",
+      )}
       disabled={disabled}
       onClick={onClick}
       size="icon"
       type="button"
-      variant="brandGhost"
+      variant={itemKey === "logout" ? "brandNavigationDestructive" : "brandNavigation"}
     >
       <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
       {compact ? null : (
-        <span className="min-w-0 truncate pr-4 transition-opacity duration-150">
+        <span className="min-w-0 truncate pr-4 pl-2 transition-opacity duration-150">
           {label}
         </span>
       )}
@@ -100,7 +104,7 @@ function NavigationHeader({ compact, onToggle }) {
       className="justify-self-center bg-brand-foreground/15 hover:bg-brand-foreground/20"
       data-navigation-item="brand"
       onClick={onToggle}
-      size="icon-lg"
+      size="icon-navigation"
       type="button"
       variant="brandGhost"
     >
@@ -316,7 +320,7 @@ export default function ValidationSidebar({
     <>
       <nav
         aria-label="Navegação recolhida"
-        className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand bg-brand text-brand-foreground"
+        className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand-foreground/10 bg-brand text-brand-foreground"
         onFocusCapture={openImmediately}
         onPointerEnter={scheduleOpen}
         onPointerLeave={cancelScheduledOpen}
@@ -338,10 +342,10 @@ export default function ValidationSidebar({
 
       <Sheet open={expanded} onOpenChange={handleSheetOpenChange}>
         <SheetContent
-          className="gap-0 overflow-hidden border-brand bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
+          className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
           onPointerEnter={keepOpen}
           onPointerLeave={scheduleClose}
-          overlayClassName="bg-black/30 supports-backdrop-filter:backdrop-blur-[1px]"
+          overlayClassName="bg-black/25 supports-backdrop-filter:backdrop-blur-[1px]"
           showCloseButton={false}
           side="left"
         >
