@@ -298,7 +298,7 @@ describe("ExamReviewPage", () => {
     expect(reviewDailyDiagnosis).not.toHaveBeenCalled();
   });
 
-  it("mantém os dados clínicos visíveis e recolhe apenas metadados e laudo", async () => {
+  it("diferencia dados clínicos e apresenta metadados e notas sem hierarquia redundante", async () => {
     const user = userEvent.setup();
     getExamById.mockResolvedValue({
       ...exam,
@@ -317,7 +317,12 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     const trigger = await screen.findByRole("button", { name: "Mais informações" });
-    expect(screen.getByRole("heading", { name: "Dados clínicos" })).toBeVisible();
+    const clinicalHeading = screen.getByRole("heading", { name: "Dados clínicos" });
+    expect(clinicalHeading).toBeVisible();
+    expect(
+      clinicalHeading.closest("[data-slot='card-title']").querySelector(".lucide-stethoscope"),
+    ).toBeTruthy();
+    expect(trigger.querySelector(".lucide-info")).toBeTruthy();
     expect(screen.getByText("Nascimento")).toBeVisible();
     expect(screen.getByText("17/05/1968")).toBeVisible();
     expect(screen.getByText("58 anos")).toBeVisible();
@@ -333,8 +338,12 @@ describe("ExamReviewPage", () => {
     await user.click(trigger);
 
     expect(screen.getByText("Data e hora")).toBeVisible();
+    expect(screen.getByText("Data e hora").closest("dl")).toHaveClass("grid-cols-2");
     expect(screen.getByText("26/08/2026 as 08:30")).toBeVisible();
     expect(screen.getByText("ECG 12 derivações")).toBeVisible();
+    expect(screen.getByText("Notas")).toBeVisible();
+    expect(screen.queryByText("Laudo original")).not.toBeInTheDocument();
+    expect(screen.queryByText("Comentários")).not.toBeInTheDocument();
     expect(screen.getByText("Ritmo regular no laudo original.")).toBeVisible();
     expect(screen.getByText("Traçado recebido sem intercorrências.")).toBeVisible();
   });

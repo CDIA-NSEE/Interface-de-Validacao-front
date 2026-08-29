@@ -1,7 +1,7 @@
 import {
   ArrowLeft,
   ChevronDown,
-  FileText,
+  Info,
   NotebookPen,
   PanelRightOpen,
   Stethoscope,
@@ -662,7 +662,7 @@ export default function ExamReviewPage() {
             }
           >
             <span className="flex items-center gap-2">
-              <Stethoscope aria-hidden="true" data-icon="inline-start" />
+              <Info aria-hidden="true" data-icon="inline-start" />
               Mais informações
             </span>
             <ChevronDown
@@ -674,8 +674,8 @@ export default function ExamReviewPage() {
         </CardHeader>
         <CollapsibleContent>
           <Separator />
-          <CardContent className="flex flex-col gap-4 pt-3">
-            <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <CardContent className="flex flex-col gap-3 pt-3">
+            <dl className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded-lg bg-muted/50 p-3">
                 <dt className="text-xs font-medium text-muted-foreground">Data e hora</dt>
                 <dd className="mt-1 font-medium text-foreground">
@@ -690,24 +690,17 @@ export default function ExamReviewPage() {
             </dl>
 
             {exam.comments || exam.source_notes ? (
-              <section className="flex flex-col gap-2" aria-labelledby="original-report-title">
-                <h3 className="flex items-center gap-2 text-sm font-medium" id="original-report-title">
-                  <FileText aria-hidden="true" data-icon="inline-start" />
-                  Laudo original
-                </h3>
-                {exam.comments ? (
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <strong className="text-xs font-medium text-muted-foreground">Comentários</strong>
-                    <p className="mt-1 break-words text-sm text-foreground">{exam.comments}</p>
-                  </div>
-                ) : null}
-                {exam.source_notes ? (
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <strong className="text-xs font-medium text-muted-foreground">Notas</strong>
-                    <p className="mt-1 break-words text-sm text-foreground">{exam.source_notes}</p>
-                  </div>
-                ) : null}
-              </section>
+              <div className="rounded-lg bg-muted/50 p-3">
+                <strong className="text-xs font-medium text-muted-foreground">Notas</strong>
+                <div className="mt-1 flex flex-col gap-2">
+                  {exam.comments ? (
+                    <p className="break-words text-sm text-foreground">{exam.comments}</p>
+                  ) : null}
+                  {exam.source_notes ? (
+                    <p className="break-words text-sm text-foreground">{exam.source_notes}</p>
+                  ) : null}
+                </div>
+              </div>
             ) : null}
           </CardContent>
         </CollapsibleContent>
