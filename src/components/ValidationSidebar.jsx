@@ -22,8 +22,8 @@ import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
 import { cn } from "@/lib/utils.js";
 
-const SIDEBAR_OPEN_DELAY_MS = 200;
-const SIDEBAR_CLOSE_DELAY_MS = 200;
+const SIDEBAR_OPEN_DELAY_MS = 100;
+const SIDEBAR_CLOSE_DELAY_MS = 150;
 
 function getInitials(name) {
   return name

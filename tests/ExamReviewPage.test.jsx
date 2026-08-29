@@ -182,13 +182,13 @@ describe("ExamReviewPage", () => {
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
     expect(document.querySelector('[data-slot="sheet-overlay"]')).not.toBeInTheDocument();
 
-    act(() => vi.advanceTimersByTime(100));
+    act(() => vi.advanceTimersByTime(99));
     fireEvent.pointerLeave(collapsedNavigation);
     act(() => vi.advanceTimersByTime(100));
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
 
     fireEvent.pointerEnter(collapsedNavigation);
-    act(() => vi.advanceTimersByTime(199));
+    act(() => vi.advanceTimersByTime(99));
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(1));
@@ -232,7 +232,7 @@ describe("ExamReviewPage", () => {
     expect(expandedNavigation).toBeVisible();
 
     fireEvent.pointerLeave(expandedNavigation);
-    act(() => vi.advanceTimersByTime(299));
+    act(() => vi.advanceTimersByTime(149));
     expect(expandedNavigation).toBeVisible();
 
     fireEvent.pointerEnter(expandedNavigation);
@@ -240,7 +240,7 @@ describe("ExamReviewPage", () => {
     expect(expandedNavigation).toBeVisible();
 
     fireEvent.pointerLeave(expandedNavigation);
-    act(() => vi.advanceTimersByTime(300));
+    act(() => vi.advanceTimersByTime(150));
     expect(expandedNavigation).toHaveAttribute("data-closed");
     expect(expandedNavigation).not.toHaveAttribute("data-open");
     act(() => vi.advanceTimersByTime(0));
