@@ -7,6 +7,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge.jsx";
 import { Button } from "@/components/ui/button.jsx";
@@ -19,6 +20,9 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
+
+const SIDEBAR_OPEN_DELAY_MS = 200;
+const SIDEBAR_CLOSE_DELAY_MS = 200;
 
 function getInitials(name) {
   return name
@@ -61,9 +65,10 @@ function NavigationAction({
   const button = (
     <Button
       aria-label={label}
-      className="grid h-12 w-full grid-cols-[4rem_minmax(0,1fr)] items-center gap-0 rounded-none px-0 text-left"
+      className="grid h-12 w-full grid-cols-[4rem_minmax(0,1fr)] items-center gap-0 rounded-none border-0 px-0 text-left"
       disabled={disabled}
       onClick={onClick}
+      size="icon"
       type="button"
       variant="brandGhost"
     >
@@ -228,20 +233,83 @@ export default function ValidationSidebar({
 }) {
   const { logout, user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const openTimerRef = useRef(null);
+  const closeTimerRef = useRef(null);
   const doctorName = user?.full_name || "Usuário";
   const doctorRole = getUserRoleLabel(user);
 
-  function closeThen(action) {
-    onOpenChange(false, { restoreFocus: false });
-    queueMicrotask(action);
+  function clearOpenTimer() {
+    if (openTimerRef.current === null) return;
+    window.clearTimeout(openTimerRef.current);
+    openTimerRef.current = null;
   }
 
-  function openFromRail(event) {
-    if (expanded) return;
+  function clearCloseTimer() {
+    if (closeTimerRef.current === null) return;
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+  }
 
+  useEffect(() => {
+    return () => {
+      clearOpenTimer();
+      clearCloseTimer();
+    };
+  }, []);
+
+  function rememberTrigger(event) {
     const focusedElement = event?.type === "focus" ? event.relatedTarget : document.activeElement;
     triggerRef.current = focusedElement instanceof HTMLElement ? focusedElement : null;
+  }
+
+  function openImmediately(event) {
+    clearOpenTimer();
+    clearCloseTimer();
+    rememberTrigger(event);
     onOpenChange(true);
+  }
+
+  function scheduleOpen(event) {
+    if (expanded) return;
+
+    clearOpenTimer();
+    clearCloseTimer();
+    rememberTrigger(event);
+    openTimerRef.current = window.setTimeout(() => {
+      openTimerRef.current = null;
+      onOpenChange(true);
+    }, SIDEBAR_OPEN_DELAY_MS);
+  }
+
+  function cancelScheduledOpen() {
+    clearOpenTimer();
+  }
+
+  function keepOpen() {
+    clearCloseTimer();
+  }
+
+  function scheduleClose() {
+    if (!expanded) return;
+
+    clearCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      onOpenChange(false);
+    }, SIDEBAR_CLOSE_DELAY_MS);
+  }
+
+  function handleSheetOpenChange(open) {
+    clearOpenTimer();
+    clearCloseTimer();
+    onOpenChange(open);
+  }
+
+  function closeThen(action) {
+    clearOpenTimer();
+    clearCloseTimer();
+    onOpenChange(false, { restoreFocus: false });
+    queueMicrotask(action);
   }
 
   return (
@@ -249,8 +317,9 @@ export default function ValidationSidebar({
       <nav
         aria-label="Navegação recolhida"
         className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand bg-brand text-brand-foreground"
-        onFocusCapture={openFromRail}
-        onPointerEnter={openFromRail}
+        onFocusCapture={openImmediately}
+        onPointerEnter={scheduleOpen}
+        onPointerLeave={cancelScheduledOpen}
       >
         <NavigationPanel
           compact
@@ -260,17 +329,18 @@ export default function ValidationSidebar({
           isDark={isDark}
           onHome={onHome}
           onLogout={logout}
-          onOpen={() => onOpenChange(true)}
+          onOpen={openImmediately}
           onSupport={onSupport}
           onTheme={toggleTheme}
           onTutorial={onTutorial}
         />
       </nav>
 
-      <Sheet open={expanded} onOpenChange={onOpenChange}>
+      <Sheet open={expanded} onOpenChange={handleSheetOpenChange}>
         <SheetContent
           className="gap-0 overflow-hidden border-brand bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
-          onPointerLeave={() => onOpenChange(false)}
+          onPointerEnter={keepOpen}
+          onPointerLeave={scheduleClose}
           overlayClassName="bg-black/30 supports-backdrop-filter:backdrop-blur-[1px]"
           showCloseButton={false}
           side="left"
@@ -280,7 +350,7 @@ export default function ValidationSidebar({
             doctorRole={doctorRole}
             isBusy={isBusy}
             isDark={isDark}
-            onClose={() => onOpenChange(false)}
+            onClose={() => handleSheetOpenChange(false)}
             onHome={() => closeThen(onHome)}
             onLogout={() => closeThen(logout)}
             onSupport={() => closeThen(onSupport)}

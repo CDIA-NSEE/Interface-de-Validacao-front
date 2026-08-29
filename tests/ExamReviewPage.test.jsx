@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ExamReviewPage from "../src/pages/ExamReviewPage.jsx";
 import {
@@ -26,6 +26,10 @@ beforeAll(() => {
 
 afterAll(() => {
   delete Element.prototype.getAnimations;
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 vi.mock("react-router-dom", async () => {
@@ -153,8 +157,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Iniciar")).toBeVisible();
   });
 
-  it("expande a navegação ao passar o ponteiro pela faixa azul e fecha com Escape", async () => {
-    const user = userEvent.setup();
+  it("expande e recolhe a navegação somente após a intenção de hover", async () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
@@ -173,9 +176,23 @@ describe("ExamReviewPage", () => {
       ),
     ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
 
+    vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation);
+    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="sheet-overlay"]')).not.toBeInTheDocument();
 
-    const expandedNavigation = await screen.findByRole("dialog", {
+    act(() => vi.advanceTimersByTime(100));
+    fireEvent.pointerLeave(collapsedNavigation);
+    act(() => vi.advanceTimersByTime(100));
+    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+
+    fireEvent.pointerEnter(collapsedNavigation);
+    act(() => vi.advanceTimersByTime(199));
+    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(1));
+
+    const expandedNavigation = screen.getByRole("dialog", {
       name: "Validação médica",
     });
     expect(expandedNavigation).toBeVisible();
@@ -205,13 +222,33 @@ describe("ExamReviewPage", () => {
     ).not.toBeInTheDocument();
     expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
 
-    await user.keyboard("{Escape}");
+    fireEvent.pointerEnter(expandedNavigation);
+    act(() => vi.advanceTimersByTime(300));
+    expect(expandedNavigation).toBeVisible();
 
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
-    });
+    fireEvent.pointerLeave(expandedNavigation);
+    act(() => vi.advanceTimersByTime(299));
+    expect(expandedNavigation).toBeVisible();
+
+    fireEvent.pointerEnter(expandedNavigation);
+    act(() => vi.advanceTimersByTime(1));
+    expect(expandedNavigation).toBeVisible();
+
+    fireEvent.pointerLeave(expandedNavigation);
+    act(() => vi.advanceTimersByTime(300));
+    expect(expandedNavigation).toHaveAttribute("data-closed");
+    expect(expandedNavigation).not.toHaveAttribute("data-open");
+    act(() => vi.advanceTimersByTime(0));
     expect(agreeButton).toHaveFocus();
+  });
 
+  it("mantém expansão por teclado e fecha com Escape", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    agreeButton.focus();
     screen.getByRole("button", { name: "Início" }).focus();
     expect(await screen.findByRole("dialog", { name: "Validação médica" })).toBeVisible();
 
@@ -228,8 +265,10 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    vi.useFakeTimers();
     fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
-    await screen.findByRole("dialog", { name: "Validação médica" });
+    act(() => vi.advanceTimersByTime(200));
+    screen.getByRole("dialog", { name: "Validação médica" });
 
     fireEvent.click(agreeButton);
 
