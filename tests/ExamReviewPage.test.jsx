@@ -265,6 +265,24 @@ describe("ExamReviewPage", () => {
     expect(agreeButton).toHaveFocus();
   });
 
+  it("permanece recolhida após restaurar o foco ao clicar fora da navegação", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    await user.click(screen.getByRole("button", { name: "Modo escuro" }));
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    const expandedHome = expandedNavigation.querySelector('button[aria-label="Início"]');
+    expandedHome.focus();
+    expect(expandedHome).toHaveFocus();
+
+    await user.click(document.querySelector('[data-slot="sheet-overlay"]'));
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+
+    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+  });
+
   it("bloqueia uma ação clínica enquanto a navegação lateral está aberta", async () => {
     stubViewport(false);
     render(<ExamReviewPage />);
