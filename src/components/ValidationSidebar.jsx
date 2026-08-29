@@ -96,26 +96,19 @@ function NavigationAction({
   );
 }
 
-function NavigationHeader({ compact, onToggle }) {
-  const toggleLabel = compact ? "Expandir navegação" : "Recolher navegação";
-  const brandButton = (
-    <Button
-      aria-label={toggleLabel}
-      className="justify-self-center bg-brand-foreground/15 hover:bg-brand-foreground/20"
+function NavigationHeader({ compact }) {
+  const brandMark = (
+    <div
+      aria-hidden="true"
+      className="grid size-10 place-items-center justify-self-center rounded-lg bg-brand-foreground/15"
       data-navigation-item="brand"
-      onClick={onToggle}
-      size="icon-navigation"
-      type="button"
-      variant="brandGhost"
     >
-      <Activity aria-hidden="true" />
-    </Button>
+      <Activity className="size-5" />
+    </div>
   );
   const content = (
     <div className="grid h-16 grid-cols-[4rem_minmax(0,1fr)] items-center">
-      {compact ? (
-        <CompactTooltip label={toggleLabel}>{brandButton}</CompactTooltip>
-      ) : brandButton}
+      {brandMark}
       {compact ? null : (
         <SheetTitle className="min-w-0 truncate pr-4 text-sm font-semibold tracking-wide text-brand-foreground uppercase">
           Validação médica
@@ -166,17 +159,15 @@ function NavigationPanel({
   doctorRole,
   isBusy,
   isDark,
-  onClose,
   onHome,
   onLogout,
-  onOpen,
   onSupport,
   onTheme,
   onTutorial,
 }) {
   return (
     <div className="flex h-full w-72 flex-col">
-      <NavigationHeader compact={compact} onToggle={compact ? onOpen : onClose} />
+      <NavigationHeader compact={compact} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         <div className="flex flex-col">
@@ -333,7 +324,6 @@ export default function ValidationSidebar({
           isDark={isDark}
           onHome={onHome}
           onLogout={logout}
-          onOpen={openImmediately}
           onSupport={onSupport}
           onTheme={toggleTheme}
           onTutorial={onTutorial}
@@ -354,7 +344,6 @@ export default function ValidationSidebar({
             doctorRole={doctorRole}
             isBusy={isBusy}
             isDark={isDark}
-            onClose={() => handleSheetOpenChange(false)}
             onHome={() => closeThen(onHome)}
             onLogout={() => closeThen(logout)}
             onSupport={() => closeThen(onSupport)}
