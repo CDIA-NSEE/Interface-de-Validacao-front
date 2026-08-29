@@ -165,9 +165,10 @@ describe("ExamReviewPage", () => {
     agreeButton.focus();
     const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
     expect(collapsedNavigation).toBeVisible();
-    expect(collapsedNavigation.querySelector('[data-navigation-item="brand"]')).toHaveAccessibleName(
-      "Expandir navegação",
-    );
+    const collapsedBrand = collapsedNavigation.querySelector('[data-navigation-item="brand"]');
+    expect(collapsedBrand).toHaveAttribute("aria-hidden", "true");
+    expect(collapsedBrand.tagName).toBe("DIV");
+    expect(screen.queryByRole("button", { name: "Expandir navegação" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     expect(
@@ -201,6 +202,10 @@ describe("ExamReviewPage", () => {
         (item) => item.dataset.navigationItem,
       ),
     ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
+    const expandedBrand = expandedNavigation.querySelector('[data-navigation-item="brand"]');
+    expect(expandedBrand).toHaveAttribute("aria-hidden", "true");
+    expect(expandedBrand.tagName).toBe("DIV");
+    expect(screen.queryByRole("button", { name: "Recolher navegação" })).not.toBeInTheDocument();
     expect(screen.getByText("Início")).toBeVisible();
     expect(screen.getByText("Tutorial rápido")).toBeVisible();
     expect(screen.getByText("Central de ajuda / Contato")).toBeVisible();
