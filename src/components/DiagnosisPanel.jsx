@@ -1,4 +1,4 @@
-import { Bot, Check, ChevronDown, MapPinned, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, MapPinned, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import {
@@ -72,7 +72,7 @@ function AiAgreementBadge() {
             />
           }
         >
-          <Bot aria-hidden="true" data-icon="inline-start" />
+          <Sparkles aria-hidden="true" data-icon="inline-start" />
           IA concordou
         </TooltipTrigger>
         <TooltipContent>{AI_AGREEMENT_DESCRIPTION}</TooltipContent>

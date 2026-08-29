@@ -105,6 +105,7 @@ describe("DiagnosisPanel", () => {
 
     expect(aiBadge).toBeVisible();
     expect(aiBadge).toHaveAccessibleName("IA concordou");
+    expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleDescription(
       "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.",
     );
