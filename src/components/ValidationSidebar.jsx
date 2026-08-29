@@ -333,6 +333,7 @@ export default function ValidationSidebar({
       <Sheet open={expanded} onOpenChange={handleSheetOpenChange}>
         <SheetContent
           className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
+          finalFocus={false}
           onPointerEnter={keepOpen}
           onPointerLeave={scheduleClose}
           overlayClassName="bg-black/25 supports-backdrop-filter:backdrop-blur-[1px]"
