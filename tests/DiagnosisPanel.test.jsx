@@ -440,13 +440,36 @@ describe("DiagnosisPanel", () => {
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
 
     fireEvent.click(screen.getByRole("button", { name: "Discordo" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Justificativa (opcional)");
+    const disagreementAlert = screen.getByRole("alert");
+    expect(disagreementAlert).toHaveTextContent("Justificativa (opcional)");
+    expect(disagreementAlert.textContent.match(/Justificativa \(opcional\)/g)).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Salvar discordância" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText(/Justificativa/), { target: { value: "Traçado incompatível" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar discordância" }));
 
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível"));
+  });
+
+  it("exibe uma única identificação da justificativa no diagnóstico adicional", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Bloqueio de ramo direito"),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Discordo" })[1]);
+
+    const disagreementAlert = screen.getByRole("alert");
+    expect(disagreementAlert.textContent.match(/Justificativa \(opcional\)/g)).toHaveLength(1);
+    expect(within(disagreementAlert).getByLabelText("Justificativa (opcional)")).toBeVisible();
   });
 
   it("preserva o payload da adição e consome a região selecionada", async () => {

@@ -264,13 +264,12 @@ function DiagnosisDetails({
 
       {isDisagreementOpen ? (
         <Alert variant="destructive">
-          <AlertTitle className="flex items-center justify-between gap-2">
-            Justificativa (opcional)
-            <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
-          </AlertTitle>
-          <AlertDescription className="mt-2 flex flex-col gap-2">
+          <AlertDescription className="flex flex-col gap-2">
             <Field>
-              <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Justificativa <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
+              <div className="flex items-center justify-between gap-2">
+                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Justificativa <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
+                <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
+              </div>
               <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
             <div className="flex flex-col gap-2 sm:flex-row">
