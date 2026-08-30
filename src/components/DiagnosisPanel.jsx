@@ -81,10 +81,6 @@ function AiAgreementBadge() {
   );
 }
 
-function regionCountLabel(count) {
-  return count === 1 ? "1 área" : `${count} áreas`;
-}
-
 function markedRegionCountLabel(count) {
   return count === 1 ? "1 área marcada" : `${count} áreas marcadas`;
 }
@@ -93,6 +89,14 @@ function reviewBadgeVariant(status) {
   if (status === "confirmed") return "success";
   if (status === "rejected") return "destructive";
   return "secondary";
+}
+
+function DiagnosisStatusBadge({ status }) {
+  return (
+    <Badge className="shrink-0" variant={reviewBadgeVariant(status)}>
+      {REVIEW_LABELS[status]}
+    </Badge>
+  );
 }
 
 function diagnosisCardVariant({ isRegionTarget, isRequired }) {
@@ -198,7 +202,7 @@ function DiagnosisDetails({
       ) : null}
 
       {regions.length ? (
-        <div className="flex flex-col gap-2" aria-label={regionCountLabel(regions.length)}>
+        <div className="flex flex-col gap-2" aria-label={markedRegionCountLabel(regions.length)}>
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Check aria-hidden="true" data-icon="inline-start" />
             {markedRegionCountLabel(regions.length)}
@@ -286,7 +290,6 @@ function DiagnosisCard({
   diagnosis,
   diagnosisReference,
   isBusy,
-  isDailyDiagnosis,
   isRequired,
   onEditRegion,
   onRemove,
@@ -301,11 +304,7 @@ function DiagnosisCard({
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const cardVariant = diagnosisCardVariant({ isRegionTarget, isRequired });
-  const statusDescription = isDisagreementOpen
-    ? "Discordância em edição"
-    : status === "pending"
-      ? REVIEW_LABELS.pending
-      : null;
+  const statusDescription = isDisagreementOpen ? "Discordância em edição" : null;
 
   return (
     <Card className={cn("gap-2.5 overflow-visible", isRegionTarget && "ring-2")} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
@@ -314,11 +313,9 @@ function DiagnosisCard({
         <CardTitle className="flex min-w-0 flex-wrap items-center gap-2">
           {diagnosisReference ? <Badge className="mt-0.5" variant="outline">{diagnosisReference}</Badge> : null}
           <span className="min-w-0 flex-1 break-words" title={`Texto padrão: ${standardText}`}>{standardText}</span>
-          {isDailyDiagnosis && statusDescription ? (
-            <Badge className="shrink-0" variant="secondary">{statusDescription}</Badge>
-          ) : null}
+          <DiagnosisStatusBadge status={status} />
         </CardTitle>
-        {!isDailyDiagnosis && statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
+        {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
       </CardHeader>
       <CardContent>
         <DiagnosisDetails
@@ -452,7 +449,7 @@ export default function DiagnosisPanel({
           </div>
         ) : null}
         {requiredDiagnoses.length ? requiredDiagnoses.map((diagnosis) => (
-          <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isDailyDiagnosis={!isGeneralReviewDay} isRequired key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
+          <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
         )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}
       </section>
 
@@ -497,11 +494,11 @@ export default function DiagnosisPanel({
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
                           <AccordionItem className="px-3" key={diagnosis.id} value={diagnosisId}>
-                            <AccordionTrigger className="gap-2 py-2.5 hover:no-underline">
+                            <AccordionTrigger className="cursor-pointer gap-2 py-2.5 hover:bg-muted/50 hover:no-underline">
                               <span className="flex min-w-0 flex-1 items-center gap-2">
                                 {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
                                 <span className="min-w-0 flex-1 break-words text-left">{standardText}</span>
-                                <Badge className="shrink-0" variant={reviewBadgeVariant(status)}>{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</Badge>
+                                <DiagnosisStatusBadge status={status} />
                               </span>
                             </AccordionTrigger>
                             <AccordionContent className="flex flex-col gap-3 border-t pt-3">

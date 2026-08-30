@@ -157,6 +157,64 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Iniciar")).toBeVisible();
   });
 
+  it("explica por que Salvar e próximo está desabilitado", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const primaryButton = await screen.findByRole("button", { name: "Salvar e próximo" });
+    expect(primaryButton).toBeDisabled();
+
+    const tooltipTrigger = primaryButton.parentElement;
+    expect(tooltipTrigger).toHaveAttribute(
+      "aria-label",
+      "Salvar e próximo indisponível: Defina Concordo ou Discordo para continuar.",
+    );
+
+    fireEvent.focus(tooltipTrigger);
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
+        "Defina Concordo ou Discordo para continuar.",
+      );
+    });
+  });
+
+  it("explica quando falta uma região obrigatória", async () => {
+    stubViewport(false);
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{
+        ...exam.diagnoses[0],
+        region_required_missing: true,
+        review_status: "confirmed",
+      }],
+    });
+    render(<ExamReviewPage />);
+
+    const primaryButton = await screen.findByRole("button", { name: "Salvar e próximo" });
+    expect(primaryButton).toBeDisabled();
+
+    const tooltipTrigger = primaryButton.parentElement;
+    fireEvent.focus(tooltipTrigger);
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
+        "Marque a região no ECG para continuar.",
+      );
+    });
+  });
+
+  it("não adiciona tooltip quando Salvar e próximo está habilitado", async () => {
+    stubViewport(false);
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }],
+    });
+    render(<ExamReviewPage />);
+
+    const primaryButton = await screen.findByRole("button", { name: "Salvar e próximo" });
+    expect(primaryButton).toBeEnabled();
+    expect(primaryButton.closest('[data-slot="tooltip-trigger"]')).toBeNull();
+  });
+
   it("expande e recolhe a navegação somente após a intenção de hover", async () => {
     stubViewport(false);
     render(<ExamReviewPage />);

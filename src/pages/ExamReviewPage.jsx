@@ -579,6 +579,14 @@ export default function ExamReviewPage() {
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
+  const primaryDisabledReason = usesDailyFlow && !requiredDecisionComplete
+    ? requiredDiagnoses.some(
+      (diagnosis) =>
+        getDiagnosisReviewStatus(diagnosis) !== "pending" && diagnosis.region_required_missing,
+    )
+      ? "Marque a região no ECG para continuar."
+      : "Defina Concordo ou Discordo para continuar."
+    : null;
 
   function blockValidationInteraction(event) {
     if (!isSidebarExpanded) return;
@@ -747,6 +755,7 @@ export default function ExamReviewPage() {
         canValidate={requiredDecisionComplete}
         isBusy={isBusy}
         isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
+        primaryDisabledReason={primaryDisabledReason}
         primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
       />
     </div>

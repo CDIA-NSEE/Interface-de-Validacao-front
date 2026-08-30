@@ -208,9 +208,11 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByTestId("optional-diagnoses-scroll-boundary")).toHaveClass("max-h-[min(32svh,20rem)]", "grid-rows-[minmax(0,1fr)]");
     expect(screen.getByTestId("optional-diagnoses-scroll")).toHaveClass("min-h-0");
 
-    fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
+    const firstOptionalTrigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    fireEvent.click(within(firstOptionalTrigger).getByText("Aguardando decisão"));
     expect(screen.getAllByRole("button", { name: "Concordo" })).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(2);
+    expect(firstOptionalTrigger).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.click(screen.getByRole("button", { name: /Sobrecarga atrial esquerda/ }));
     expect(screen.getAllByRole("button", { name: "Concordo" })).toHaveLength(2);
@@ -273,7 +275,10 @@ describe("DiagnosisPanel", () => {
     const onRemoveRegion = vi.fn();
     const onReview = vi.fn().mockResolvedValue(true);
     const optional = originalDiagnosis(2, "Bloqueio de ramo direito", {
-      regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
+      regions: [
+        { id: 9, x: 10, y: 20, width: 30, height: 15 },
+        { id: 10, x: 50, y: 35, width: 20, height: 10 },
+      ],
     });
     const doctorAdded = {
       ...originalDiagnosis(3, "Fibrilação atrial"),
@@ -290,7 +295,8 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
-    expect(screen.getByText("1 área marcada")).toBeVisible();
+    expect(screen.getByText("2 áreas marcadas")).toBeVisible();
+    expect(screen.getByLabelText("2 áreas marcadas")).toBeVisible();
     fireEvent.click(screen.getAllByRole("button", { name: "Concordo" })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
@@ -304,6 +310,23 @@ describe("DiagnosisPanel", () => {
     within(doctorDecision).getAllByRole("button").forEach((button) => expect(button).toBeDisabled());
     fireEvent.click(screen.getByRole("button", { name: "Remover diagnóstico" }));
     expect(onRemove).toHaveBeenCalledWith(3);
+  });
+
+  it("expõe o nome acessível singular da região marcada", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal", {
+            regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
+          }),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("1 área marcada")).toBeVisible();
   });
 
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
@@ -336,7 +359,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
   });
 
-  it("comunica a decisão somente pelo botão selecionado e destaca região obrigatória", () => {
+  it("comunica a decisão pelo badge padronizado e pelo botão selecionado", () => {
     render(
       <DiagnosisPanelHarness
         {...createProps({ options: [] })}
@@ -351,9 +374,35 @@ describe("DiagnosisPanel", () => {
 
     const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
     expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(dailyPanel).getAllByText("Concordo")).toHaveLength(1);
+    expect(within(dailyPanel).getByText("Concordo", { selector: '[data-slot="badge"]' })).toBeVisible();
     expect(within(dailyPanel).getByText("Área no ECG")).toBeVisible();
     expect(within(dailyPanel).getByText("Obrigatória para este diagnóstico.")).toBeVisible();
+  });
+
+  it("usa o mesmo badge para estados rejeitado e confirmado", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" }),
+          originalDiagnosis(2, "Bloqueio de ramo direito", { review_status: "confirmed" }),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
+    expect(within(dailyPanel).getByText("Discordo", { selector: '[data-slot="badge"]' })).toHaveAttribute(
+      "data-variant",
+      "destructive",
+    );
+
+    const optionalTrigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    expect(within(optionalTrigger).getByText("Concordo", { selector: '[data-slot="badge"]' })).toHaveAttribute(
+      "data-variant",
+      "success",
+    );
   });
 
   it("preserva todos os diagnósticos originais na revalidação geral", () => {
