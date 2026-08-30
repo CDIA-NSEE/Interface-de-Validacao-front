@@ -107,9 +107,10 @@ describe("DiagnosisPanel", () => {
     expect(aiBadge).toBeVisible();
     expect(pendingStatus.closest("[data-slot='card-title']")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleName("IA concordou");
+    expect(aiBadge).toHaveAttribute("data-variant", "ai");
     expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleDescription(
-      "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.",
+      "Sugestão informativa; a decisão permanece médica.",
     );
     expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "false");
     expect(within(dailyPanel).getByRole("button", { name: "Discordo" })).toHaveAttribute("aria-pressed", "false");
@@ -119,7 +120,7 @@ describe("DiagnosisPanel", () => {
     fireEvent.focus(aiBadge);
     await waitFor(() => {
       expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
-        "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.",
+        "Sugestão informativa; a decisão permanece médica.",
       );
     });
   });
@@ -329,6 +330,34 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByLabelText("1 área marcada")).toBeVisible();
   });
 
+  it("mantém o texto original legível com hierarquia visual secundária", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal", {
+            original_text: "RITMO SINUSAL DO TRAÇADO ORIGINAL",
+          }),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const original = screen.getByRole("button", {
+      name: "Original: RITMO SINUSAL DO TRAÇADO ORIGINAL",
+    });
+    expect(within(original).getByText("Original:")).toHaveClass(
+      "text-[0.7rem]",
+      "text-muted-foreground/80",
+    );
+    expect(original.firstElementChild).toHaveClass(
+      "text-xs",
+      "font-normal",
+      "text-muted-foreground",
+    );
+  });
+
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
     render(
       <DiagnosisPanelHarness
@@ -348,7 +377,9 @@ describe("DiagnosisPanel", () => {
     expect(within(dailyPanel).queryByText("Um único diagnóstico obrigatório para esta validação.")).not.toBeInTheDocument();
     expect(within(dailyPanel).getByText("Diagnóstico do dia")).toBeVisible();
     expect(within(dailyPanel).getAllByTestId("diagnosis-card")).toHaveLength(1);
-    expect(within(dailyPanel).getByText("Ritmo sinusal")).toBeVisible();
+    expect(
+      within(dailyPanel).getByTitle("Texto padrão: Ritmo sinusal"),
+    ).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText("Diagnósticos adicionais")).toBeVisible();
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
@@ -374,6 +405,7 @@ describe("DiagnosisPanel", () => {
 
     const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
     expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(dailyPanel).getByRole("button", { name: "Discordo" })).toHaveAttribute("aria-pressed", "false");
     expect(within(dailyPanel).getByText("Concordo", { selector: '[data-slot="badge"]' })).toBeVisible();
     expect(within(dailyPanel).getByText("Área no ECG")).toBeVisible();
     expect(within(dailyPanel).getByText("Obrigatória para este diagnóstico.")).toBeVisible();
@@ -393,6 +425,8 @@ describe("DiagnosisPanel", () => {
     );
 
     const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
+    expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(dailyPanel).getByRole("button", { name: "Discordo" })).toHaveAttribute("aria-pressed", "true");
     expect(within(dailyPanel).getByText("Discordo", { selector: '[data-slot="badge"]' })).toHaveAttribute(
       "data-variant",
       "destructive",
@@ -421,8 +455,14 @@ describe("DiagnosisPanel", () => {
     expect(within(generalPanel).getByRole("heading", { name: "Revalidação geral" })).toBeVisible();
     expect(within(generalPanel).getByText("Revise todos os diagnósticos originais deste exame.")).toBeVisible();
     expect(within(generalPanel).getAllByTestId("diagnosis-card")).toHaveLength(2);
-    expect(within(generalPanel).getByText("Ritmo sinusal")).toBeVisible();
-    expect(within(generalPanel).getByText("Bloqueio de ramo direito")).toBeVisible();
+    expect(
+      within(generalPanel).getByTitle("Texto padrão: Ritmo sinusal"),
+    ).toBeVisible();
+    expect(
+      within(generalPanel).getByTitle(
+        "Texto padrão: Bloqueio de ramo direito",
+      ),
+    ).toBeVisible();
   });
 
   it("mantém decisões em ToggleGroup controlado e exige salvar a discordância", async () => {

@@ -584,7 +584,7 @@ export default function ExamReviewPage() {
       (diagnosis) =>
         getDiagnosisReviewStatus(diagnosis) !== "pending" && diagnosis.region_required_missing,
     )
-      ? "Marque a região no ECG para continuar."
+      ? "Marque a área obrigatória no ECG para continuar."
       : "Defina Concordo ou Discordo para continuar."
     : null;
 

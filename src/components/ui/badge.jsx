@@ -20,6 +20,8 @@ const badgeVariants = cva(
           "border-warning/30 bg-warning/18 text-warning-subtle-foreground focus-visible:ring-warning/25 [a]:hover:bg-warning/26",
         info:
           "border-info/25 bg-info/14 text-info-subtle-foreground focus-visible:ring-info/25 [a]:hover:bg-info/22",
+        ai:
+          "h-4 border-info/15 bg-info/8 px-1.5 py-0 text-[0.7rem] font-normal text-info-subtle-foreground focus-visible:ring-info/20 [a]:hover:bg-info/14",
         outline:
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:

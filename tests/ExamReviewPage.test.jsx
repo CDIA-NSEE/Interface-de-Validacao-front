@@ -197,7 +197,7 @@ describe("ExamReviewPage", () => {
     fireEvent.focus(tooltipTrigger);
     await waitFor(() => {
       expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
-        "Marque a região no ECG para continuar.",
+        "Marque a área obrigatória no ECG para continuar.",
       );
     });
   });

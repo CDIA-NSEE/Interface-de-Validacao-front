@@ -53,7 +53,7 @@ const REVIEW_LABELS = {
 };
 
 const AI_AGREEMENT_DESCRIPTION =
-  "A IA concordou com este diagnóstico. A avaliação médica continua obrigatória.";
+  "Sugestão informativa; a decisão permanece médica.";
 
 function AiAgreementBadge() {
   const descriptionId = useId();
@@ -67,7 +67,7 @@ function AiAgreementBadge() {
               aria-describedby={descriptionId}
               aria-label="IA concordou"
               tabIndex={0}
-              variant="info"
+              variant="ai"
             />
           }
         >
@@ -187,7 +187,10 @@ function DiagnosisDetails({
               />
             }
           >
-            Original: {originalPreview}
+            <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
+              <span className="text-[0.7rem] text-muted-foreground/80">Original:</span>{" "}
+              {originalPreview}
+            </span>
           </TooltipTrigger>
           <TooltipContent>{originalText}</TooltipContent>
         </Tooltip>
