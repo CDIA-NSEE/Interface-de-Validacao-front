@@ -33,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -84,6 +83,10 @@ function AiAgreementBadge() {
 
 function regionCountLabel(count) {
   return count === 1 ? "1 área" : `${count} áreas`;
+}
+
+function markedRegionCountLabel(count) {
+  return count === 1 ? "1 área marcada" : `${count} áreas marcadas`;
 }
 
 function reviewBadgeVariant(status) {
@@ -197,8 +200,8 @@ function DiagnosisDetails({
       {regions.length ? (
         <div className="flex flex-col gap-2" aria-label={regionCountLabel(regions.length)}>
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <MapPinned aria-hidden="true" data-icon="inline-start" />
-            {regionCountLabel(regions.length)} no ECG
+            <Check aria-hidden="true" data-icon="inline-start" />
+            {markedRegionCountLabel(regions.length)}
           </div>
           {regions.map((region, index) => {
             const regionReference = getRegionReference(diagnosisReference, index);
@@ -283,6 +286,7 @@ function DiagnosisCard({
   diagnosis,
   diagnosisReference,
   isBusy,
+  isDailyDiagnosis,
   isRequired,
   onEditRegion,
   onRemove,
@@ -304,14 +308,17 @@ function DiagnosisCard({
       : null;
 
   return (
-    <Card className={cn("gap-3 overflow-visible", isRegionTarget && "ring-2")} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
-      <CardHeader>
+    <Card className={cn("gap-2.5 overflow-visible", isRegionTarget && "ring-2")} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+      <CardHeader className="gap-1.5">
         <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
-        <CardTitle className="flex min-w-0 items-start gap-2">
+        <CardTitle className="flex min-w-0 flex-wrap items-center gap-2">
           {diagnosisReference ? <Badge className="mt-0.5" variant="outline">{diagnosisReference}</Badge> : null}
-          <span className="min-w-0 break-words" title={`Texto padrão: ${standardText}`}>{standardText}</span>
+          <span className="min-w-0 flex-1 break-words" title={`Texto padrão: ${standardText}`}>{standardText}</span>
+          {isDailyDiagnosis && statusDescription ? (
+            <Badge className="shrink-0" variant="secondary">{statusDescription}</Badge>
+          ) : null}
         </CardTitle>
-        {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
+        {!isDailyDiagnosis && statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
       </CardHeader>
       <CardContent>
         <DiagnosisDetails
@@ -354,6 +361,7 @@ export default function DiagnosisPanel({
   reviewDrafts = {},
   selectedRegion,
 }) {
+  const addDiagnosisContentId = useId();
   const [name, setName] = useState("");
   const [isAddDiagnosisOpen, setIsAddDiagnosisOpen] = useState(false);
   const [expandedDiagnosisId, setExpandedDiagnosisId] = useState(null);
@@ -400,6 +408,11 @@ export default function DiagnosisPanel({
     onReviewDraftChange?.(diagnosisId, draft);
   }
 
+  function handleAddDiagnosisToggle(open) {
+    setIsAddDiagnosisOpen(open);
+    if (open && !isSecondaryOpen) onSecondaryToggle?.(true);
+  }
+
   async function handleSelectDiagnosis(diagnosisName) {
     setName(diagnosisName || "");
     if (!diagnosisName) return;
@@ -417,7 +430,6 @@ export default function DiagnosisPanel({
     }
   }
 
-  const secondarySummary = `${optionalDiagnoses.length} no ECG · ${doctorDiagnoses.length} adicionados`;
   const sharedCardProps = {
     activeRegionTarget,
     aiModeEnabled,
@@ -440,24 +452,37 @@ export default function DiagnosisPanel({
           </div>
         ) : null}
         {requiredDiagnoses.length ? requiredDiagnoses.map((diagnosis) => (
-          <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isRequired key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
+          <DiagnosisCard {...sharedCardProps} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isDailyDiagnosis={!isGeneralReviewDay} isRequired key={diagnosis.id} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
         )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}
       </section>
 
       {secondaryDiagnoses.length || options.length ? (
         <Collapsible onOpenChange={onSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden" size="sm">
-            <CardHeader>
-              <CardTitle>Diagnósticos adicionais</CardTitle>
-              <CardDescription>{secondarySummary}</CardDescription>
-              <CardAction>
-                <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} size="icon-sm" type="button" variant="ghost" />}>
-                  <ChevronDown aria-hidden="true" className={cn("transition-transform", isSecondaryOpen && "rotate-180")} />
-                </CollapsibleTrigger>
-              </CardAction>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent className="border-t px-0 py-0">
+              <CardHeader>
+                <CardTitle>Diagnósticos adicionais</CardTitle>
+                <CardAction className="flex items-center gap-1">
+                  {options.length ? (
+                    <Button
+                      aria-controls={addDiagnosisContentId}
+                      aria-expanded={isAddDiagnosisOpen}
+                      aria-label="Adicionar diagnóstico"
+                      onClick={() => handleAddDiagnosisToggle(!isAddDiagnosisOpen)}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Plus aria-hidden="true" data-icon="inline-start" />
+                      Adicionar
+                    </Button>
+                  ) : null}
+                  <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} size="icon-sm" type="button" variant="ghost" />}>
+                    <ChevronDown aria-hidden="true" className={cn("transition-transform", isSecondaryOpen && "rotate-180")} />
+                  </CollapsibleTrigger>
+                </CardAction>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="border-t px-0 py-0">
                 {secondaryDiagnoses.length ? (
                   <div className="grid max-h-[min(32svh,20rem)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
                     <ScrollArea className="min-h-0" data-testid="optional-diagnoses-scroll">
@@ -472,13 +497,11 @@ export default function DiagnosisPanel({
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
                           <AccordionItem className="px-3" key={diagnosis.id} value={diagnosisId}>
-                            <AccordionTrigger className="gap-2 py-3 hover:no-underline">
-                              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                                <span className="flex min-w-0 items-start gap-2">
-                                  {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
-                                  <span className="min-w-0 break-words text-left">{standardText}</span>
-                                </span>
-                                <Badge className="w-fit" variant={reviewBadgeVariant(status)}>{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</Badge>
+                            <AccordionTrigger className="gap-2 py-2.5 hover:no-underline">
+                              <span className="flex min-w-0 flex-1 items-center gap-2">
+                                {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
+                                <span className="min-w-0 flex-1 break-words text-left">{standardText}</span>
+                                <Badge className="shrink-0" variant={reviewBadgeVariant(status)}>{REVIEW_LABELS[status] || REVIEW_LABELS.pending}</Badge>
                               </span>
                             </AccordionTrigger>
                             <AccordionContent className="flex flex-col gap-3 border-t pt-3">
@@ -493,30 +516,24 @@ export default function DiagnosisPanel({
                   </div>
                 ) : null}
 
-                {secondaryDiagnoses.length && options.length ? <Separator /> : null}
-
                 {options.length ? (
-                  <Collapsible onOpenChange={setIsAddDiagnosisOpen} open={isAddDiagnosisOpen}>
-                    <div className="p-2">
-                      <CollapsibleTrigger render={<Button aria-label="Adicionar diagnóstico" className="w-fit" size="sm" type="button" variant="ghost" />}>
-                        <Plus aria-hidden="true" data-icon="inline-start" />
-                        Adicionar diagnóstico
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <Field className="pt-2">
+                  <Collapsible onOpenChange={handleAddDiagnosisToggle} open={isAddDiagnosisOpen}>
+                    <CollapsibleContent id={addDiagnosisContentId}>
+                      <div className="border-t p-2">
+                        <Field>
                           <FieldLabel className="sr-only" htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
                           <Select disabled={isBusy} items={selectItems} onValueChange={handleSelectDiagnosis} value={name || null}>
                             <SelectTrigger className="w-full" id="new-diagnosis-select"><SelectValue placeholder="Selecione um diagnóstico padronizado" /></SelectTrigger>
                             <SelectContent align="start"><SelectGroup>{selectItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
                           </Select>
                         </Field>
-                      </CollapsibleContent>
-                    </div>
+                      </div>
+                    </CollapsibleContent>
                   </Collapsible>
                 ) : null}
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
         </Collapsible>
       ) : null}
 

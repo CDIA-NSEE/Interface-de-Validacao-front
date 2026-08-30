@@ -102,8 +102,10 @@ describe("DiagnosisPanel", () => {
 
     const dailyPanel = screen.getByRole("region", { name: "Diagnóstico do dia" });
     const aiBadge = within(dailyPanel).getByLabelText("IA concordou");
+    const pendingStatus = within(dailyPanel).getByText("Aguardando decisão");
 
     expect(aiBadge).toBeVisible();
+    expect(pendingStatus.closest("[data-slot='card-title']")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleDescription(
@@ -288,6 +290,7 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
+    expect(screen.getByText("1 área marcada")).toBeVisible();
     fireEvent.click(screen.getAllByRole("button", { name: "Concordo" })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
@@ -325,7 +328,11 @@ describe("DiagnosisPanel", () => {
     expect(within(dailyPanel).getByText("Ritmo sinusal")).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText("Diagnósticos adicionais")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toBeVisible();
+    const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
+    expect(addDiagnosisButton).toBeVisible();
+    expect(addDiagnosisButton).toHaveTextContent("Adicionar");
+    expect(addDiagnosisButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("1 no ECG · 0 adicionados")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
   });
 

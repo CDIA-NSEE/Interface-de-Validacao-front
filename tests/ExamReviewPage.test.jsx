@@ -324,6 +324,10 @@ describe("ExamReviewPage", () => {
     ).toBeTruthy();
     expect(trigger.querySelector(".lucide-info")).toBeTruthy();
     expect(screen.getByText("Nascimento")).toBeVisible();
+    const clinicalGrid = screen.getByText("Nascimento").closest("dl");
+    expect(clinicalGrid).toHaveClass("grid-cols-3");
+    expect(clinicalGrid).toContainElement(screen.getByText("58 anos"));
+    expect(clinicalGrid).toContainElement(screen.getByText("Feminino"));
     expect(screen.getByText("17/05/1968")).toBeVisible();
     expect(screen.getByText("58 anos")).toBeVisible();
     expect(screen.getByText("Feminino")).toBeVisible();
