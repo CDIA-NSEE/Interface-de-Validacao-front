@@ -767,11 +767,14 @@ export default function ExamReviewPage() {
               <Info aria-hidden="true" data-icon="inline-start" />
               Mais informações
             </span>
-            <ChevronDown
+            <span
               aria-hidden="true"
-              className={isMoreInformationOpen ? "rotate-180 transition-transform" : "transition-transform"}
-              data-icon="inline-end"
-            />
+              className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"
+            >
+              <ChevronDown
+                className={isMoreInformationOpen ? "rotate-180 transition-transform" : "transition-transform"}
+              />
+            </span>
           </CollapsibleTrigger>
         </CardHeader>
         <CollapsibleContent>

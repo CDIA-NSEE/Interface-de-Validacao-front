@@ -590,7 +590,7 @@ export default function DiagnosisPanel({
       {secondaryDiagnoses.length || options.length ? (
         <Collapsible onOpenChange={onSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden" size="sm">
-              <CardHeader>
+              <CardHeader className="items-center">
                 <CardTitle>Diagnósticos adicionais</CardTitle>
                 <CardAction className="flex items-center gap-1">
                   {options.length ? (
@@ -608,7 +608,7 @@ export default function DiagnosisPanel({
                       Adicionar
                     </Button>
                   ) : null}
-                  <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} size="icon-sm" type="button" variant="ghost" />}>
+                  <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} className="mr-px" size="icon-sm" type="button" variant="ghost" />}>
                     <ChevronDown aria-hidden="true" className={cn("transition-transform", isSecondaryOpen && "rotate-180")} />
                   </CollapsibleTrigger>
                 </CardAction>
