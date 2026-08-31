@@ -98,6 +98,10 @@ function regionLabelFor(diagnosis) {
   return diagnosis?.standard_text || diagnosis?.name || "diagnóstico";
 }
 
+function savedRegionKey(diagnosisId, region, index) {
+  return `${diagnosisId}:${region.id ?? `legacy-${index}`}`;
+}
+
 function useCompactReviewLayout() {
   const compactMediaQuery = `(max-width: ${REVIEW_MOBILE_BREAKPOINT - 1}px)`;
   const [isCompact, setIsCompact] = useState(
@@ -141,7 +145,12 @@ export default function ExamReviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
-  const [saveFeedback, setSaveFeedback] = useState("");
+  const [notesSaveState, setNotesSaveState] = useState({ status: "idle", message: "" });
+  const [decisionFeedbacks, setDecisionFeedbacks] = useState({});
+  const [regionErrors, setRegionErrors] = useState({});
+  const [hoveredRegionKey, setHoveredRegionKey] = useState(null);
+  const [selectedRegionKey, setSelectedRegionKey] = useState(null);
+  const decisionFeedbackTimersRef = useRef(new Map());
   const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
@@ -169,7 +178,11 @@ export default function ExamReviewPage() {
       setIsReviewSheetOpen(false);
       setDiagnosisReviewDrafts({});
       setIsExitConfirmOpen(false);
-      setSaveFeedback("");
+      setNotesSaveState({ status: "idle", message: "" });
+      setDecisionFeedbacks({});
+      setRegionErrors({});
+      setHoveredRegionKey(null);
+      setSelectedRegionKey(null);
       if (examData.status_validation === "nao_validado") {
         const updatedExam = await updateExamStatus(id, "em_validacao");
         setExam(updatedExam);
@@ -185,6 +198,11 @@ export default function ExamReviewPage() {
       setIsLoading(false);
     }
   }, [id]);
+
+  useEffect(() => () => {
+    decisionFeedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    decisionFeedbackTimersRef.current.clear();
+  }, []);
 
   useEffect(() => {
     loadExam();
@@ -268,7 +286,6 @@ export default function ExamReviewPage() {
   async function runAction(action) {
     setIsBusy(true);
     setError("");
-    setSaveFeedback("");
     try {
       const updatedExam = await action();
       if (updatedExam) {
@@ -304,21 +321,22 @@ export default function ExamReviewPage() {
       };
     });
 
-    if (wasAdded && addedDiagnosis?.region_required_missing) {
-      handleStartRegion(addedDiagnosis);
-    }
-
-    return wasAdded;
+    return wasAdded ? addedDiagnosis : null;
   }
 
   async function handleRemoveDiagnosis(diagnosisId) {
-    await runAction(async () => {
+    const wasRemoved = await runAction(async () => {
       await removeDiagnosis(id, diagnosisId);
       return {
         ...exam,
         diagnoses: exam.diagnoses.filter((diagnosis) => diagnosis.id !== diagnosisId),
       };
     });
+    if (wasRemoved) {
+      if (selectedRegionKey?.startsWith(`${diagnosisId}:`)) setSelectedRegionKey(null);
+      if (hoveredRegionKey?.startsWith(`${diagnosisId}:`)) setHoveredRegionKey(null);
+    }
+    return wasRemoved;
   }
 
   function handleStartRegion(diagnosis, region = null) {
@@ -330,6 +348,7 @@ export default function ExamReviewPage() {
       region,
     });
     setSelectedRegion(region || null);
+    setSelectedRegionKey(null);
     if (isCompactLayout) {
       setIsReviewSheetOpen(false);
     }
@@ -338,6 +357,7 @@ export default function ExamReviewPage() {
   function handleCancelRegionSelection() {
     setActiveRegionTarget(null);
     setSelectedRegion(null);
+    setSelectedRegionKey(null);
     if (isCompactLayout) {
       setIsReviewSheetOpen(true);
     }
@@ -349,25 +369,26 @@ export default function ExamReviewPage() {
       return;
     }
 
-    if (!activeRegionTarget) {
-      setSelectedRegion(region);
-      setIsSecondaryPanelOpen(true);
-      return;
-    }
+    if (!activeRegionTarget) return;
 
     const target = activeRegionTarget;
+    let savedDiagnosis = null;
     const wasSaved = await runAction(
       async () => {
-        const updatedDiagnosis = target.regionId
+        savedDiagnosis = target.regionId
           ? await updateDiagnosisRegion(target.diagnosisId, target.regionId, region)
           : await addDiagnosisRegion(target.diagnosisId, region);
-        return replaceDiagnosis(exam, updatedDiagnosis);
+        return replaceDiagnosis(exam, savedDiagnosis);
       }
     );
 
     if (wasSaved) {
+      const savedRegions = savedDiagnosis?.regions || [];
+      const savedRegionId = target.regionId || savedRegions.at(-1)?.id;
       setActiveRegionTarget(null);
       setSelectedRegion(null);
+      setRegionErrors((current) => ({ ...current, [String(target.diagnosisId)]: "" }));
+      if (savedRegionId) setSelectedRegionKey(`${target.diagnosisId}:${savedRegionId}`);
     }
 
     if (isCompactLayout) {
@@ -377,14 +398,22 @@ export default function ExamReviewPage() {
 
   async function handleRemoveRegion(diagnosisId, regionId) {
     if (!regionId) return;
-
-    await runAction(
-      async () => {
-        const updatedDiagnosis = await removeDiagnosisRegion(diagnosisId, regionId);
-        return replaceDiagnosis(exam, updatedDiagnosis);
-      },
-      "Área removida.",
-    );
+    setIsBusy(true);
+    setRegionErrors((current) => ({ ...current, [String(diagnosisId)]: "" }));
+    try {
+      const updatedDiagnosis = await removeDiagnosisRegion(diagnosisId, regionId);
+      setExam(replaceDiagnosis(exam, updatedDiagnosis));
+      setSelectedRegionKey(null);
+    } catch (requestError) {
+      setRegionErrors((current) => ({
+        ...current,
+        [String(diagnosisId)]: [400, 409].includes(requestError?.response?.status)
+          ? "Este diagnóstico exige ao menos uma área."
+          : requestError?.response?.data?.detail || "Não foi possível remover a área.",
+      }));
+    } finally {
+      setIsBusy(false);
+    }
   }
 
   async function handleReviewDiagnosis(diagnosisId, reviewStatus, reviewNotes = "") {
@@ -395,9 +424,41 @@ export default function ExamReviewPage() {
       return false;
     }
 
-    return runAction(
-      () => reviewDailyDiagnosis(diagnosisId, reviewStatus, reviewNotes),
-    );
+    const key = String(diagnosisId);
+    for (const timerKey of [`saving:${key}`, `clear:${key}`]) {
+      const timer = decisionFeedbackTimersRef.current.get(timerKey);
+      if (timer) window.clearTimeout(timer);
+      decisionFeedbackTimersRef.current.delete(timerKey);
+    }
+    setIsBusy(true);
+    setError("");
+    setDecisionFeedbacks((current) => ({ ...current, [key]: null }));
+    const savingTimer = window.setTimeout(() => {
+      setDecisionFeedbacks((current) => ({ ...current, [key]: { type: "pending", message: "Salvando…" } }));
+      decisionFeedbackTimersRef.current.delete(`saving:${key}`);
+    }, 150);
+    decisionFeedbackTimersRef.current.set(`saving:${key}`, savingTimer);
+    try {
+      const updatedExam = await reviewDailyDiagnosis(diagnosisId, reviewStatus, reviewNotes);
+      setExam(updatedExam);
+      window.clearTimeout(savingTimer);
+      setDecisionFeedbacks((current) => ({ ...current, [key]: { type: "success", message: "✓ Decisão salva" } }));
+      const clearTimer = window.setTimeout(() => {
+        setDecisionFeedbacks((current) => ({ ...current, [key]: null }));
+        decisionFeedbackTimersRef.current.delete(`clear:${key}`);
+      }, 1800);
+      decisionFeedbackTimersRef.current.set(`clear:${key}`, clearTimer);
+      return true;
+    } catch {
+      window.clearTimeout(savingTimer);
+      setDecisionFeedbacks((current) => ({
+        ...current,
+        [key]: { type: "error", message: "Não foi possível salvar a decisão. Tente novamente." },
+      }));
+      return false;
+    } finally {
+      setIsBusy(false);
+    }
   }
 
   function pendingSaveError() {
@@ -417,14 +478,24 @@ export default function ExamReviewPage() {
       return false;
     }
 
-    return runAction(() => saveExamDraft(id, { notes }));
+    setIsBusy(true);
+    setError("");
+    setNotesSaveState({ status: "saving", message: "Salvando…" });
+    try {
+      const updatedExam = await saveExamDraft(id, { notes });
+      setExam(updatedExam);
+      setNotesSaveState({ status: "saved", message: "✓ Observações salvas" });
+      return true;
+    } catch {
+      setNotesSaveState({ status: "error", message: "Não foi possível salvar as observações. Tente novamente." });
+      return false;
+    } finally {
+      setIsBusy(false);
+    }
   }
 
   async function handleSave() {
-    const wasSaved = await saveCurrentDraft();
-    if (wasSaved) {
-      setSaveFeedback("Alterações salvas.");
-    }
+    await saveCurrentDraft();
   }
 
   function handleReturnHome() {
@@ -513,25 +584,31 @@ export default function ExamReviewPage() {
           const regionReference = getRegionReference(diagnosisReference, index);
           const diagnosisLabel = regionLabelFor(diagnosis);
 
+          const regionKey = savedRegionKey(diagnosis.id, region, index);
           return {
             ...region,
             ...getDiagnosisRegionVisual(
               diagnosis,
               diagnosisReviewDrafts[String(diagnosis.id)]?.isOpen ? "rejected" : null,
+              { isRequired: diagnosisReference === "D1" },
             ),
+            regionKey,
             diagnosisId: diagnosis.id,
             diagnosisReference,
-            isActive: activeRegionTarget?.diagnosisId === diagnosis.id,
+            isHovered: hoveredRegionKey === regionKey,
+            isSelected: selectedRegionKey === regionKey,
+            isDimmed: Boolean(selectedRegionKey && selectedRegionKey !== regionKey),
             label: regionReference ? `${regionReference} · ${diagnosisLabel}` : diagnosisLabel,
             regionReference,
           };
         });
       }),
     [
-      activeRegionTarget?.diagnosisId,
       diagnosisGroups,
       diagnosisReferences,
       diagnosisReviewDrafts,
+      hoveredRegionKey,
+      selectedRegionKey,
     ],
   );
   const activeRegionDiagnosis = useMemo(
@@ -545,6 +622,7 @@ export default function ExamReviewPage() {
     ? getDiagnosisRegionVisual(
         activeRegionDiagnosis,
         diagnosisReviewDrafts[String(activeRegionDiagnosis.id)]?.isOpen ? "rejected" : null,
+        { isRequired: getDiagnosisReference(diagnosisReferences, activeRegionDiagnosis.id) === "D1" },
       )
     : null;
   const activeRegionReference = useMemo(() => {
@@ -557,8 +635,13 @@ export default function ExamReviewPage() {
       activeRegionTarget,
     );
   }, [activeRegionDiagnosis, activeRegionTarget, diagnosisReferences]);
+  const activeDiagnosisReference = activeRegionDiagnosis
+    ? getDiagnosisReference(diagnosisReferences, activeRegionDiagnosis.id)
+    : null;
   const activeSelectionLabel = activeRegionTarget
-    ? `Marcando ${activeRegionReference || "área"}: ${activeRegionTarget.label}`
+    ? activeRegionTarget.regionId
+      ? `Redesenhando ${activeRegionReference || "área"} · Arraste sobre o ECG · Esc para cancelar`
+      : `Marcando área para ${activeDiagnosisReference || "diagnóstico"} · Arraste sobre o ECG · Esc para cancelar`
     : "";
   const requiredDecisionComplete =
     !validationContext?.is_configured ||
@@ -575,9 +658,8 @@ export default function ExamReviewPage() {
       return (draft.note || "") !== (diagnosis?.review_notes || "");
     },
   );
-  const hasUnassignedRegion = Boolean(selectedRegion && !activeRegionTarget);
   const hasUnsavedChanges =
-    notes !== (exam?.draft_notes || "") || hasUnassignedRegion || hasUnsavedDiagnosisReview;
+    notes !== (exam?.draft_notes || "") || hasUnsavedDiagnosisReview;
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
   const primaryDisabledReason = usesDailyFlow && !requiredDecisionComplete
     ? requiredDiagnoses.some(
@@ -592,6 +674,14 @@ export default function ExamReviewPage() {
     if (!isSidebarExpanded) return;
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  function handleSavedRegionHover(regionOrKey) {
+    setHoveredRegionKey(typeof regionOrKey === "string" ? regionOrKey : regionOrKey?.regionKey || null);
+  }
+
+  function handleSavedRegionSelect(regionOrKey) {
+    setSelectedRegionKey(typeof regionOrKey === "string" ? regionOrKey : regionOrKey?.regionKey || null);
   }
 
   function handleSidebarOpenChange(open, options = {}) {
@@ -624,12 +714,18 @@ export default function ExamReviewPage() {
       dailyStandardDiagnosis={validationContext?.active_standard_diagnosis}
       diagnoses={exam.diagnoses}
       diagnosisReferences={diagnosisReferences}
+      decisionFeedbacks={decisionFeedbacks}
+      hoveredRegionKey={hoveredRegionKey}
       options={diagnosisOptions}
       reviewDrafts={diagnosisReviewDrafts}
+      regionErrors={regionErrors}
+      selectedRegionKey={selectedRegionKey}
       onAdd={handleAddDiagnosis}
       onEditRegion={handleStartRegion}
       onRemove={handleRemoveDiagnosis}
       onRemoveRegion={handleRemoveRegion}
+      onRegionHover={handleSavedRegionHover}
+      onRegionSelect={handleSavedRegionSelect}
       onReview={handleReviewDiagnosis}
       onReviewDraftChange={handleDiagnosisReviewDraftChange}
       onStartRegion={handleStartRegion}
@@ -637,8 +733,6 @@ export default function ExamReviewPage() {
       isGeneralReviewDay={validationContext?.is_general_review_day}
       isSecondaryOpen={isSecondaryPanelOpen}
       onSecondaryToggle={setIsSecondaryPanelOpen}
-      selectedRegion={selectedRegion}
-      onRegionConsumed={() => setSelectedRegion(null)}
     />
   );
 
@@ -724,12 +818,6 @@ export default function ExamReviewPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
-      {saveFeedback ? (
-        <Alert role="status" variant="success">
-          <AlertTitle>Exame atualizado</AlertTitle>
-          <AlertDescription>{saveFeedback}</AlertDescription>
-        </Alert>
-      ) : null}
       {diagnosisPanel}
       {clinicalInformation}
       {moreInformation}
@@ -757,6 +845,8 @@ export default function ExamReviewPage() {
         isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
         primaryDisabledReason={primaryDisabledReason}
         primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
+        saveDisabled={notes === (exam?.draft_notes || "")}
+        saveLabel="Salvar observações"
       />
     </div>
   );
@@ -811,6 +901,8 @@ export default function ExamReviewPage() {
                   onRegionCancel={handleCancelRegionSelection}
                   selectedRegion={selectedRegion}
                   onRegionChange={handleRegionChange}
+                  onRegionHover={handleSavedRegionHover}
+                  onRegionSelect={handleSavedRegionSelect}
                   regions={viewerRegions}
                   selectionLabel={activeSelectionLabel}
                   selectionReference={activeRegionReference}
@@ -836,11 +928,16 @@ export default function ExamReviewPage() {
                     value={notes}
                     onChange={(event) => {
                       setNotes(event.target.value);
-                      setSaveFeedback("");
+                      setNotesSaveState({ status: "idle", message: "" });
                     }}
                     placeholder="Registre comentários gerais sobre o exame"
                     rows={2}
                   />
+                  {notesSaveState.message ? (
+                    <p className={notesSaveState.status === "error" ? "text-xs text-destructive" : "text-xs text-muted-foreground"} role={notesSaveState.status === "error" ? "alert" : "status"}>
+                      {notesSaveState.message}
+                    </p>
+                  ) : null}
                 </Field>
               </div>
             </section>

@@ -174,4 +174,51 @@ describe("EcgViewer", () => {
     expect(onRegionCancel).toHaveBeenCalledOnce();
     expect(onRegionChange).toHaveBeenCalledWith(null);
   });
+
+  it("só desenha após ativar Marcar área e permite ciclos consecutivos", () => {
+    const onRegionChange = vi.fn();
+    const { container, rerender } = renderWithTooltips(
+      <EcgViewer imageUrl="/ecg-real.png" onRegionChange={onRegionChange} />,
+    );
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    vi.spyOn(stage, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 100 });
+
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerUp(stage, { button: 0, clientX: 40, clientY: 40, pointerId: 1 });
+    expect(onRegionChange).not.toHaveBeenCalled();
+    expect(stage).not.toHaveClass("touch-none", "cursor-crosshair");
+
+    rerender(<TooltipProvider><EcgViewer imageUrl="/ecg-real.png" onRegionChange={onRegionChange} selectionLabel="Marcando área para D1" /></TooltipProvider>);
+    const activeStage = container.querySelector(".ecg-image-stage");
+    activeStage.setPointerCapture = vi.fn();
+    vi.spyOn(activeStage, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 100 });
+    expect(activeStage).toHaveClass("touch-none", "cursor-crosshair");
+
+    for (const pointerId of [2, 3]) {
+      fireEvent.pointerDown(activeStage, { button: 0, clientX: 10, clientY: 10, pointerId });
+      fireEvent.pointerUp(activeStage, { button: 0, clientX: 40, clientY: 40, pointerId });
+    }
+    expect(onRegionChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("sincroniza hover, foco e seleção das regiões salvas", () => {
+    const onRegionHover = vi.fn();
+    const onRegionSelect = vi.fn();
+    renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        onRegionHover={onRegionHover}
+        onRegionSelect={onRegionSelect}
+        regions={[{ id: 9, diagnosisId: 1, regionKey: "1:9", x: 10, y: 10, width: 20, height: 20, label: "D1.1 · Ritmo sinusal" }]}
+      />,
+    );
+
+    const region = screen.getByRole("button", { name: "D1.1 · Ritmo sinusal" });
+    fireEvent.mouseEnter(region);
+    fireEvent.focus(region);
+    fireEvent.click(region);
+    expect(onRegionHover).toHaveBeenCalledWith(expect.objectContaining({ regionKey: "1:9" }));
+    expect(onRegionSelect).toHaveBeenCalledWith(expect.objectContaining({ regionKey: "1:9" }));
+  });
 });

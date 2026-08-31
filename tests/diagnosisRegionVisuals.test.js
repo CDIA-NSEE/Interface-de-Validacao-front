@@ -13,22 +13,32 @@ test("keeps the same visual for every region of a diagnosis", () => {
   assert.deepEqual(getDiagnosisRegionVisual(diagnosis), getDiagnosisRegionVisual(diagnosis));
 });
 
-test("uses distinct status palettes for confirmed and rejected diagnoses", () => {
+test("keeps a diagnosis identity stable when its clinical decision changes", () => {
   const confirmed = getDiagnosisRegionVisual({ id: 42, review_status: "confirmed" });
   const rejected = getDiagnosisRegionVisual({ id: 42, review_status: "rejected" });
 
   assert.equal(confirmed.status, "confirmed");
   assert.equal(rejected.status, "rejected");
-  assert.notEqual(confirmed.color, rejected.color);
-  assert.notEqual(confirmed.fill, rejected.fill);
+  assert.equal(confirmed.color, rejected.color);
+  assert.equal(confirmed.fill, rejected.fill);
 });
 
-test("uses one neutral visual for pending diagnoses", () => {
+test("assigns categorical visuals by diagnosis identity", () => {
   const firstPending = getDiagnosisRegionVisual({ id: 1, review_status: "pending" });
   const secondPending = getDiagnosisRegionVisual({ id: 999, validation_status: "pending" });
 
-  assert.deepEqual(firstPending, secondPending);
+  assert.notEqual(firstPending.color, secondPending.color);
   assert.equal(firstPending.status, "pending");
+});
+
+test("uses teal for the required D1 diagnosis", () => {
+  const visual = getDiagnosisRegionVisual(
+    { id: 42, review_status: "pending" },
+    null,
+    { isRequired: true },
+  );
+
+  assert.equal(visual.color, "#0f7490");
 });
 
 test("uses validation status before review status", () => {

@@ -296,8 +296,9 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
-    expect(screen.getByText("2 áreas marcadas")).toBeVisible();
+    expect(screen.getByText("✓ 2 áreas marcadas")).toBeVisible();
     expect(screen.getByLabelText("2 áreas marcadas")).toBeVisible();
+    fireEvent.click(screen.getByLabelText("2 áreas marcadas"));
     fireEvent.click(screen.getAllByRole("button", { name: "Concordo" })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
@@ -307,9 +308,11 @@ describe("DiagnosisPanel", () => {
     expect(onRemoveRegion).toHaveBeenCalledWith(2, 9);
 
     fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
-    const doctorDecision = screen.getByRole("group", { name: "Revisão de Fibrilação atrial" });
-    within(doctorDecision).getAllByRole("button").forEach((button) => expect(button).toBeDisabled());
-    fireEvent.click(screen.getByRole("button", { name: "Remover diagnóstico" }));
+    expect(screen.queryByRole("group", { name: "Revisão de Fibrilação atrial" })).not.toBeInTheDocument();
+    expect(screen.getByText("Adicionado", { selector: '[data-slot="badge"]' })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+    expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("Fibrilação atrial e 0 áreas associadas serão removidos juntos.");
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remover" }));
     expect(onRemove).toHaveBeenCalledWith(3);
   });
 
@@ -328,6 +331,7 @@ describe("DiagnosisPanel", () => {
     );
 
     expect(screen.getByLabelText("1 área marcada")).toBeVisible();
+    expect(screen.getByText("✓ 1 área marcada")).toBeVisible();
   });
 
   it("mantém o texto original legível com hierarquia visual secundária", () => {
@@ -512,7 +516,7 @@ describe("DiagnosisPanel", () => {
     expect(within(disagreementAlert).getByLabelText("Justificativa (opcional)")).toBeVisible();
   });
 
-  it("preserva o payload da adição e consome a região selecionada", async () => {
+  it("adiciona o diagnóstico sem reutilizar uma região em edição", async () => {
     const onAdd = vi.fn().mockResolvedValue(true);
     const onRegionConsumed = vi.fn();
     render(
@@ -534,12 +538,88 @@ describe("DiagnosisPanel", () => {
       expect(onAdd).toHaveBeenCalledWith({
         name: "Fibrilação atrial",
         is_abnormal: true,
-        region_x: 10,
-        region_y: 20,
-        region_width: 30,
-        region_height: 40,
+        region_x: null,
+        region_y: null,
+        region_width: null,
+        region_height: null,
       });
-      expect(onRegionConsumed).toHaveBeenCalledOnce();
+      expect(onRegionConsumed).not.toHaveBeenCalled();
     });
+  });
+
+  it("mostra Área necessária sem decisões para diagnóstico criado pelo médico", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          { ...originalDiagnosis(7, "Fibrilação atrial"), source: "doctor_added", region_required_missing: true },
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
+    expect(screen.getByText("Área necessária", { selector: '[data-slot="badge"]' })).toBeVisible();
+    expect(screen.queryByRole("group", { name: "Revisão de Fibrilação atrial" })).not.toBeInTheDocument();
+  });
+
+  it("seleciona uma área pelo teclado e mantém sua lista recolhida até interação", () => {
+    const onRegionHover = vi.fn();
+    const onRegionSelect = vi.fn();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onRegionHover, onRegionSelect, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", {
+          regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
+        })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Área 1" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("1 área marcada"));
+    const area = screen.getByRole("button", { name: "Área 1" });
+    fireEvent.focus(area);
+    fireEvent.click(area);
+    expect(onRegionHover).toHaveBeenCalledWith("1:9");
+    expect(onRegionSelect).toHaveBeenCalledWith("1:9");
+  });
+
+  it("fecha o seletor e abre o diagnóstico recém-adicionado sem iniciar marcação", async () => {
+    const onAdd = vi.fn().mockResolvedValue({
+      ...originalDiagnosis(8, "Fibrilação atrial"),
+      source: "doctor_added",
+    });
+    const onStartRegion = vi.fn();
+    const { rerender } = render(
+      <DiagnosisPanelHarness
+        {...createProps({ onAdd, onStartRegion })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Adicionar diagnóstico" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Fibrilação atrial" }));
+    await waitFor(() => expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument());
+    expect(onStartRegion).not.toHaveBeenCalled();
+
+    rerender(
+      <DiagnosisPanelHarness
+        {...createProps({ onAdd, onStartRegion })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          { ...originalDiagnosis(8, "Fibrilação atrial"), source: "doctor_added" },
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Fibrilação atrial/ })).toHaveAttribute("aria-expanded", "true");
   });
 });

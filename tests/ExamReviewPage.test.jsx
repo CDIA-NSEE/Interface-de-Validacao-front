@@ -7,6 +7,7 @@ import {
   addDiagnosisRegion,
   getDiagnosisOptions,
   getExamById,
+  removeDiagnosisRegion,
   saveExamDraft,
 } from "../src/services/examsService.js";
 import {
@@ -135,6 +136,10 @@ beforeEach(() => {
     regions: [{ id: 7, x: 10, y: 10, width: 30, height: 20 }],
   });
   saveExamDraft.mockResolvedValue(exam);
+  reviewDailyDiagnosis.mockResolvedValue({
+    ...exam,
+    diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }],
+  });
 });
 
 describe("ExamReviewPage", () => {
@@ -155,6 +160,7 @@ describe("ExamReviewPage", () => {
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
     expect(screen.getByText("Iniciar")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Salvar observações" })).toBeDisabled();
   });
 
   it("explica por que Salvar e próximo está desabilitado", async () => {
@@ -487,7 +493,7 @@ describe("ExamReviewPage", () => {
         screen.queryByRole("dialog", { name: "Diagnósticos e ações" }),
       ).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/Marcando D1\.1: Ritmo sinusal/)).toBeVisible();
+    expect(screen.getByText("Marcando área para D1 · Arraste sobre o ECG · Esc para cancelar")).toBeVisible();
   });
 
   it("reabre o Sheet ao cancelar a marcação no layout compacto", async () => {
@@ -583,9 +589,37 @@ describe("ExamReviewPage", () => {
 
     const notes = await screen.findByRole("textbox", { name: "Observações gerais" });
     fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
 
     await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Alterações salvas.");
+    expect(await screen.findByRole("status")).toHaveTextContent("✓ Observações salvas");
+  });
+
+  it("mostra feedback contextual ao salvar uma decisão clínica", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Concordo" }));
+    expect(await screen.findByText("✓ Decisão salva")).toBeVisible();
+    expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "confirmed", "");
+  });
+
+  it("explica junto ao diagnóstico quando a última área obrigatória não pode ser removida", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{
+        ...exam.diagnoses[0],
+        review_status: "confirmed",
+        requires_region: true,
+        regions: [{ id: 7, x: 10, y: 10, width: 30, height: 20 }],
+      }],
+    });
+    removeDiagnosisRegion.mockRejectedValueOnce({ response: { status: 400, data: { detail: "recusado" } } });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    fireEvent.click(await screen.findByLabelText("1 área marcada"));
+    fireEvent.click(screen.getByRole("button", { name: "Remover D1.1" }));
+    expect(await screen.findByText("Este diagnóstico exige ao menos uma área.")).toBeVisible();
   });
 });

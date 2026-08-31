@@ -12,6 +12,7 @@ export default function ReviewActions({
   onSave,
   onValidate,
   primaryDisabledReason,
+  saveDisabled = false,
   saveLabel = "Salvar",
   primaryLabel = "Validar",
 }) {
@@ -52,7 +53,7 @@ export default function ReviewActions({
         {onSave ? (
           <Button
             className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
-            disabled={isBusy}
+            disabled={isBusy || saveDisabled}
             onClick={onSave}
             type="button"
             variant="secondary"

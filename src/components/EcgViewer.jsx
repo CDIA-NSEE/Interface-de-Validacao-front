@@ -35,6 +35,8 @@ export default function EcgViewer({
   onImageAspectRatioChange,
   onRegionCancel,
   onRegionChange,
+  onRegionHover,
+  onRegionSelect,
   regions = [],
   selectedRegion,
   selectionLabel,
@@ -50,6 +52,7 @@ export default function EcgViewer({
   const canvasRef = useRef(null);
   const source = useMemo(() => imageUrl || "/sample-ecg.svg", [imageUrl]);
   const activeRegion = draftRegion || selectedRegion;
+  const hasSelectedSavedRegion = regions.some((region) => region.isSelected);
   const visibleRegions = useMemo(
     () => regions.filter((region) => !(activeRegion?.id && region.id === activeRegion.id)),
     [activeRegion, regions],
@@ -151,6 +154,10 @@ export default function EcgViewer({
 
   function handlePointerDown(event) {
     if (event.button !== 0) return;
+    if (!selectionLabel) {
+      onRegionSelect?.(null);
+      return;
+    }
     const point = getPoint(event);
     setSelectionStart(point);
     setDraftRegion({ x: point.x, y: point.y, width: 0, height: 0 });
@@ -180,9 +187,23 @@ export default function EcgViewer({
   }
 
   function clearSelection() {
-    onRegionCancel?.();
-    onRegionChange?.(null);
+    if (selectionLabel || selectedRegion) {
+      onRegionCancel?.();
+      onRegionChange?.(null);
+    }
+    onRegionSelect?.(null);
   }
+
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key !== "Escape" || (!selectionLabel && !selectedRegion && !hasSelectedSavedRegion)) return;
+      event.preventDefault();
+      clearSelection();
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [hasSelectedSavedRegion, onRegionCancel, onRegionChange, onRegionSelect, selectedRegion, selectionLabel]);
 
   const controls = (
     <div
@@ -214,7 +235,7 @@ export default function EcgViewer({
       <TooltipIconButton label="Ajustar à tela" onClick={() => setZoom(1)} size="icon-sm" variant="outline">
         <Maximize2 aria-hidden="true" />
       </TooltipIconButton>
-      {selectedRegion || selectionLabel ? (
+      {selectedRegion || selectionLabel || hasSelectedSavedRegion ? (
         <TooltipIconButton label="Limpar seleção" onClick={clearSelection} size="icon-sm" variant="outline">
           <X aria-hidden="true" />
         </TooltipIconButton>
@@ -228,7 +249,7 @@ export default function EcgViewer({
       <div className="relative flex min-h-72 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 sm:min-h-88">
         <div className="ecg-canvas" ref={canvasRef}>
           <div
-            className="ecg-image-stage"
+            className={`ecg-image-stage ${selectionLabel ? "touch-none cursor-crosshair" : ""}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -242,9 +263,19 @@ export default function EcgViewer({
             onLoad={handleImageLoad}
           />
           {visibleRegions.map((region, index) => (
-            <span
-              className={`saved-region-box ${region.isActive ? "is-active" : ""}`}
+            <button
+              aria-label={region.label || region.regionReference || "Área vinculada"}
+              aria-pressed={Boolean(region.isSelected)}
+              className={`saved-region-box ${region.isHovered ? "is-hovered" : ""} ${region.isSelected ? "is-selected" : ""} ${region.isDimmed ? "is-dimmed" : ""}`}
               key={`${region.diagnosisId || "region"}-${region.id || `legacy-${index}`}`}
+              onBlur={() => onRegionHover?.(null)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRegionSelect?.(region);
+              }}
+              onFocus={() => onRegionHover?.(region)}
+              onMouseEnter={() => onRegionHover?.(region)}
+              onMouseLeave={() => onRegionHover?.(null)}
               style={{
                 "--region-color": region.color,
                 "--region-fill": region.fill,
@@ -258,7 +289,7 @@ export default function EcgViewer({
               {region.regionReference ? (
                 <span className="region-reference-label">{region.regionReference}</span>
               ) : null}
-            </span>
+            </button>
           ))}
           {activeRegion ? (
             <span
