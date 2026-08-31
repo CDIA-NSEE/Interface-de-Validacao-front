@@ -408,8 +408,8 @@ function DiagnosisCard({
     <Card className={cn("gap-2.5 overflow-visible", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
-        <CardTitle className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
-          {diagnosisReference ? <Badge className="mt-0.5" variant="outline">{diagnosisReference}</Badge> : null}
+        <CardTitle className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+          {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
           <span className="line-clamp-2 min-w-0 break-words" title={standardText}>{standardText}</span>
           <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
         </CardTitle>
@@ -690,7 +690,7 @@ export default function DiagnosisPanel({
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                               selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent ring-2 ring-inset ring-ring/30",
                             )}>
-                              <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                              <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
                                 {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
                                 <span className="line-clamp-2 min-w-0 break-words text-left" title={standardText}>{standardText}</span>
                                 <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
