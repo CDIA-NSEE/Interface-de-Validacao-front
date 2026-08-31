@@ -49,7 +49,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getDiagnosisReviewStatus, getDiagnosisVisualStatus } from "../utils/diagnosisRegionVisuals.js";
-import { hasDisagreementNote } from "../utils/disagreementReview.js";
 import {
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
@@ -146,6 +145,7 @@ function DiagnosisDetails({
   onRegionHover,
   onRegionSelect,
   onReview,
+  onReviewInteractionBlocked,
   regionError,
   selectedRegionKey,
   hoveredRegionKey,
@@ -164,9 +164,10 @@ function DiagnosisDetails({
   const originalPreview = getOriginalTextPreview(originalText);
   const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText);
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
+  const savedReviewNote = diagnosis.review_notes || "";
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
+  const isReviewDraftDirty = isDisagreementOpen && reviewNoteDraft !== savedReviewNote;
   const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
-  const canSaveDisagreement = hasDisagreementNote(reviewNoteDraft);
   const decisionValue = visualStatus === "pending" ? [] : [visualStatus];
 
   function setDisagreementPanelOpen(isOpen) {
@@ -183,8 +184,8 @@ function DiagnosisDetails({
     });
   }
 
-  async function submitDisagreement(note) {
-    const wasReviewed = await onReview(diagnosis.id, "rejected", note);
+  async function submitDisagreement(note, feedbackKind = "decision") {
+    const wasReviewed = await onReview(diagnosis.id, "rejected", note, feedbackKind);
     if (wasReviewed) setDisagreementPanelOpen(false);
   }
 
@@ -194,9 +195,13 @@ function DiagnosisDetails({
   }
 
   function handleDecisionChange(nextValue) {
+    if (isReviewDraftDirty) {
+      onReviewInteractionBlocked?.(diagnosis.id);
+      return;
+    }
     const nextDecision = nextValue.at(-1);
     if (nextDecision === "confirmed") submitAgreement();
-    if (nextDecision === "rejected") openDisagreementPanel();
+    if (nextDecision === "rejected") submitDisagreement(savedReviewNote);
   }
 
   return (
@@ -237,7 +242,7 @@ function DiagnosisDetails({
             className="flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <Check aria-hidden="true" data-icon="inline-start" />
-            <span>✓ {markedRegionCountLabel(regions.length)}</span>
+            <span>{markedRegionCountLabel(regions.length)}</span>
             <ChevronDown aria-hidden="true" className={cn("transition-transform", isAreaListOpen && "rotate-180")} />
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2 flex flex-col gap-2" aria-label={markedRegionCountLabel(regions.length)}>
@@ -250,7 +255,11 @@ function DiagnosisDetails({
             const isHovered = hoveredRegionKey === regionKey;
             return (
               <div
-                className={cn("flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors", (isSelected || isHovered) && "bg-accent ring-2 ring-ring/30")}
+                className={cn(
+                  "flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
+                  isHovered && !isSelected && "bg-accent/60",
+                  isSelected && "bg-accent ring-2 ring-ring/30",
+                )}
                 key={regionKey}
                 onBlur={() => onRegionHover?.(null)}
                 onFocus={() => onRegionHover?.(regionKey)}
@@ -273,6 +282,10 @@ function DiagnosisDetails({
               </div>
             );
           })}
+            <Button aria-pressed={isRegionTarget} className="w-fit" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Adicionar área
+            </Button>
           </CollapsibleContent>
         </Collapsible>
       ) : null}
@@ -288,7 +301,7 @@ function DiagnosisDetails({
         </p>
       ) : null}
 
-      {diagnosis.region_required_missing ? (
+      {!regions.length && diagnosis.region_required_missing ? (
         <Alert variant="warning">
           <MapPinned aria-hidden="true" />
           <AlertTitle>Área no ECG</AlertTitle>
@@ -296,20 +309,21 @@ function DiagnosisDetails({
             <span>Obrigatória para este diagnóstico.</span>
             <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
               <MapPinned aria-hidden="true" data-icon="inline-start" />
-              {regions.length ? "+ Adicionar área" : "Marcar área"}
+              Marcar área
             </Button>
           </AlertDescription>
         </Alert>
-      ) : (
+      ) : !regions.length ? (
         <Button aria-pressed={isRegionTarget} className="w-fit" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
           <MapPinned aria-hidden="true" data-icon="inline-start" />
-          {regions.length ? "+ Adicionar área" : "Marcar área"}
+          Marcar área
         </Button>
-      )}
+      ) : null}
 
       {diagnosis.source === "doctor_added" ? (
         <AlertDialog>
           <AlertDialogTrigger render={<Button className="w-fit text-muted-foreground hover:text-destructive focus-visible:text-destructive" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
             Remover
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -344,8 +358,12 @@ function DiagnosisDetails({
               <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button disabled={isBusy || !canSaveDisagreement} onClick={() => submitDisagreement(reviewNoteDraft)} size="sm" type="button">Salvar discordância</Button>
-              <Button disabled={isBusy} onClick={() => submitDisagreement("")} size="sm" type="button" variant="outline">Discordar sem justificativa</Button>
+              {isReviewDraftDirty ? (
+                <>
+                  <Button disabled={isBusy} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
+                  <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
+                </>
+              ) : null}
             </div>
           </AlertDescription>
         </Alert>
@@ -367,6 +385,7 @@ function DiagnosisCard({
   onRegionHover,
   onRegionSelect,
   onReview,
+  onReviewInteractionBlocked,
   reviewDraft,
   onReviewDraftChange,
   onStartRegion,
@@ -389,9 +408,9 @@ function DiagnosisCard({
     <Card className={cn("gap-2.5 overflow-visible", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
-        <CardTitle className="flex min-w-0 flex-wrap items-center gap-2">
+        <CardTitle className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
           {diagnosisReference ? <Badge className="mt-0.5" variant="outline">{diagnosisReference}</Badge> : null}
-          <span className="min-w-0 flex-1 break-words" title={`Texto padrão: ${standardText}`}>{standardText}</span>
+          <span className="line-clamp-2 min-w-0 break-words" title={standardText}>{standardText}</span>
           <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
         </CardTitle>
         {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
@@ -408,6 +427,7 @@ function DiagnosisCard({
           onRegionHover={onRegionHover}
           onRegionSelect={onRegionSelect}
           onReview={onReview}
+          onReviewInteractionBlocked={onReviewInteractionBlocked}
           onReviewDraftChange={onReviewDraftChange}
           onStartRegion={onStartRegion}
           reviewDraft={reviewDraft}
@@ -439,6 +459,7 @@ export default function DiagnosisPanel({
   onRegionHover,
   onRegionSelect,
   onReview,
+  onReviewInteractionBlocked,
   onReviewDraftChange,
   onSecondaryToggle,
   onStartRegion,
@@ -470,13 +491,19 @@ export default function DiagnosisPanel({
     () => new Set(secondaryDiagnoses.map((diagnosis) => String(diagnosis.id))),
     [secondaryDiagnoses],
   );
-  const openReviewDraftDiagnosisId = secondaryDiagnoses.find(
-    (diagnosis) => reviewDrafts[String(diagnosis.id)]?.isOpen,
+  const dirtyReviewDraftDiagnosisId = diagnoses.find(
+    (diagnosis) => {
+      const draft = reviewDrafts[String(diagnosis.id)];
+      return draft?.isOpen && (draft.note || "") !== (diagnosis.review_notes || "");
+    },
   )?.id;
+  const dirtySecondaryReviewDraftDiagnosisId = secondaryDiagnosisIds.has(String(dirtyReviewDraftDiagnosisId ?? ""))
+    ? dirtyReviewDraftDiagnosisId
+    : null;
   const activeSecondaryDiagnosisId = secondaryDiagnosisIds.has(String(activeRegionTarget?.diagnosisId ?? ""))
     ? activeRegionTarget.diagnosisId
     : null;
-  const forcedExpandedDiagnosisId = activeSecondaryDiagnosisId ?? openReviewDraftDiagnosisId;
+  const forcedExpandedDiagnosisId = activeSecondaryDiagnosisId ?? dirtySecondaryReviewDraftDiagnosisId;
   const selectItems = useMemo(() => options.map((option) => ({ label: option, value: option })), [options]);
 
   const revealSecondaryDiagnosis = useCallback((diagnosisId) => {
@@ -486,6 +513,20 @@ export default function DiagnosisPanel({
     if (!isSecondaryOpen) onSecondaryToggle?.(true);
   }, [isSecondaryOpen, onSecondaryToggle, secondaryDiagnosisIds]);
 
+  const scrollDiagnosisIntoView = useCallback((diagnosisId) => {
+    const scrollTimer = window.setTimeout(() => {
+      document.querySelector(`[data-diagnosis-id="${diagnosisId}"]`)?.scrollIntoView?.({ block: "nearest" });
+    }, 0);
+    return () => window.clearTimeout(scrollTimer);
+  }, []);
+
+  function isInteractionBlocked(nextDiagnosisId = null) {
+    if (!dirtyReviewDraftDiagnosisId) return false;
+    if (nextDiagnosisId && String(nextDiagnosisId) === String(dirtyReviewDraftDiagnosisId)) return false;
+    onReviewInteractionBlocked?.(dirtyReviewDraftDiagnosisId);
+    return true;
+  }
+
   useEffect(() => {
     revealSecondaryDiagnosis(forcedExpandedDiagnosisId);
   }, [forcedExpandedDiagnosisId, revealSecondaryDiagnosis]);
@@ -493,19 +534,17 @@ export default function DiagnosisPanel({
   useEffect(() => {
     if (!pendingExpandedDiagnosisId || !secondaryDiagnosisIds.has(pendingExpandedDiagnosisId)) return;
     revealSecondaryDiagnosis(pendingExpandedDiagnosisId);
+    scrollDiagnosisIntoView(pendingExpandedDiagnosisId);
     setPendingExpandedDiagnosisId(null);
-  }, [pendingExpandedDiagnosisId, revealSecondaryDiagnosis, secondaryDiagnosisIds]);
+  }, [pendingExpandedDiagnosisId, revealSecondaryDiagnosis, scrollDiagnosisIntoView, secondaryDiagnosisIds]);
 
   useEffect(() => {
     if (!selectedRegionKey) return;
     const diagnosisId = selectedRegionKey.split(":")[0];
     setOpenAreaDiagnosisIds((current) => new Set(current).add(diagnosisId));
     revealSecondaryDiagnosis(diagnosisId);
-    const scrollTimer = window.setTimeout(() => {
-      document.querySelector(`[data-diagnosis-id="${diagnosisId}"]`)?.scrollIntoView?.({ block: "nearest" });
-    }, 0);
-    return () => window.clearTimeout(scrollTimer);
-  }, [revealSecondaryDiagnosis, selectedRegionKey]);
+    return scrollDiagnosisIntoView(diagnosisId);
+  }, [revealSecondaryDiagnosis, scrollDiagnosisIntoView, selectedRegionKey]);
 
   useEffect(() => {
     if (!isAddDiagnosisOpen) return undefined;
@@ -514,7 +553,9 @@ export default function DiagnosisPanel({
   }, [isAddDiagnosisOpen]);
 
   function handlePanelStartRegion(diagnosis, region) {
+    if (isInteractionBlocked(diagnosis.id)) return;
     revealSecondaryDiagnosis(diagnosis.id);
+    if (region) handleAreaListOpenChange(diagnosis.id, true);
     onStartRegion(diagnosis, region);
   }
 
@@ -524,12 +565,14 @@ export default function DiagnosisPanel({
   }
 
   function handleAddDiagnosisToggle(open) {
+    if (open && isInteractionBlocked()) return;
     setIsAddDiagnosisOpen(open);
     if (open && !isSecondaryOpen) onSecondaryToggle?.(true);
     if (!open) window.setTimeout(() => addDiagnosisTriggerRef.current?.focus(), 0);
   }
 
   async function handleSelectDiagnosis(diagnosisName) {
+    if (isInteractionBlocked()) return;
     setName(diagnosisName || "");
     if (!diagnosisName) return;
     const addedDiagnosis = await onAdd({
@@ -545,6 +588,18 @@ export default function DiagnosisPanel({
       setIsAddDiagnosisOpen(false);
       setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
     }
+  }
+
+  function handleSecondaryToggle(open) {
+    if (isInteractionBlocked()) return;
+    onSecondaryToggle?.(open);
+  }
+
+  function handleExpandedDiagnosisChange(values) {
+    const nextDiagnosisId = values.at(-1) || null;
+    if (isInteractionBlocked(nextDiagnosisId)) return;
+    setExpandedDiagnosisId(nextDiagnosisId);
+    if (nextDiagnosisId) scrollDiagnosisIntoView(nextDiagnosisId);
   }
 
   function handleAreaListOpenChange(diagnosisId, open) {
@@ -567,6 +622,7 @@ export default function DiagnosisPanel({
     onRegionHover,
     onRegionSelect,
     onReview,
+    onReviewInteractionBlocked,
     onReviewDraftChange: handlePanelReviewDraftChange,
     onStartRegion: handlePanelStartRegion,
     hoveredRegionKey,
@@ -588,7 +644,7 @@ export default function DiagnosisPanel({
       </section>
 
       {secondaryDiagnoses.length || options.length ? (
-        <Collapsible onOpenChange={onSecondaryToggle} open={Boolean(isSecondaryOpen)}>
+        <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden" size="sm">
               <CardHeader className="items-center">
                 <CardTitle>Diagnósticos adicionais</CardTitle>
@@ -619,7 +675,7 @@ export default function DiagnosisPanel({
                   <div className="grid max-h-[min(32svh,20rem)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
                     <ScrollArea className="min-h-0" data-testid="optional-diagnoses-scroll">
                       <Accordion
-                        onValueChange={(values) => setExpandedDiagnosisId(values.at(-1) || null)}
+                        onValueChange={handleExpandedDiagnosisChange}
                         value={(forcedExpandedDiagnosisId ?? expandedDiagnosisId) ? [String(forcedExpandedDiagnosisId ?? expandedDiagnosisId)] : []}
                       >
                       {secondaryDiagnoses.map((diagnosis) => {
@@ -629,10 +685,14 @@ export default function DiagnosisPanel({
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
                           <AccordionItem className="px-3" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
-                            <AccordionTrigger className={cn("cursor-pointer gap-2 py-2.5 hover:bg-muted/50 hover:no-underline", [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`)) && "bg-accent") }>
-                              <span className="flex min-w-0 flex-1 items-center gap-2">
+                            <AccordionTrigger className={cn(
+                              "cursor-pointer gap-2 py-2.5 hover:bg-muted/50 hover:no-underline",
+                              hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
+                              selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent ring-2 ring-inset ring-ring/30",
+                            )}>
+                              <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
                                 {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
-                                <span className="min-w-0 flex-1 break-words text-left">{standardText}</span>
+                                <span className="line-clamp-2 min-w-0 break-words text-left" title={standardText}>{standardText}</span>
                                 <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
                               </span>
                             </AccordionTrigger>

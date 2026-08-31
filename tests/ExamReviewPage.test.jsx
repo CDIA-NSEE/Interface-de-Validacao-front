@@ -571,10 +571,15 @@ describe("ExamReviewPage", () => {
   it("preserva o rascunho de discordância ao alternar entre desktop e Sheet", async () => {
     const user = userEvent.setup();
     const viewport = stubViewport(false);
+    reviewDailyDiagnosis.mockResolvedValueOnce({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], review_status: "rejected" }],
+    });
     render(<ExamReviewPage />);
 
     await screen.findByRole("heading", { name: "Exame ECG-42" });
     await user.click(screen.getByRole("button", { name: "Discordo" }));
+    await user.click(await screen.findByRole("button", { name: "Justificativa (opcional)" }));
     await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
 
     act(() => viewport.setCompact(true));
@@ -602,6 +607,25 @@ describe("ExamReviewPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Concordo" }));
     expect(await screen.findByText("✓ Decisão salva")).toBeVisible();
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "confirmed", "");
+  });
+
+  it("salva a justificativa opcional com feedback próprio", async () => {
+    const user = userEvent.setup();
+    const rejectedExam = {
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], review_status: "rejected" }],
+    };
+    getExamById.mockResolvedValue(rejectedExam);
+    reviewDailyDiagnosis.mockResolvedValue(rejectedExam);
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Justificativa (opcional)" }));
+    await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
+    await user.click(screen.getByRole("button", { name: "Salvar justificativa" }));
+
+    expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível");
+    expect(await screen.findByText("✓ Justificativa salva")).toBeVisible();
   });
 
   it("explica junto ao diagnóstico quando a última área obrigatória não pode ser removida", async () => {

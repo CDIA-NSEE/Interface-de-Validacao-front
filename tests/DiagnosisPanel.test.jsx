@@ -246,9 +246,10 @@ describe("DiagnosisPanel", () => {
   });
 
   it("reabre o diagnóstico opcional com discordância em edição após remontar", async () => {
+    const onReviewInteractionBlocked = vi.fn();
     render(
       <AutoRevealHarness
-        {...createProps({ options: [] })}
+        {...createProps({ onReviewInteractionBlocked, options: [] })}
         dailyStandardDiagnosis="Ritmo sinusal"
         diagnoses={[
           originalDiagnosis(1, "Ritmo sinusal"),
@@ -268,6 +269,7 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Sobrecarga atrial esquerda/ }));
     expect(optionalDiagnosis).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: /Sobrecarga atrial esquerda/ })).toHaveAttribute("aria-expanded", "false");
+    expect(onReviewInteractionBlocked).toHaveBeenCalledWith(2);
   });
 
   it("preserva decisões, regiões e remoção nos diagnósticos secundários", async () => {
@@ -296,9 +298,11 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
-    expect(screen.getByText("✓ 2 áreas marcadas")).toBeVisible();
+    expect(screen.getByText("2 áreas marcadas")).toBeVisible();
     expect(screen.getByLabelText("2 áreas marcadas")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("2 áreas marcadas"));
+    expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
     fireEvent.click(screen.getAllByRole("button", { name: "Concordo" })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
@@ -331,7 +335,7 @@ describe("DiagnosisPanel", () => {
     );
 
     expect(screen.getByLabelText("1 área marcada")).toBeVisible();
-    expect(screen.getByText("✓ 1 área marcada")).toBeVisible();
+    expect(screen.getByText("1 área marcada")).toBeVisible();
   });
 
   it("mantém o texto original legível com hierarquia visual secundária", () => {
@@ -382,7 +386,7 @@ describe("DiagnosisPanel", () => {
     expect(within(dailyPanel).getByText("Diagnóstico do dia")).toBeVisible();
     expect(within(dailyPanel).getAllByTestId("diagnosis-card")).toHaveLength(1);
     expect(
-      within(dailyPanel).getByTitle("Texto padrão: Ritmo sinusal"),
+      within(dailyPanel).getByTitle("Ritmo sinusal"),
     ).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText("Diagnósticos adicionais")).toBeVisible();
@@ -460,16 +464,14 @@ describe("DiagnosisPanel", () => {
     expect(within(generalPanel).getByText("Revise todos os diagnósticos originais deste exame.")).toBeVisible();
     expect(within(generalPanel).getAllByTestId("diagnosis-card")).toHaveLength(2);
     expect(
-      within(generalPanel).getByTitle("Texto padrão: Ritmo sinusal"),
+      within(generalPanel).getByTitle("Ritmo sinusal"),
     ).toBeVisible();
     expect(
-      within(generalPanel).getByTitle(
-        "Texto padrão: Bloqueio de ramo direito",
-      ),
+      within(generalPanel).getByTitle("Bloqueio de ramo direito"),
     ).toBeVisible();
   });
 
-  it("mantém decisões em ToggleGroup controlado e exige salvar a discordância", async () => {
+  it("persiste a discordância imediatamente e mantém a justificativa opcional", async () => {
     const onReview = vi.fn().mockResolvedValue(true);
     render(
       <DiagnosisPanelHarness
@@ -484,36 +486,33 @@ describe("DiagnosisPanel", () => {
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
 
     fireEvent.click(screen.getByRole("button", { name: "Discordo" }));
-    const disagreementAlert = screen.getByRole("alert");
-    expect(disagreementAlert).toHaveTextContent("Justificativa (opcional)");
-    expect(disagreementAlert.textContent.match(/Justificativa \(opcional\)/g)).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Salvar discordância" })).toBeDisabled();
-
-    fireEvent.change(screen.getByLabelText(/Justificativa/), { target: { value: "Traçado incompatível" } });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar discordância" }));
-
-    await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível"));
+    await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "", "decision"));
+    expect(screen.queryByLabelText(/Justificativa/)).not.toBeInTheDocument();
   });
 
   it("exibe uma única identificação da justificativa no diagnóstico adicional", () => {
+    const onReview = vi.fn().mockResolvedValue(true);
     render(
       <DiagnosisPanelHarness
-        {...createProps({ options: [] })}
+        {...createProps({ onReview, options: [] })}
         dailyStandardDiagnosis="Ritmo sinusal"
         diagnoses={[
           originalDiagnosis(1, "Ritmo sinusal"),
-          originalDiagnosis(2, "Bloqueio de ramo direito"),
+          originalDiagnosis(2, "Bloqueio de ramo direito", { review_status: "rejected" }),
         ]}
         isGeneralReviewDay={false}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
-    fireEvent.click(screen.getAllByRole("button", { name: "Discordo" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
 
     const disagreementAlert = screen.getByRole("alert");
     expect(disagreementAlert.textContent.match(/Justificativa \(opcional\)/g)).toHaveLength(1);
     expect(within(disagreementAlert).getByLabelText("Justificativa (opcional)")).toBeVisible();
+    fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa (opcional)"), { target: { value: "Traçado incompatível" } });
+    fireEvent.click(within(disagreementAlert).getByRole("button", { name: "Salvar justificativa" }));
+    expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
 
   it("adiciona o diagnóstico sem reutilizar uma região em edição", async () => {

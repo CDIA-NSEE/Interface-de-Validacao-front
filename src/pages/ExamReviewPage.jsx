@@ -416,7 +416,7 @@ export default function ExamReviewPage() {
     }
   }
 
-  async function handleReviewDiagnosis(diagnosisId, reviewStatus, reviewNotes = "") {
+  async function handleReviewDiagnosis(diagnosisId, reviewStatus, reviewNotes = "", feedbackKind = "decision") {
     const diagnosis = exam?.diagnoses?.find((item) => item.id === diagnosisId);
     if (reviewStatus === "confirmed" && diagnosis?.region_required_missing) {
       setError("Marque ao menos uma área do ECG antes de confirmar este diagnóstico.");
@@ -442,7 +442,13 @@ export default function ExamReviewPage() {
       const updatedExam = await reviewDailyDiagnosis(diagnosisId, reviewStatus, reviewNotes);
       setExam(updatedExam);
       window.clearTimeout(savingTimer);
-      setDecisionFeedbacks((current) => ({ ...current, [key]: { type: "success", message: "✓ Decisão salva" } }));
+      setDecisionFeedbacks((current) => ({
+        ...current,
+        [key]: {
+          type: "success",
+          message: feedbackKind === "justification" ? "✓ Justificativa salva" : "✓ Decisão salva",
+        },
+      }));
       const clearTimer = window.setTimeout(() => {
         setDecisionFeedbacks((current) => ({ ...current, [key]: null }));
         decisionFeedbackTimersRef.current.delete(`clear:${key}`);
@@ -453,7 +459,12 @@ export default function ExamReviewPage() {
       window.clearTimeout(savingTimer);
       setDecisionFeedbacks((current) => ({
         ...current,
-        [key]: { type: "error", message: "Não foi possível salvar a decisão. Tente novamente." },
+        [key]: {
+          type: "error",
+          message: feedbackKind === "justification"
+            ? "Não foi possível salvar a justificativa. Tente novamente."
+            : "Não foi possível salvar a decisão. Tente novamente.",
+        },
       }));
       return false;
     } finally {
@@ -466,7 +477,7 @@ export default function ExamReviewPage() {
       return "Associe a área marcada a um diagnóstico antes de salvar.";
     }
     if (hasUnsavedDiagnosisReview) {
-      return "Salve ou cancele a observação da discordância antes de continuar.";
+      return "Salve ou cancele a justificativa antes de continuar.";
     }
     return null;
   }
@@ -640,7 +651,7 @@ export default function ExamReviewPage() {
     : null;
   const activeSelectionLabel = activeRegionTarget
     ? activeRegionTarget.regionId
-      ? `Redesenhando ${activeRegionReference || "área"} · Arraste sobre o ECG · Esc para cancelar`
+      ? `Editando ${activeRegionReference || "área"} · Arraste sobre o ECG · Esc para cancelar`
       : `Marcando área para ${activeDiagnosisReference || "diagnóstico"} · Arraste sobre o ECG · Esc para cancelar`
     : "";
   const requiredDecisionComplete =
@@ -649,7 +660,7 @@ export default function ExamReviewPage() {
       (diagnosis) =>
         getDiagnosisReviewStatus(diagnosis) !== "pending" && !diagnosis.region_required_missing,
     );
-  const hasUnsavedDiagnosisReview = Object.entries(diagnosisReviewDrafts).some(
+  const dirtyDiagnosisReviewId = Object.entries(diagnosisReviewDrafts).find(
     ([diagnosisId, draft]) => {
       if (!draft?.isOpen) return false;
       const diagnosis = (exam?.diagnoses || []).find(
@@ -657,7 +668,8 @@ export default function ExamReviewPage() {
       );
       return (draft.note || "") !== (diagnosis?.review_notes || "");
     },
-  );
+  )?.[0] || null;
+  const hasUnsavedDiagnosisReview = Boolean(dirtyDiagnosisReviewId);
   const hasUnsavedChanges =
     notes !== (exam?.draft_notes || "") || hasUnsavedDiagnosisReview;
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
@@ -681,7 +693,21 @@ export default function ExamReviewPage() {
   }
 
   function handleSavedRegionSelect(regionOrKey) {
-    setSelectedRegionKey(typeof regionOrKey === "string" ? regionOrKey : regionOrKey?.regionKey || null);
+    const nextRegionKey = typeof regionOrKey === "string" ? regionOrKey : regionOrKey?.regionKey || null;
+    const nextDiagnosisId = nextRegionKey?.split(":")[0];
+    if (
+      dirtyDiagnosisReviewId &&
+      nextDiagnosisId &&
+      nextDiagnosisId !== dirtyDiagnosisReviewId
+    ) {
+      handleReviewInteractionBlocked();
+      return;
+    }
+    setSelectedRegionKey(nextRegionKey);
+  }
+
+  function handleReviewInteractionBlocked() {
+    setError("Salve ou cancele a justificativa antes de continuar.");
   }
 
   function handleSidebarOpenChange(open, options = {}) {
@@ -727,6 +753,7 @@ export default function ExamReviewPage() {
       onRegionHover={handleSavedRegionHover}
       onRegionSelect={handleSavedRegionSelect}
       onReview={handleReviewDiagnosis}
+      onReviewInteractionBlocked={handleReviewInteractionBlocked}
       onReviewDraftChange={handleDiagnosisReviewDraftChange}
       onStartRegion={handleStartRegion}
       isBusy={isBusy}
