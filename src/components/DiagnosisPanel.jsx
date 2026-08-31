@@ -98,7 +98,7 @@ function markedRegionCountLabel(count) {
 function reviewBadgeVariant(status) {
   if (status === "confirmed") return "success";
   if (status === "rejected") return "destructive";
-  return "secondary";
+  return "pending";
 }
 
 function DiagnosisStatusBadge({ diagnosis, status }) {

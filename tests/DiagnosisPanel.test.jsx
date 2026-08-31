@@ -106,6 +106,7 @@ describe("DiagnosisPanel", () => {
 
     expect(aiBadge).toBeVisible();
     expect(pendingStatus.closest("[data-slot='card-title']")).toBeTruthy();
+    expect(pendingStatus).toHaveAttribute("data-variant", "pending");
     expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge).toHaveAttribute("data-variant", "ai");
     expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
@@ -560,7 +561,10 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
-    expect(screen.getByText("Área necessária", { selector: '[data-slot="badge"]' })).toBeVisible();
+    expect(screen.getByText("Área necessária", { selector: '[data-slot="badge"]' })).toHaveAttribute(
+      "data-variant",
+      "warning",
+    );
     expect(screen.queryByRole("group", { name: "Revisão de Fibrilação atrial" })).not.toBeInTheDocument();
   });
 
