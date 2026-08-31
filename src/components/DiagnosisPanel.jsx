@@ -630,7 +630,7 @@ export default function DiagnosisPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <section aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"} className="flex flex-col gap-2" role="region">
         {isGeneralReviewDay ? (
           <div className="px-0.5">
