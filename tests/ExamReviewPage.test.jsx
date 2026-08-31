@@ -389,7 +389,12 @@ describe("ExamReviewPage", () => {
     expect(trigger.querySelector(".lucide-info")).toBeTruthy();
     expect(screen.getByText("Nascimento")).toBeVisible();
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
-    expect(clinicalGrid).toHaveClass("grid-cols-3");
+    expect(clinicalGrid).toHaveClass("grid-cols-2", "gap-2", "sm:grid-cols-3");
+    expect(clinicalGrid).not.toHaveClass("bg-muted/40");
+    expect(clinicalGrid.children).toHaveLength(6);
+    [...clinicalGrid.children].forEach((clinicalItem) => {
+      expect(clinicalItem).toHaveClass("rounded-lg", "border", "bg-muted/40");
+    });
     expect(clinicalGrid).toContainElement(screen.getByText("58 anos"));
     expect(clinicalGrid).toContainElement(screen.getByText("Feminino"));
     expect(screen.getByText("17/05/1968")).toBeVisible();

@@ -20,9 +20,9 @@ export default function PatientInfo({ patient }) {
   );
 
   return (
-    <dl className="grid grid-cols-3 rounded-lg bg-muted/40 text-sm">
+    <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
       {availableRows.map(([label, value]) => (
-        <div className="min-w-0 px-2 py-2 sm:px-3" key={label}>
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5" key={label}>
           <dt className="truncate text-xs font-medium text-muted-foreground">{label}</dt>
           <dd className="mt-0.5 whitespace-nowrap text-xs font-medium text-foreground sm:text-sm">{value}</dd>
         </div>
