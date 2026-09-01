@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Como funciona a Validação Médica de exames</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #102a36;
+      --muted: #56717d;
+      --line: #c7dce4;
+      --paper: #f4fafc;
+      --card: #ffffff;
+      --blue: #0f7490;
+      --blue-soft: #dff3fa;
+      --green: #147a53;
+      --green-soft: #e4f5ed;
+      --red: #b72d3d;
+      --red-soft: #fdecef;
+      --amber: #96620d;
+      --amber-soft: #fff4d6;
+      --violet: #5b4bb7;
+      --shadow: 0 14px 40px rgba(21, 74, 94, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #eaf6fa 0, var(--paper) 28rem);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 64px; }
+    header, section { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+    header { padding: clamp(24px, 5vw, 52px); }
+    section { margin-top: 20px; padding: clamp(22px, 4vw, 38px); }
+    h1 { max-width: 19ch; margin: 0 0 16px; font-size: clamp(2rem, 5vw, 4.2rem); line-height: 1.02; letter-spacing: -.045em; }
+    h2 { margin: 0 0 18px; font-size: clamp(1.35rem, 3vw, 2rem); line-height: 1.15; letter-spacing: -.025em; }
+    h3 { margin: 26px 0 8px; font-size: 1.05rem; }
+    p, li { max-width: 72ch; }
+    p { margin: 8px 0; }
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: 6px; }
+    code { padding: .12rem .34rem; border-radius: 5px; background: #edf3f6; color: #174b60; font-size: .9em; }
+    .lead { max-width: 70ch; color: var(--muted); font-size: 1.08rem; }
+    .meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 28px 0 0; }
+    .meta div { border-radius: 12px; background: #edf7fa; padding: 12px 14px; }
+    .meta dt { color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .meta dd { margin: 3px 0 0; font-weight: 650; }
+    .architecture { overflow-x: auto; margin-top: 28px; border-radius: 16px; background: #0d2d39; padding: 16px; }
+    .architecture svg { display: block; min-width: 900px; width: 100%; height: auto; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .mini { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: #fbfdfe; }
+    .mini h3 { margin-top: 0; }
+    .callout { margin: 16px 0; border-left: 5px solid var(--blue); border-radius: 10px; background: var(--blue-soft); padding: 14px 16px; }
+    .callout.warn { border-color: var(--amber); background: var(--amber-soft); }
+    .callout.risk { border-color: var(--red); background: var(--red-soft); }
+    .callout.good { border-color: var(--green); background: var(--green-soft); }
+    .tag { display: inline-flex; align-items: center; margin: 2px 4px 2px 0; padding: 3px 8px; border: 1px solid currentColor; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+    .tag.blue { color: var(--blue); background: var(--blue-soft); }
+    .tag.green { color: var(--green); background: var(--green-soft); }
+    .tag.red { color: var(--red); background: var(--red-soft); }
+    .tag.amber { color: var(--amber); background: var(--amber-soft); }
+    .state-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0; }
+    .state { border: 1px solid var(--line); border-radius: 10px; background: #f8fbfc; padding: 10px 12px; font-weight: 700; }
+    .arrow { color: var(--blue); font-weight: 900; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    th { background: #eaf5f8; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    .route { white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; color: #174b60; }
+    .step { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; margin: 14px 0; }
+    .step b:first-child { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: white; }
+    .step p { margin-top: 2px; }
+    .source-map { columns: 2; column-gap: 28px; }
+    .source-map li { break-inside: avoid; margin-bottom: 8px; }
+    footer { color: var(--muted); padding: 30px 8px 0; text-align: center; font-size: .84rem; }
+    @media (max-width: 760px) {
+      main { width: min(100% - 20px, 1180px); padding-top: 20px; }
+      .meta, .grid, .grid.three { grid-template-columns: 1fr; }
+      .source-map { columns: 1; }
+      th, td { min-width: 150px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Como funciona a Validação Médica de exames</h1>
+    <p class="lead">Este é o mapa completo da área mostrada na imagem: o que cada bloco representa, todos os estados que ele pode assumir, como as ações percorrem o frontend e a API, onde cada informação é persistida e quais limites existem hoje.</p>
+    <dl class="meta">
+      <div><dt>Date</dt><dd>2026-09-01</dd></div>
+      <div><dt>Input shape</dt><dd>concept</dd></div>
+      <div><dt>Subject</dt><dd>Painel e fluxo da página de Validação Médica no frontend c2cec8f e backend 341c2d7</dd></div>
+    </dl>
+    <div class="architecture" aria-label="Arquitetura do fluxo de validação">
+      <svg viewBox="0 0 1060 360" role="img" aria-labelledby="arch-title arch-desc">
+        <title id="arch-title">Fluxo entre interface, serviços, API e banco</title>
+        <desc id="arch-desc">A página React organiza o painel e o ECG, chama serviços Axios autenticados, que acessam endpoints FastAPI e persistem exames, decisões, regiões, rascunhos e auditoria no banco.</desc>
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6fd4ee"/></marker>
+        </defs>
+        <rect x="20" y="36" width="230" height="286" rx="18" fill="#123f50" stroke="#6fd4ee"/>
+        <text x="40" y="70" fill="#fff" font-size="20" font-weight="700">Frontend React</text>
+        <rect x="40" y="92" width="190" height="48" rx="10" fill="#1b566b"/><text x="55" y="122" fill="#fff">ExamReviewPage</text>
+        <rect x="40" y="152" width="190" height="48" rx="10" fill="#1b566b"/><text x="55" y="182" fill="#fff">DiagnosisPanel</text>
+        <rect x="40" y="212" width="190" height="48" rx="10" fill="#1b566b"/><text x="55" y="242" fill="#fff">EcgViewer</text>
+        <rect x="40" y="272" width="190" height="32" rx="9" fill="#1b566b"/><text x="55" y="293" fill="#dff7ff" font-size="13">PatientInfo + ações</text>
+        <rect x="318" y="88" width="190" height="180" rx="18" fill="#163c5a" stroke="#6fd4ee"/>
+        <text x="338" y="122" fill="#fff" font-size="20" font-weight="700">Serviços Axios</text>
+        <text x="338" y="158" fill="#dff7ff">examsService</text>
+        <text x="338" y="190" fill="#dff7ff">validationService</text>
+        <text x="338" y="222" fill="#dff7ff">Bearer token + 12 s</text>
+        <rect x="576" y="36" width="214" height="286" rx="18" fill="#2d365f" stroke="#b9b2ff"/>
+        <text x="596" y="70" fill="#fff" font-size="20" font-weight="700">Backend FastAPI</text>
+        <text x="596" y="110" fill="#eeeaff">Contexto do ciclo</text>
+        <text x="596" y="142" fill="#eeeaff">Diagnósticos e decisões</text>
+        <text x="596" y="174" fill="#eeeaff">Regiões percentuais</text>
+        <text x="596" y="206" fill="#eeeaff">Rascunho por médico</text>
+        <text x="596" y="238" fill="#eeeaff">Validação final</text>
+        <text x="596" y="270" fill="#eeeaff">IA configurada</text>
+        <rect x="858" y="36" width="182" height="286" rx="18" fill="#164d46" stroke="#84dbc7"/>
+        <text x="878" y="70" fill="#fff" font-size="20" font-weight="700">Persistência</text>
+        <text x="878" y="110" fill="#e7fff9">Exam</text>
+        <text x="878" y="142" fill="#e7fff9">Diagnosis</text>
+        <text x="878" y="174" fill="#e7fff9">DiagnosisValidation</text>
+        <text x="878" y="206" fill="#e7fff9">DiagnosisRegion</text>
+        <text x="878" y="238" fill="#e7fff9">ExamDraft</text>
+        <text x="878" y="270" fill="#e7fff9">Review</text>
+        <line x1="250" y1="178" x2="318" y2="178" stroke="#6fd4ee" stroke-width="3" marker-end="url(#arrowhead)"/>
+        <line x1="508" y1="178" x2="576" y2="178" stroke="#6fd4ee" stroke-width="3" marker-end="url(#arrowhead)"/>
+        <line x1="790" y1="178" x2="858" y2="178" stroke="#6fd4ee" stroke-width="3" marker-end="url(#arrowhead)"/>
+        <text x="258" y="163" fill="#dff7ff" font-size="12">props/estado</text>
+        <text x="516" y="163" fill="#dff7ff" font-size="12">JSON/HTTP</text>
+        <text x="797" y="163" fill="#dff7ff" font-size="12">SQLModel</text>
+      </svg>
+    </div>
+  </header>
+
+  <section>
+    <h2>1. O que exatamente aparece na imagem</h2>
+    <div class="grid">
+      <article class="mini">
+        <h3>Diagnóstico do dia: D1</h3>
+        <p><strong>RITMO SINUSAL</strong> é o diagnóstico original que coincide com o diagnóstico canônico ativo no ciclo atual. Por isso ele vira D1, fica sempre expandido e recebe o fundo de destaque.</p>
+        <p><span class="tag blue">Diagnóstico do dia</span> identifica a obrigação diária. <span class="tag blue">IA concordou</span> é apenas informação: não seleciona “Concordo” e não salva nada.</p>
+      </article>
+      <article class="mini">
+        <h3>Aguardando decisão</h3>
+        <p>O D1 ainda está em <code>pending</code>. “Concordo” envia <code>confirmed</code>; “Discordo” envia <code>rejected</code>. A decisão é persistida imediatamente, sem depender do botão do rodapé.</p>
+        <p>“Original: RITMO SINUSAL” mostra o texto recebido antes da apresentação padronizada. Quando o texto é longo, a interface trunca e oferece o valor completo em tooltip.</p>
+      </article>
+      <article class="mini">
+        <h3>Diagnósticos adicionais: D2</h3>
+        <p>D2 é um diagnóstico original que não é o diagnóstico obrigatório do dia ou um diagnóstico criado pelo médico. A imagem mostra D2 como <span class="tag red">Discordo</span>, mas ele está recolhido no accordion.</p>
+        <p>Essa discordância de D2 não conclui o D1. É por isso que o rodapé ainda pode mostrar “Iniciar”.</p>
+      </article>
+      <article class="mini">
+        <h3>Dados e ações finais</h3>
+        <p>“Dados clínicos” exibe somente Nascimento, Idade, Sexo, Peso, Altura e IMC que estiverem presentes. “Mais informações” contém Data/hora, Tipo e notas de origem.</p>
+        <p>O rodapé é fixo: mostra o estado da fila e oferece Voltar, Salvar observações e Salvar e próximo ou Validar exame, conforme o modo atual.</p>
+      </article>
+    </div>
+    <div class="callout">
+      <strong>Leitura correta da captura:</strong> o exame já pode estar tecnicamente em <code>em_validacao</code> no banco porque foi aberto, mas continuar com o badge de fila “Iniciar” enquanto não houver uma decisão registrada para o diagnóstico obrigatório do ciclo.
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Os três modos possíveis da página</h2>
+    <div class="grid three">
+      <article class="mini">
+        <h3>Validação diária</h3>
+        <p>Existe um diagnóstico canônico ativo, como “Ritmo sinusal”, e não é o dia geral. Apenas diagnósticos originais equivalentes formam o bloco obrigatório. O botão principal vira <strong>Salvar e próximo</strong>.</p>
+        <p>A decisão é registrada no ciclo, as observações são salvas como rascunho e a tela segue para o próximo exame. O exame não é necessariamente marcado como <code>valido</code> nessa etapa.</p>
+      </article>
+      <article class="mini">
+        <h3>Revalidação geral</h3>
+        <p>No dia geral do calendário, todos os diagnósticos originais aparecem no bloco “Revalidação geral”. O botão principal vira <strong>Validar exame</strong>.</p>
+        <p>Após a validação final, o exame recebe <code>status_validation = valido</code>, um resultado <code>sem_alteracao</code> ou <code>alterado</code> e a tela tenta abrir o próximo exame.</p>
+      </article>
+      <article class="mini">
+        <h3>Contexto não configurado</h3>
+        <p>Se não houver dia geral nem diagnóstico ativo, não existe obrigação diária. A página trabalha como validação final convencional e permite “Validar exame”.</p>
+        <p>O backend atual está configurado com dia ativo 1, “Ritmo sinusal” e revisão geral no dia 15.</p>
+      </article>
+    </div>
+    <div class="state-strip" aria-label="Estados principais do exame">
+      <span class="state">nao_validado</span><span class="arrow">→ abrir</span><span class="state">em_validacao</span><span class="arrow">→ decisão diária</span><span class="state">fila: validated</span><span class="arrow">→ validação final</span><span class="state">valido</span>
+    </div>
+    <p>A <strong>situação persistida do exame</strong> e a <strong>situação calculada da fila</strong> são conceitos diferentes. O backend traduz isso para “Iniciar”, “Em Validação” e “Concluídos”. Quando concluído, um segundo badge informa “Sem alteração” ou “Alterado”.</p>
+  </section>
+
+  <section>
+    <h2>3. Diagnósticos: origens, estados e apresentação</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tipo</th><th>Como surge</th><th>Decisões</th><th>Remoção</th><th>Status visual</th></tr></thead>
+        <tbody>
+          <tr><td>Original obrigatório</td><td>Veio no exame e coincide com o diagnóstico canônico do dia; na revisão geral, todos os originais são obrigatórios.</td><td>Concordo ou Discordo.</td><td>Não pode ser removido.</td><td>D1/Dn, pendente, concordado, discordado, IA, agrupado, área necessária.</td></tr>
+          <tr><td>Original adicional</td><td>Veio no exame, mas não é o diagnóstico diário atual.</td><td>Concordo ou Discordo dentro do accordion.</td><td>Não pode ser removido.</td><td>Mesmo conjunto de estados dos originais.</td></tr>
+          <tr><td>Adicionado pelo médico</td><td>Escolhido no seletor “+ Adicionar” a partir da lista padronizada.</td><td>Não exibe Concordo/Discordo; a própria adição representa a inclusão médica.</td><td>Pode ser removido com confirmação; suas áreas são removidas juntas.</td><td>“Adicionado” ou “Área necessária”.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Referências D1, D2 e D1.1</h3>
+    <p>O frontend ordena os diagnósticos como obrigatórios, originais opcionais e adicionados pelo médico. Depois atribui D1, D2, D3… nessa ordem. As regiões recebem D1.1, D1.2 etc. Essas referências são de apresentação; não são IDs do banco.</p>
+    <h3>Padronização e agrupamento</h3>
+    <p>O backend remove diferenças de acento, caixa e espaços para comparar textos. Um arquivo de agrupamentos converte várias descrições originais em um texto padrão. Quando ocorreu conversão, a API envia <code>is_grouped = true</code> e a tela mostra “Agrupado”. O texto original continua disponível.</p>
+    <h3>Accordion dos adicionais</h3>
+    <ul>
+      <li>O conjunto inteiro pode ser recolhido.</li>
+      <li>Somente um diagnóstico adicional fica aberto por vez.</li>
+      <li>Um diagnóstico com justificativa em edição ou marcação de região ativa é forçado a permanecer aberto.</li>
+      <li>Selecionar uma região no ECG abre e rola até o diagnóstico relacionado.</li>
+      <li>A lista variável possui rolagem interna e altura máxima de <code>min(32svh, 20rem)</code>.</li>
+      <li>Um rascunho de justificativa modificado bloqueia a troca para outro diagnóstico até salvar ou cancelar.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Concordo, Discordo e justificativa</h2>
+    <div class="state-strip">
+      <span class="state">pending</span><span class="arrow">→ Concordo</span><span class="state"><span class="tag green">confirmed</span></span>
+      <span class="arrow">ou Discordo</span><span class="state"><span class="tag red">rejected</span></span>
+    </div>
+    <div class="step"><b>1</b><div><strong>O clique é uma gravação imediata.</strong><p>O frontend chama <code>POST /validation/diagnoses/{id}/review</code>. Ele não espera “Salvar observações”.</p></div></div>
+    <div class="step"><b>2</b><div><strong>Feedback contextual.</strong><p>Se a chamada durar mais de 150 ms aparece “Salvando…”. No sucesso, “✓ Decisão salva” fica por 1,8 segundo. A falha permanece junto ao diagnóstico.</p></div></div>
+    <div class="step"><b>3</b><div><strong>Discordância pode ter justificativa.</strong><p>A primeira discordância pode ser salva com nota vazia. Depois surge “Justificativa (opcional)”. A edição possui rascunho local, Salvar justificativa e Cancelar.</p></div></div>
+    <div class="step"><b>4</b><div><strong>Persistência por ciclo.</strong><p>O backend cria ou atualiza <code>DiagnosisValidation</code> usando exame + texto padronizado + ciclo. Também atualiza <code>Diagnosis.review_status</code> para compatibilidade legada.</p></div></div>
+    <div class="callout warn">
+      <strong>Consequência do agrupamento:</strong> diagnósticos originais equivalentes compartilham o estado efetivo mais recente daquele texto padronizado no ciclo. A API prioriza <code>DiagnosisValidation</code> sobre o campo legado do diagnóstico.
+    </div>
+  </section>
+
+  <section>
+    <h2>5. IA: o que faz e o que não faz</h2>
+    <p>O badge “IA concordou” depende de duas condições simultâneas:</p>
+    <ol>
+      <li><code>GET /validation/context</code> precisa retornar <code>ai_mode_enabled = true</code>.</li>
+      <li>O diagnóstico precisa retornar <code>ai_suggested = true</code>.</li>
+    </ol>
+    <p>A configuração versionada atual está desabilitada por padrão. Quando o processo do backend é iniciado com <code>AI_MODE_ENABLED=true</code>, a regra curinga <code>*</code> marca “Ritmo sinusal” para qualquer código de exame.</p>
+    <div class="grid">
+      <div class="callout good"><strong>A IA faz:</strong> compara código do exame e diagnóstico canônico com regras configuradas e exibe uma indicação informativa.</div>
+      <div class="callout risk"><strong>A IA não faz:</strong> não executa modelo real, não cria diagnóstico, não calcula confiança, não seleciona Concordo, não altera status e não persiste uma inferência.</div>
+    </div>
+    <p>Se a configuração estiver ausente, malformada, desabilitada ou receber uma variável de ambiente inválida, o backend falha de forma segura: desliga o modo e oculta todas as sugestões.</p>
+  </section>
+
+  <section>
+    <h2>6. Marcação de áreas no ECG</h2>
+    <p>“Marcar área” conecta o painel diagnóstico ao visualizador. A região só pode ser desenhada depois que o médico escolhe explicitamente um diagnóstico.</p>
+    <div class="step"><b>1</b><div><strong>Ativar.</strong><p>O frontend guarda diagnóstico, região sendo editada e rótulo. No mobile, fecha o Sheet para liberar o ECG.</p></div></div>
+    <div class="step"><b>2</b><div><strong>Desenhar.</strong><p>O cursor vira mira; o toque nativo é bloqueado apenas nesse modo. O arraste gera x, y, largura e altura em porcentagem da imagem, preservando a associação mesmo com zoom e responsividade.</p></div></div>
+    <div class="step"><b>3</b><div><strong>Salvar.</strong><p>Uma nova área usa <code>POST /diagnoses/{diagnosis_id}/regions</code>; redesenhar usa <code>PATCH /diagnoses/{diagnosis_id}/regions/{region_id}</code>. O frontend aceita somente desenho com ao menos 0,8% de largura e altura.</p></div></div>
+    <div class="step"><b>4</b><div><strong>Sincronizar.</strong><p>A região salva é selecionada, sua lista abre, o diagnóstico relacionado é revelado e, no mobile, o Sheet reabre.</p></div></div>
+    <h3>Estados e interações das regiões</h3>
+    <ul>
+      <li>Sem região: “Marcar área”. Com uma ou mais: contador recolhível e “Adicionar área”.</li>
+      <li>Hover e foco em uma linha destacam temporariamente a região no ECG; o inverso também ocorre.</li>
+      <li>Clique cria seleção persistente; as demais regiões ficam atenuadas.</li>
+      <li>Escape, clique no ECG vazio ou “Limpar seleção” cancela/desseleciona.</li>
+      <li>Editar significa redesenhar do zero; não existem alças de mover ou redimensionar.</li>
+      <li>Regiões antigas sem ID continuam visíveis, mas não podem ser removidas pela interface.</li>
+    </ul>
+    <h3>Regras do backend</h3>
+    <p>As quatro coordenadas devem estar entre 0 e 100, ter largura e altura positivas e permanecer dentro da imagem. O backend permite várias regiões por diagnóstico e mantém a primeira também nos campos legados <code>region_x/y/width/height</code>.</p>
+    <p>Hoje uma região é obrigatória quando o nome padronizado ou original contém “INFARTO” ou um token iniciado por “IAM”. Confirmar sem região retorna erro. Remover a última região de um infarto já confirmado também retorna erro.</p>
+  </section>
+
+  <section>
+    <h2>7. Adicionar e remover diagnósticos</h2>
+    <h3>Adicionar</h3>
+    <p>“+ Adicionar” abre e foca um Select. As opções vêm de textos canônicos do arquivo de agrupamentos e conclusões válidas da base de metadados, com deduplicação normalizada. O backend rejeita texto vazio ou fora dessa lista.</p>
+    <p>O frontend envia nome, <code>is_abnormal = true</code> e nenhuma região. O seletor fecha e o novo item abre, mas a marcação não começa automaticamente. Duplicidades não são bloqueadas pela API atual.</p>
+    <ul>
+      <li>Diagnóstico comum: nasce como <code>confirmed</code> e mostra “Adicionado”.</li>
+      <li>Diagnóstico de infarto/IAM sem área: nasce como <code>pending</code> e mostra “Área necessária”. A primeira região o converte para <code>confirmed</code>.</li>
+    </ul>
+    <h3>Remover</h3>
+    <p>Somente diagnósticos <code>doctor_added</code> oferecem “Remover”. A confirmação informa nome e quantidade de áreas. O backend apaga diagnóstico e regiões na mesma transação. Diagnósticos originais são protegidos e retornam erro 400 se alguém tentar removê-los diretamente pela API.</p>
+  </section>
+
+  <section>
+    <h2>8. Dados clínicos e Mais informações</h2>
+    <div class="grid">
+      <article class="mini">
+        <h3>Dados clínicos</h3>
+        <p>A API expõe Nascimento, Idade, Sexo, Peso, Altura e IMC. O frontend filtra valores nulos, indefinidos ou vazios e cria uma caixa independente somente para os presentes.</p>
+        <ul>
+          <li>Idade recebe “anos”.</li>
+          <li>Peso recebe “kg”.</li>
+          <li>Altura acima de 3 é tratada como centímetros; caso contrário, metros.</li>
+          <li>Desktop usa três colunas; mobile, duas.</li>
+        </ul>
+        <p>Embora o modelo de banco possua o nome do paciente, <code>_patient_payload</code> não o envia para esta tela.</p>
+      </article>
+      <article class="mini">
+        <h3>Mais informações</h3>
+        <p>Começa recolhida e contém metadados somente de leitura:</p>
+        <ul>
+          <li>Data e hora do exame.</li>
+          <li>Tipo do exame.</li>
+          <li>Notas, quando <code>comments</code> ou <code>source_notes</code> existem.</li>
+        </ul>
+        <p>O cabeçalho inteiro é botão. O hover, o foco e o clique cobrem toda a caixa; a seta apenas comunica o estado aberto ou fechado.</p>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>9. Observações, status e botões do rodapé</h2>
+    <h3>Observações gerais</h3>
+    <p>O textarea fica abaixo do ECG e é opcional. Ele não é a justificativa de uma discordância. São dados separados:</p>
+    <ul>
+      <li><strong>Observações gerais:</strong> <code>ExamDraft.notes</code> por exame e por médico; na validação final, migram para <code>Review.notes</code>.</li>
+      <li><strong>Justificativa:</strong> <code>DiagnosisValidation.notes</code>, associada ao diagnóstico padronizado e ao ciclo.</li>
+      <li><strong>Notas de origem:</strong> <code>Exam.comments/source_notes</code>, apenas leitura em “Mais informações”.</li>
+    </ul>
+    <p>“Salvar observações” aparece apenas no fluxo diário e fica desabilitado sem alterações. Texto vazio ou apenas espaços remove o rascunho do usuário. Rascunhos de médicos diferentes são isolados.</p>
+    <h3>Voltar</h3>
+    <p>Volta ao dashboard. Se as observações mudaram ou existe uma justificativa editada e não salva, abre confirmação para permanecer ou descartar. Uma marcação de região ativa, sozinha, não faz parte desse detector de saída.</p>
+    <h3>Salvar e próximo</h3>
+    <p>No fluxo diário, salva as observações, exige uma decisão do diagnóstico obrigatório e nenhuma área obrigatória faltando, e busca <code>GET /validation/next</code>. Se não houver outro exame — ou a fila devolver o mesmo — volta ao dashboard.</p>
+    <h3>Validar exame</h3>
+    <p>Fora do fluxo diário, calcula automaticamente o resultado:</p>
+    <ul>
+      <li><code>alterado</code> se qualquer diagnóstico estiver discordado ou se existir diagnóstico adicionado pelo médico;</li>
+      <li><code>sem_alteracao</code> nos demais casos.</li>
+    </ul>
+    <p><code>POST /exams/{id}/validate</code> muda o exame para <code>valido</code>, grava um <code>Review</code> com médico, transição, resultado e observações, e remove o rascunho daquele médico.</p>
+  </section>
+
+  <section>
+    <h2>10. Contratos HTTP usados pela página</h2>
+    <p>Todas as rotas abaixo exigem usuário ativo e token Bearer. O frontend usa Axios apontando por padrão para localhost na porta 8000 e timeout de 12 segundos. Uma resposta 401 apaga a sessão local.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Rota</th><th>Uso atual</th><th>Efeito principal</th></tr></thead>
+        <tbody>
+          <tr><td class="route">GET /exams/{id}</td><td>Abre a página.</td><td>Retorna exame, paciente, diagnósticos, regiões, contexto e rascunho do usuário.</td></tr>
+          <tr><td class="route">GET /validation/context</td><td>Define o modo.</td><td>Retorna ciclo, dia, diagnóstico ativo, revisão geral, IA e suporte.</td></tr>
+          <tr><td class="route">GET /diagnosis-options</td><td>Preenche “+ Adicionar”.</td><td>Lista diagnósticos padronizados permitidos.</td></tr>
+          <tr><td class="route">PATCH /exams/{id}/status</td><td>Primeira abertura.</td><td>Muda <code>nao_validado</code> para <code>em_validacao</code> e registra transição.</td></tr>
+          <tr><td class="route">POST /validation/diagnoses/{id}/review</td><td>Concordo, Discordo, justificativa.</td><td>Cria/atualiza decisão por ciclo e devolve o exame inteiro atualizado.</td></tr>
+          <tr><td class="route">POST /exams/{id}/diagnoses</td><td>Adicionar diagnóstico.</td><td>Cria <code>doctor_added</code> validado contra a lista permitida.</td></tr>
+          <tr><td class="route">DELETE /exams/{id}/diagnoses/{diagnosis_id}</td><td>Remover diagnóstico médico.</td><td>Remove diagnóstico e regiões atomicamente.</td></tr>
+          <tr><td class="route">POST /diagnoses/{id}/regions</td><td>Nova região.</td><td>Cria região percentual e atribui autor.</td></tr>
+          <tr><td class="route">PATCH /diagnoses/{id}/regions/{region_id}</td><td>Editar/redesenhar.</td><td>Substitui coordenadas e atualiza data.</td></tr>
+          <tr><td class="route">DELETE /diagnoses/{id}/regions/{region_id}</td><td>Excluir região.</td><td>Protege a última região obrigatória de infarto confirmado.</td></tr>
+          <tr><td class="route">PUT /exams/{id}/draft</td><td>Salvar observações.</td><td>Cria, atualiza ou remove rascunho exclusivo do médico.</td></tr>
+          <tr><td class="route">POST /exams/{id}/validate</td><td>Validação final.</td><td>Conclui o exame, grava resultado e auditoria, remove rascunho.</td></tr>
+          <tr><td class="route">GET /validation/next</td><td>Próximo exame.</td><td>Retorna o primeiro pendente priorizando os já em validação.</td></tr>
+          <tr><td class="route">GET /exams/{id}/image</td><td>Carrega ECG protegido.</td><td>Entrega blob da base de metadados com cache privado ou redireciona para fallback.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      Existe também <code>PATCH /exams/{exam_id}/diagnoses/{diagnosis_id}/review</code>, mas a página atual não o usa. Ela usa a rota de validação por ciclo para todas as decisões clínicas desta tela.
+    </div>
+  </section>
+
+  <section>
+    <h2>11. O que cada tabela do backend guarda</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tabela</th><th>Responsabilidade</th><th>Observação importante</th></tr></thead>
+        <tbody>
+          <tr><td>Patient</td><td>Dados demográficos e antropométricos.</td><td>O nome existe no banco, mas não vai no payload desta página.</td></tr>
+          <tr><td>Exam</td><td>Identidade do exame, imagem, metadados, status e resultado final.</td><td><code>status_validation</code> e <code>review_result</code> representam a conclusão global.</td></tr>
+          <tr><td>Diagnosis</td><td>Diagnóstico original ou adicionado, status legado e primeira região legada.</td><td><code>source</code> distingue <code>original</code> de <code>doctor_added</code>.</td></tr>
+          <tr><td>DiagnosisValidation</td><td>Decisão clínica por texto canônico e ciclo.</td><td>Guarda médico, justificativa e datas; é a fonte efetiva preferida.</td></tr>
+          <tr><td>DiagnosisRegion</td><td>Uma ou mais caixas percentuais vinculadas ao diagnóstico.</td><td>Guarda criador e timestamps.</td></tr>
+          <tr><td>ExamDraft</td><td>Observação geral ainda não finalizada.</td><td>Única por exame + usuário.</td></tr>
+          <tr><td>Review</td><td>Histórico de transição global do exame.</td><td>Registra início e validação final, não cada hover ou edição local.</td></tr>
+          <tr><td>ValidationCycle</td><td>Metadados persistidos do ciclo.</td><td>O contexto executado hoje é lido principalmente da configuração e variáveis de ambiente.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>12. Responsividade, acessibilidade e comportamento visual</h2>
+    <ul>
+      <li><strong>Desktop:</strong> painel esquerdo e ECG lado a lado. A largura do painel é calculada para reservar a proporção natural do ECG: cerca de 30–32%; entre 768 e 920 px, pode chegar a 42%.</li>
+      <li><strong>Abaixo de 768 px:</strong> o ECG ocupa a tela e “Diagnósticos e ações” abre um Sheet à direita. A mesma composição React é reutilizada; o estado não é duplicado.</li>
+      <li><strong>Rolagem:</strong> corpo do painel rola, enquanto status e ações permanecem fixos. O painel direito também pode rolar sem deformar o ECG.</li>
+      <li><strong>Teclado:</strong> accordion, collapsibles, tooltips, Sheet, decisões e regiões possuem nomes acessíveis. Foco reproduz o destaque de hover. Escape cancela região/seleção e fecha overlays.</li>
+      <li><strong>Navegação retrátil:</strong> quando expandida, torna o workspace clínico <code>inert</code> e intercepta ações, evitando cliques acidentais através do overlay.</li>
+      <li><strong>Temas:</strong> os componentes usam tokens semânticos; sucesso é verde, discordância vermelha, atenção âmbar e informação/IA azul.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>13. Limites e pontos de atenção atuais</h2>
+    <div class="callout risk">
+      <strong>Revalidação geral não exige todos os diagnósticos no gate atual.</strong> O texto da interface pede revisar todos, mas <code>requiredDecisionComplete</code> usa <code>some(...)</code>. Assim, uma única decisão não pendente pode habilitar “Validar exame”. O endpoint final também não revalida a completude dos diagnósticos.
+    </div>
+    <div class="callout warn">
+      <strong>Infarto rejeitado e região.</strong> O backend só exige área antes de <em>confirmar</em> infarto, porém o gate diário do frontend exige que <code>region_required_missing</code> seja falso mesmo quando a decisão é “Discordo”. Na prática, um infarto rejeitado sem área pode bloquear “Salvar e próximo”.
+    </div>
+    <ul>
+      <li>Não há controle de versão ou bloqueio otimista: decisões compartilhadas podem sofrer “última gravação vence” se dois médicos atuarem no mesmo diagnóstico. Os rascunhos gerais, porém, são separados por usuário.</li>
+      <li>Os endpoints clínicos exigem usuário ativo, mas não fazem uma verificação adicional de papel “doctor” em cada rota.</li>
+      <li>Duplicidades de diagnósticos adicionados são aceitas atualmente.</li>
+      <li>A IA é uma simulação configurada, sem confiança, modelo real, auditoria de inferência ou persistência própria.</li>
+      <li>Editar região é redesenhar; não há movimentação ou redimensionamento por alças.</li>
+      <li>O detector de saída não considera uma região em desenho como alteração não salva; ele considera observações e justificativas sujas.</li>
+      <li>O frontend impõe região mínima de 0,8% por eixo, enquanto o backend aceita qualquer tamanho positivo. Clientes alternativos podem enviar caixas menores.</li>
+      <li>A remoção de região não possui confirmação; a remoção de diagnóstico médico possui.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>14. Mapa rápido do código</h2>
+    <ul class="source-map">
+      <li><code>front/src/pages/ExamReviewPage.jsx</code>: orquestra carga, estados, serviços, layout, footer, Sheet e observações.</li>
+      <li><code>front/src/components/DiagnosisPanel.jsx</code>: cards, accordions, badges, decisões, justificativas, áreas, adição e remoção.</li>
+      <li><code>front/src/components/EcgViewer.jsx</code>: imagem, proporção, zoom, desenho e sincronização de regiões.</li>
+      <li><code>front/src/components/PatientInfo.jsx</code>: formatação e filtragem dos dados clínicos.</li>
+      <li><code>front/src/components/ReviewActions.jsx</code>: Voltar, Salvar observações, Salvar e próximo/Validar exame.</li>
+      <li><code>front/src/utils/diagnosisReferences.js</code>: agrupamento visual, D1/D2 e D1.1.</li>
+      <li><code>front/src/utils/diagnosisRegionVisuals.js</code>: estado efetivo e cores das regiões.</li>
+      <li><code>front/src/services/examsService.js</code> e <code>validationService.js</code>: contratos HTTP.</li>
+      <li><code>back/app/main.py</code>: payloads, regras clínicas, fila e endpoints.</li>
+      <li><code>back/app/models.py</code>: tabelas SQLModel.</li>
+      <li><code>back/app/schemas.py</code>: formatos de entrada validados.</li>
+      <li><code>back/app/config_source.py</code>: padronização, calendário, modo IA e configurações seguras.</li>
+      <li><code>back/app/metadata_source.py</code>: opções padronizadas e imagem do ECG.</li>
+      <li><code>back/app/config/*.json</code>: ciclo atual, agrupamentos e sugestões simuladas.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Modelo mental final</h2>
+    <p><strong>A página não é apenas um formulário.</strong> Ela combina quatro camadas independentes: o ciclo decide qual diagnóstico importa hoje; cada diagnóstico guarda uma decisão clínica por ciclo; as regiões vinculam evidência visual ao diagnóstico; e a validação final conclui o exame globalmente.</p>
+    <p>Na captura, você está no primeiro desses passos: D1 é o item obrigatório ainda pendente, D2 já possui discordância própria, a IA apenas informou compatibilidade com D1, e o exame ainda não avançou na fila porque a decisão obrigatória não foi tomada.</p>
+  </section>
+
+  <footer>Composed 2026-09-01 09:46 BRT by ce-explain</footer>
+</main>
+</body>
+</html>
+
