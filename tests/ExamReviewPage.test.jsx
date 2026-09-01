@@ -382,6 +382,8 @@ describe("ExamReviewPage", () => {
 
     const trigger = await screen.findByRole("button", { name: "Mais informações" });
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
+    expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted");
+    expect(trigger).not.toHaveClass("aria-expanded:bg-muted");
     const clinicalHeading = screen.getByRole("heading", { name: "Dados clínicos" });
     expect(clinicalHeading).toBeVisible();
     expect(
@@ -416,6 +418,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("26/08/2026 as 08:30")).toBeVisible();
     expect(screen.getByText("ECG 12 derivações")).toBeVisible();
     expect(screen.getByText("Notas")).toBeVisible();
+    expect(screen.getByText("Notas").closest("[data-slot='card-content']")).toHaveClass("py-3");
     expect(screen.queryByText("Laudo original")).not.toBeInTheDocument();
     expect(screen.queryByText("Comentários")).not.toBeInTheDocument();
     expect(screen.getByText("Ritmo regular no laudo original.")).toBeVisible();

@@ -15,6 +15,8 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        collapsible:
+          "rounded-xl hover:bg-muted hover:text-foreground aria-expanded:rounded-b-none dark:hover:bg-muted/50",
         brandGhost:
           "text-brand-foreground hover:bg-brand-foreground/12 hover:text-brand-foreground aria-expanded:bg-brand-foreground/12 aria-expanded:text-brand-foreground",
         brandNavigation:

@@ -784,9 +784,9 @@ export default function ExamReviewPage() {
           <CollapsibleTrigger
             render={
               <Button
-                className="h-auto w-full justify-between rounded-none px-3 py-3"
+                className="h-auto w-full justify-between px-3 py-3"
                 type="button"
-                variant="ghost"
+                variant="collapsible"
               />
             }
           >
@@ -806,7 +806,7 @@ export default function ExamReviewPage() {
         </CardHeader>
         <CollapsibleContent>
           <Separator />
-          <CardContent className="flex flex-col gap-3 pt-3">
+          <CardContent className="flex flex-col gap-3 py-3">
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded-lg bg-muted/50 p-3">
                 <dt className="text-xs font-medium text-muted-foreground">Data e hora</dt>
