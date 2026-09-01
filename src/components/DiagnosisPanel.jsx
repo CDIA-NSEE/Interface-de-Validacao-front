@@ -671,7 +671,7 @@ export default function DiagnosisPanel({
                       Adicionar
                     </Button>
                   ) : null}
-                  <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} className="mr-px" size="icon-sm" type="button" variant="ghost" />}>
+                  <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} className="mr-px aria-expanded:bg-transparent aria-expanded:hover:bg-muted" size="icon-sm" type="button" variant="ghost" />}>
                     <ChevronDown aria-hidden="true" className={cn("transition-transform", isSecondaryOpen && "rotate-180")} />
                   </CollapsibleTrigger>
                 </CardAction>
