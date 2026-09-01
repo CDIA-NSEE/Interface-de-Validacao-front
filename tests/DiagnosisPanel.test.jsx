@@ -190,6 +190,30 @@ describe("DiagnosisPanel", () => {
     expect(within(generalPanel).getAllByText("IA concordou")).toHaveLength(2);
   });
 
+  it("preserva badges clínicos no conteúdo do diagnóstico opcional expandido", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Bloqueio de ramo direito", {
+            is_grouped: true,
+            region_required_missing: true,
+          }),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    fireEvent.click(trigger);
+    const content = document.getElementById(trigger.getAttribute("aria-controls"));
+
+    expect(within(content).getByText("Agrupado")).toBeVisible();
+    expect(within(content).getByText("Área necessária")).toBeVisible();
+  });
+
   it("mantém os opcionais recolhidos e abre somente um diagnóstico por vez", () => {
     render(
       <DiagnosisPanelHarness

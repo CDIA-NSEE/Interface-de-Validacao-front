@@ -124,6 +124,13 @@ function diagnosisCardVariant({ isRegionTarget, isRequired }) {
 }
 
 function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
+  const hasBadges = isRequired
+    || (aiModeEnabled && diagnosis.ai_suggested)
+    || diagnosis.is_grouped
+    || (diagnosis.source !== "doctor_added" && diagnosis.region_required_missing);
+
+  if (!hasBadges) return null;
+
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       {isRequired ? <Badge variant="info">Diagnóstico do dia</Badge> : null}
@@ -696,7 +703,7 @@ export default function DiagnosisPanel({
                                 <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
                               </span>
                             </AccordionTrigger>
-                            <AccordionContent className="flex flex-col gap-3 border-t pt-3">
+                            <AccordionContent className="flex flex-col gap-3 border-t pt-2">
                               <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                               <DiagnosisDetails {...sharedCardProps} decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
