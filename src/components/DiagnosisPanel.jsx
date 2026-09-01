@@ -655,7 +655,7 @@ export default function DiagnosisPanel({
           <Card className="gap-0 overflow-hidden" size="sm">
               <CardHeader className="items-center">
                 <CardTitle>Diagnósticos adicionais</CardTitle>
-                <CardAction className="flex items-center gap-1">
+                <CardAction className="row-span-1 flex items-center gap-1 self-center">
                   {options.length ? (
                     <Button
                       aria-controls={addDiagnosisContentId}
