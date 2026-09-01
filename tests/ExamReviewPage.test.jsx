@@ -381,6 +381,7 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     const trigger = await screen.findByRole("button", { name: "Mais informações" });
+    expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
     const clinicalHeading = screen.getByRole("heading", { name: "Dados clínicos" });
     expect(clinicalHeading).toBeVisible();
     expect(

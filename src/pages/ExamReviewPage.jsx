@@ -779,7 +779,7 @@ export default function ExamReviewPage() {
 
   const moreInformation = (
     <Collapsible onOpenChange={setIsMoreInformationOpen} open={isMoreInformationOpen}>
-      <Card className="gap-0 overflow-hidden" size="sm">
+      <Card className="gap-0 overflow-hidden py-0" size="sm">
         <CardHeader className="p-0">
           <CollapsibleTrigger
             render={
