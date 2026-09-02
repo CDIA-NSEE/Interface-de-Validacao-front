@@ -414,7 +414,28 @@ describe("DiagnosisPanel", () => {
       within(dailyPanel).getByTitle("Ritmo sinusal"),
     ).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByText("Diagnósticos adicionais")).toBeVisible();
+    const secondaryTitle = screen.getByText("Diagnósticos adicionais");
+    const secondaryCard = secondaryTitle.closest('[data-slot="card"]');
+    const secondaryHeader = secondaryTitle.closest('[data-slot="card-header"]');
+
+    expect(secondaryTitle).toBeVisible();
+    expect(secondaryCard).toHaveClass("py-0");
+    expect(secondaryHeader).toHaveClass("py-3");
+    const secondaryToggle = screen.getByRole("button", { name: "Recolher opcionais" });
+    const secondaryContent = document.getElementById(secondaryToggle.getAttribute("aria-controls"));
+    expect(secondaryContent).toHaveClass(
+      "h-(--collapsible-panel-height)",
+      "overflow-hidden",
+      "transition-[height]",
+      "duration-200",
+      "data-ending-style:h-0",
+      "data-starting-style:h-0",
+    );
+    expect(secondaryToggle.querySelector("svg")).toHaveClass(
+      "transition-transform",
+      "duration-[180ms]",
+      "rotate-180",
+    );
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
     expect(addDiagnosisButton).toBeVisible();
     expect(addDiagnosisButton).toHaveTextContent("Adicionar");

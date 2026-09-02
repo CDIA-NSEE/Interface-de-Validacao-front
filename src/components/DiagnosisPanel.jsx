@@ -652,8 +652,8 @@ export default function DiagnosisPanel({
 
       {secondaryDiagnoses.length || options.length ? (
         <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
-          <Card className="gap-0 overflow-hidden" size="sm">
-              <CardHeader className="items-center">
+          <Card className="gap-0 overflow-hidden py-0" size="sm">
+              <CardHeader className="items-center py-3">
                 <CardTitle>Diagnósticos adicionais</CardTitle>
                 <CardAction className="row-span-1 flex items-center gap-1 self-center">
                   {options.length ? (
@@ -672,11 +672,11 @@ export default function DiagnosisPanel({
                     </Button>
                   ) : null}
                   <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} className="mr-px aria-expanded:bg-transparent aria-expanded:hover:bg-muted" size="icon-sm" type="button" variant="ghost" />}>
-                    <ChevronDown aria-hidden="true" className={cn("transition-transform", isSecondaryOpen && "rotate-180")} />
+                    <ChevronDown aria-hidden="true" className={cn("transition-transform duration-[180ms] ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
                   </CollapsibleTrigger>
                 </CardAction>
               </CardHeader>
-              <CollapsibleContent>
+              <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
                 <CardContent className="border-t px-0 py-0">
                 {secondaryDiagnoses.length ? (
                   <div className="grid max-h-[min(32svh,20rem)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
