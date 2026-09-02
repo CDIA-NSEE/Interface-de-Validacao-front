@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+const ACTION_CLASS_NAME =
+  "h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none";
+
 export default function ReviewActions({
   canValidate = true,
   isBusy,
@@ -18,7 +21,7 @@ export default function ReviewActions({
 }) {
   const primaryButton = (
     <Button
-      className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
+      className={ACTION_CLASS_NAME}
       disabled={isBusy || isValid || !canValidate}
       onClick={onValidate}
       type="button"
@@ -41,7 +44,7 @@ export default function ReviewActions({
         role="group"
       >
         <Button
-          className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
+          className={ACTION_CLASS_NAME}
           disabled={isBusy}
           onClick={onBack}
           type="button"
@@ -52,7 +55,7 @@ export default function ReviewActions({
         </Button>
         {onSave ? (
           <Button
-            className="h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs"
+            className={ACTION_CLASS_NAME}
             disabled={isBusy || saveDisabled}
             onClick={onSave}
             type="button"

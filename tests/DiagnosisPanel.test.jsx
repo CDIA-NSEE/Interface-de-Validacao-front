@@ -110,6 +110,13 @@ describe("DiagnosisPanel", () => {
     expect(pendingStatus).toHaveAttribute("data-variant", "pending");
     expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge).toHaveAttribute("data-variant", "ai");
+    expect(aiBadge).toHaveClass(
+      "h-4",
+      "border-info/15",
+      "bg-info/8",
+      "px-1.5",
+      "font-normal",
+    );
     expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleDescription(
       "Sugestão informativa; a decisão permanece médica.",
@@ -487,8 +494,10 @@ describe("DiagnosisPanel", () => {
       "w-full",
       "justify-start",
       "cursor-pointer",
+      "rounded-none",
+      "hover:bg-muted/40",
       "aria-expanded:bg-transparent",
-      "aria-expanded:hover:bg-muted",
+      "aria-expanded:hover:bg-muted/40",
     );
     expect(headerToggle.querySelector("button")).not.toBeInTheDocument();
     expect(addDiagnosisButton.parentElement.closest("button")).toBeNull();

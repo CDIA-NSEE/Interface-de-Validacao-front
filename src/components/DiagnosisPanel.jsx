@@ -655,7 +655,7 @@ export default function DiagnosisPanel({
                 <CollapsibleTrigger
                   render={
                     <Button
-                      className="h-7 min-w-0 w-full cursor-pointer justify-start border-x-0 px-0 text-left font-heading text-sm aria-expanded:bg-transparent aria-expanded:hover:bg-muted"
+                      className="h-7 min-w-0 w-full cursor-pointer justify-start rounded-none border-x-0 px-0 text-left font-heading text-sm hover:bg-muted/40 aria-expanded:bg-transparent aria-expanded:hover:bg-muted/40"
                       type="button"
                       variant="ghost"
                     />

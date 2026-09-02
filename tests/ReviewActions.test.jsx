@@ -48,7 +48,14 @@ describe("ReviewActions", () => {
       />,
     );
 
-    screen.getAllByRole("button").forEach((button) => expect(button).toBeDisabled());
+    screen.getAllByRole("button").forEach((button) => {
+      expect(button).toBeDisabled();
+      expect(button).toHaveClass(
+        "disabled:bg-muted",
+        "disabled:text-muted-foreground",
+        "disabled:opacity-100",
+      );
+    });
   });
 
   it("preserva ações, bloqueios e o rótulo alternativo", () => {
@@ -84,5 +91,44 @@ describe("ReviewActions", () => {
     );
 
     expect(screen.getByRole("button", { name: "Validar exame" })).toBeDisabled();
+  });
+
+  it("neutraliza visualmente as ações desabilitadas sem afetar a ação primária habilitada", () => {
+    const sharedProps = {
+      isBusy: false,
+      isValid: false,
+      onBack: vi.fn(),
+      onSave: vi.fn(),
+      onValidate: vi.fn(),
+      primaryLabel: "Salvar e próximo",
+      saveLabel: "Salvar observações",
+    };
+
+    const { rerender } = render(
+      <ReviewActions {...sharedProps} canValidate={false} saveDisabled />,
+    );
+
+    const saveButton = screen.getByRole("button", { name: "Salvar observações" });
+    const primaryButton = screen.getByRole("button", { name: "Salvar e próximo" });
+
+    [saveButton, primaryButton].forEach((button) => {
+      expect(button).toBeDisabled();
+      expect(button).toHaveClass(
+        "disabled:border-border",
+        "disabled:bg-muted",
+        "disabled:text-muted-foreground",
+        "disabled:opacity-100",
+        "disabled:shadow-none",
+      );
+    });
+
+    rerender(<ReviewActions {...sharedProps} canValidate saveDisabled={false} />);
+
+    expect(screen.getByRole("button", { name: "Salvar observações" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toHaveClass(
+      "bg-success",
+      "text-success-foreground",
+    );
   });
 });
