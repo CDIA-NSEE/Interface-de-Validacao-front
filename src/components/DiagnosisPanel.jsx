@@ -652,7 +652,17 @@ export default function DiagnosisPanel({
         <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden py-0" size="sm">
               <CardHeader className="items-center py-3">
-                <CardTitle>Diagnósticos adicionais</CardTitle>
+                <CollapsibleTrigger
+                  render={
+                    <Button
+                      className="h-7 min-w-0 w-full cursor-pointer justify-start border-x-0 px-0 text-left font-heading text-sm aria-expanded:bg-transparent aria-expanded:hover:bg-muted"
+                      type="button"
+                      variant="ghost"
+                    />
+                  }
+                >
+                  Diagnósticos adicionais
+                </CollapsibleTrigger>
                 <CardAction className="row-span-1 flex items-center gap-1 self-center">
                   {options.length ? (
                     <Button

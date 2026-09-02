@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -461,6 +462,57 @@ describe("DiagnosisPanel", () => {
     expect(addDiagnosisButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("1 no ECG · 0 adicionados")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
+  });
+
+  it("expande diagnósticos adicionais pelo cabeçalho sem misturar a ação de adicionar", async () => {
+    const user = userEvent.setup();
+    render(
+      <AutoRevealHarness
+        {...createProps()}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Bloqueio de ramo direito"),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const headerToggle = screen.getByRole("button", { name: "Diagnósticos adicionais" });
+    const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
+
+    expect(headerToggle).toHaveAttribute("aria-expanded", "false");
+    expect(headerToggle).toHaveClass(
+      "min-w-0",
+      "w-full",
+      "justify-start",
+      "cursor-pointer",
+      "aria-expanded:bg-transparent",
+      "aria-expanded:hover:bg-muted",
+    );
+    expect(headerToggle.querySelector("button")).not.toBeInTheDocument();
+    expect(addDiagnosisButton.parentElement.closest("button")).toBeNull();
+
+    await user.click(headerToggle);
+    expect(headerToggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(addDiagnosisButton);
+    expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
+    expect(headerToggle).toHaveAttribute("aria-expanded", "true");
+
+    addDiagnosisButton.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
+    expect(headerToggle).toHaveAttribute("aria-expanded", "true");
+
+    const chevronToggle = screen.getByRole("button", { name: "Recolher opcionais" });
+    chevronToggle.focus();
+    await user.keyboard("{Enter}");
+    expect(headerToggle).toHaveAttribute("aria-expanded", "false");
+
+    headerToggle.focus();
+    await user.keyboard(" ");
+    expect(headerToggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("comunica a decisão pelo badge padronizado e pelo botão selecionado", () => {
