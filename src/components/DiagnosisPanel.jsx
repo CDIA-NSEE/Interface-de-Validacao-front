@@ -1,6 +1,7 @@
 import { Check, ChevronDown, MapPinned, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
+import ValidationPanelIconLabel from "./ValidationPanelIconLabel.jsx";
 import {
   Accordion,
   AccordionContent,
@@ -289,9 +290,8 @@ function DiagnosisDetails({
               </div>
             );
           })}
-            <Button aria-pressed={isRegionTarget} className="w-fit" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Adicionar área
+            <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+              <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
             </Button>
           </CollapsibleContent>
         </Collapsible>
@@ -315,15 +315,13 @@ function DiagnosisDetails({
           <AlertDescription className="flex flex-col items-start gap-2">
             <span>Obrigatória para este diagnóstico.</span>
             <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
-              <MapPinned aria-hidden="true" data-icon="inline-start" />
-              Marcar área
+              <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
             </Button>
           </AlertDescription>
         </Alert>
       ) : !regions.length ? (
-        <Button aria-pressed={isRegionTarget} className="w-fit" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
-          <MapPinned aria-hidden="true" data-icon="inline-start" />
-          Marcar área
+        <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+          <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
         </Button>
       ) : null}
 
@@ -672,7 +670,7 @@ export default function DiagnosisPanel({
                     </Button>
                   ) : null}
                   <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} className="mr-px aria-expanded:bg-transparent aria-expanded:hover:bg-muted" size="icon-sm" type="button" variant="ghost" />}>
-                    <ChevronDown aria-hidden="true" className={cn("transition-transform duration-[180ms] ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
+                    <ChevronDown aria-hidden="true" className={cn("text-muted-foreground transition-transform duration-[180ms] ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
                   </CollapsibleTrigger>
                 </CardAction>
               </CardHeader>

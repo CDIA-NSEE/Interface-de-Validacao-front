@@ -382,6 +382,7 @@ describe("ExamReviewPage", () => {
 
     const trigger = await screen.findByRole("button", { name: "Mais informações" });
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
+    expect(trigger).toHaveClass("border-x-0");
     expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted");
     expect(trigger).not.toHaveClass("aria-expanded:bg-muted");
     const clinicalHeading = screen.getByRole("heading", { name: "Dados clínicos" });
@@ -390,6 +391,19 @@ describe("ExamReviewPage", () => {
       clinicalHeading.closest("[data-slot='card-title']").querySelector(".lucide-stethoscope"),
     ).toBeTruthy();
     expect(trigger.querySelector(".lucide-info")).toBeTruthy();
+    expect(trigger.querySelector(".lucide-chevron-down")).toHaveClass("text-muted-foreground");
+    const clinicalIconLabel = clinicalHeading.querySelector('[data-slot="validation-panel-icon-label"]');
+    const informationIconLabel = trigger.querySelector('[data-slot="validation-panel-icon-label"]');
+    expect(clinicalIconLabel).toHaveClass("gap-2", "items-center");
+    expect(informationIconLabel).toHaveClass("gap-2", "items-center");
+    expect(clinicalIconLabel.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
+      "size-5",
+      "shrink-0",
+    );
+    expect(informationIconLabel.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
+      "size-5",
+      "shrink-0",
+    );
     expect(screen.getByText("Nascimento")).toBeVisible();
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
     expect(clinicalGrid).toHaveClass("grid-cols-2", "gap-2", "sm:grid-cols-3");

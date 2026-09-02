@@ -231,6 +231,18 @@ describe("DiagnosisPanel", () => {
 
     expect(screen.getAllByRole("button", { name: "Concordo" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(1);
+    const markAreaButton = screen.getByRole("button", { name: "Marcar área" });
+    expect(markAreaButton).toHaveClass("border-x-0", "px-0");
+    const markAreaIconSlot = markAreaButton.querySelector('[data-slot="validation-panel-icon"]');
+    expect(markAreaIconSlot).toHaveClass(
+      "size-5",
+      "shrink-0",
+    );
+    expect(markAreaIconSlot.querySelector("svg")).toHaveClass("size-[18px]");
+    expect(markAreaButton.querySelector('[data-slot="validation-panel-icon-label"]')).toHaveClass(
+      "gap-2",
+      "items-center",
+    );
     expect(screen.getByTestId("optional-diagnoses-scroll-boundary")).toHaveClass("max-h-[min(32svh,20rem)]", "grid-rows-[minmax(0,1fr)]");
     expect(screen.getByTestId("optional-diagnoses-scroll")).toHaveClass("min-h-0");
 
@@ -327,7 +339,13 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByLabelText("2 áreas marcadas")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("2 áreas marcadas"));
-    expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
+    const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
+    expect(addAreaButton).toBeVisible();
+    expect(addAreaButton).toHaveClass("border-x-0", "px-0");
+    expect(addAreaButton.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
+      "size-5",
+      "shrink-0",
+    );
     fireEvent.click(screen.getAllByRole("button", { name: "Concordo" })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
@@ -432,6 +450,7 @@ describe("DiagnosisPanel", () => {
       "data-starting-style:h-0",
     );
     expect(secondaryToggle.querySelector("svg")).toHaveClass(
+      "text-muted-foreground",
       "transition-transform",
       "duration-[180ms]",
       "rotate-180",

@@ -19,6 +19,7 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
 import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
+import ValidationPanelIconLabel from "../components/ValidationPanelIconLabel.jsx";
 import ValidationSidebar from "../components/ValidationSidebar.jsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import {
   addDiagnosis,
   addDiagnosisRegion,
@@ -766,9 +768,10 @@ export default function ExamReviewPage() {
   const clinicalInformation = (
     <Card size="sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Stethoscope aria-hidden="true" data-icon="inline-start" />
-          <h2>Dados clínicos</h2>
+        <CardTitle>
+          <h2>
+            <ValidationPanelIconLabel icon={Stethoscope}>Dados clínicos</ValidationPanelIconLabel>
+          </h2>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -784,22 +787,19 @@ export default function ExamReviewPage() {
           <CollapsibleTrigger
             render={
               <Button
-                className="h-auto w-full justify-between px-3 py-3"
+                className="h-auto w-full justify-between border-x-0 px-3 py-3"
                 type="button"
                 variant="collapsible"
               />
             }
           >
-            <span className="flex items-center gap-2">
-              <Info aria-hidden="true" data-icon="inline-start" />
-              Mais informações
-            </span>
+            <ValidationPanelIconLabel icon={Info}>Mais informações</ValidationPanelIconLabel>
             <span
               aria-hidden="true"
               className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"
             >
               <ChevronDown
-                className={isMoreInformationOpen ? "rotate-180 transition-transform" : "transition-transform"}
+                className={cn("text-muted-foreground transition-transform", isMoreInformationOpen && "rotate-180")}
               />
             </span>
           </CollapsibleTrigger>
