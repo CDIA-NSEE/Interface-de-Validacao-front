@@ -137,8 +137,6 @@
   display: flex;
   min-height: 0;
   flex: 1 1 0%;
-  align-items: center;
-  justify-content: center;
   overflow: auto;
   padding: clamp(2px, 0.35vw, 6px);
   background: var(--card);
@@ -149,7 +147,7 @@
   position: relative;
   max-width: none;
   flex: 0 0 auto;
-  transition: width 180ms ease, height 180ms ease;
+  margin: auto;
 }
 
 .ecg-image-stage img {

@@ -155,7 +155,8 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("button", { name: "Mais informações" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("textbox", { name: "Observações gerais" })).toBeVisible();
     const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
-    expect(screen.getByTestId("general-observations-header")).toContainElement(ecgToolbar);
+    expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
+    expect(screen.getByTestId("general-observations-header")).not.toContainElement(ecgToolbar);
     expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
@@ -516,7 +517,7 @@ describe("ExamReviewPage", () => {
         screen.queryByRole("dialog", { name: "Diagnósticos e ações" }),
       ).not.toBeInTheDocument();
     });
-    expect(screen.getByText("Marcando área para D1 · Arraste sobre o ECG · Esc para cancelar")).toBeVisible();
+    expect(screen.getByText("Marcando área para D1")).toBeVisible();
   });
 
   it("reabre o Sheet ao cancelar a marcação no layout compacto", async () => {
@@ -527,7 +528,7 @@ describe("ExamReviewPage", () => {
     await screen.findByRole("heading", { name: "Exame ECG-42" });
     await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
     await user.click(await screen.findByRole("button", { name: "Marcar área" }));
-    await user.click(screen.getByRole("button", { name: "Limpar seleção" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar marcação" }));
 
     expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
   });
@@ -620,7 +621,33 @@ describe("ExamReviewPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
 
     await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("✓ Observações salvas");
+    expect(await screen.findByRole("status")).toHaveTextContent("✓ Salvas");
+    expect(screen.getByTestId("general-observations-header")).toContainElement(screen.getByRole("status"));
+    expect(screen.getByTestId("general-observations-header")).not.toContainElement(
+      screen.getByRole("toolbar", { name: "Controles do ECG" }),
+    );
+  });
+
+  it("não confirma como salvo um texto alterado durante a requisição", async () => {
+    let resolveSave;
+    saveExamDraft.mockReturnValueOnce(new Promise((resolve) => {
+      resolveSave = resolve;
+    }));
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const notes = await screen.findByRole("textbox", { name: "Observações gerais" });
+    fireEvent.change(notes, { target: { value: "Primeira versão" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Salvando…");
+
+    fireEvent.change(notes, { target: { value: "Versão ainda não enviada" } });
+    await act(async () => {
+      resolveSave({ ...exam, draft_notes: "Primeira versão" });
+    });
+
+    expect(screen.queryByText("✓ Salvas")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar observações" })).toBeEnabled();
   });
 
   it("mostra feedback contextual ao salvar uma decisão clínica", async () => {

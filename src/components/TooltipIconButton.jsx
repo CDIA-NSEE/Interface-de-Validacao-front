@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button.jsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 
-export default function TooltipIconButton({ children, label, type = "button", ...buttonProps }) {
+export default function TooltipIconButton({ children, label, tooltip = label, type = "button", ...buttonProps }) {
   return (
     <Tooltip>
       <TooltipTrigger
@@ -9,7 +9,7 @@ export default function TooltipIconButton({ children, label, type = "button", ..
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
 }

@@ -1,7 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useState } from "react";
-
 import EcgViewer from "../src/components/EcgViewer.jsx";
 import { TooltipProvider } from "../src/components/ui/tooltip.jsx";
 
@@ -9,33 +7,22 @@ function renderWithTooltips(component) {
   return render(<TooltipProvider>{component}</TooltipProvider>);
 }
 
-function ViewerHarness(props) {
-  const [controlsTarget, setControlsTarget] = useState(null);
-
-  return (
-    <>
-      <div data-testid="ecg-controls-target" ref={setControlsTarget} />
-      <EcgViewer {...props} controlsTarget={controlsTarget} />
-    </>
-  );
-}
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("EcgViewer", () => {
-  it("renderiza os controles no alvo externo sem faixa ou rótulo visível", () => {
-    const { container } = renderWithTooltips(<ViewerHarness imageUrl="/ecg-real.png" />);
+  it("mantém a toolbar compacta dentro do viewer sem alterar sua altura", () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
 
     const canvas = container.querySelector(".ecg-canvas");
-    const controlsTarget = screen.getByTestId("ecg-controls-target");
     const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
 
-    expect(container.querySelector("[data-testid='ecg-controls-dock']")).not.toBeInTheDocument();
-    expect(controlsTarget).toContainElement(toolbar);
+    expect(canvas.parentElement).toContainElement(toolbar);
+    expect(toolbar).toHaveClass("absolute", "grid", "grid-cols-2");
     expect(toolbar).not.toHaveTextContent("Controles do ECG");
     expect(canvas.parentElement).toHaveClass("min-h-72", "sm:min-h-88");
+    expect(screen.getAllByRole("button")).toHaveLength(4);
   });
 
   it("usa a proporção natural da imagem e a informa ao layout", async () => {
@@ -106,29 +93,26 @@ describe("EcgViewer", () => {
   it("preserva a faixa de zoom de 0,6 a 2,4 e o passo de 0,15", () => {
     renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
 
-    const zoomIn = screen.getByRole("button", { name: "Zoom mais" });
+    const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
 
-    expect(screen.getByText("100%")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Restaurar escala" })).toHaveTextContent("100%");
     fireEvent.click(zoomIn);
-    expect(screen.getByText("115%")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Resetar zoom" }));
-    expect(screen.getByText("100%")).toBeVisible();
-    fireEvent.click(zoomIn);
-    fireEvent.click(screen.getByRole("button", { name: "Ajustar à tela" }));
-    expect(screen.getByText("100%")).toBeVisible();
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" });
+    fireEvent.click(screen.getByRole("button", { name: "Restaurar escala" }));
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "100%" });
     fireEvent.click(zoomIn);
 
     for (let index = 0; index < 20; index += 1) {
-      fireEvent.click(screen.getByRole("button", { name: "Zoom mais" }));
+      fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
     }
-    expect(screen.getByText("240%")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Zoom mais" })).toBeDisabled();
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "240%" });
+    expect(screen.getByRole("button", { name: "Aumentar zoom" })).toBeDisabled();
 
     for (let index = 0; index < 20; index += 1) {
-      fireEvent.click(screen.getByRole("button", { name: "Zoom menos" }));
+      fireEvent.click(screen.getByRole("button", { name: "Diminuir zoom" }));
     }
-    expect(screen.getByText("60%")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Zoom menos" })).toBeDisabled();
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "60%" });
+    expect(screen.getByRole("button", { name: "Diminuir zoom" })).toBeDisabled();
   });
 
   it("mantém as regiões em coordenadas percentuais e permite limpar a seleção", () => {
@@ -170,9 +154,134 @@ describe("EcgViewer", () => {
       height: "12%",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Limpar seleção" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar edição" }));
     expect(onRegionCancel).toHaveBeenCalledOnce();
     expect(onRegionChange).toHaveBeenCalledWith(null);
+  });
+
+  it("oculta e restaura as marcações sem apagar dados", () => {
+    const { container } = renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        regions={[{ id: 7, x: 10, y: 10, width: 20, height: 20, label: "D1.1" }]}
+      />,
+    );
+
+    expect(container.querySelector(".saved-region-box")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar marcações" }));
+    expect(container.querySelector(".saved-region-box")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar marcações" }));
+    expect(container.querySelector(".saved-region-box")).toBeInTheDocument();
+  });
+
+  it("desabilita a visão limpa e oferece cancelamento contextual durante marcação", () => {
+    const onRegionCancel = vi.fn();
+    renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        onRegionCancel={onRegionCancel}
+        selectionLabel="Marcando área para D2"
+        selectionDescription="Arraste sobre o ECG · Esc para cancelar"
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Ocultar marcações" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Marcando área para D2")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar marcação" }));
+    expect(onRegionCancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancela marcação e edição com Escape sem alterar a região persistida", () => {
+    const onRegionCancel = vi.fn();
+    const onRegionChange = vi.fn();
+    const { rerender } = renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        onRegionCancel={onRegionCancel}
+        onRegionChange={onRegionChange}
+        selectionLabel="Marcando área para D1"
+      />,
+    );
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onRegionCancel).toHaveBeenCalledOnce();
+    expect(onRegionChange).toHaveBeenLastCalledWith(null);
+
+    rerender(
+      <TooltipProvider>
+        <EcgViewer
+          imageUrl="/ecg-real.png"
+          onRegionCancel={onRegionCancel}
+          onRegionChange={onRegionChange}
+          regions={[{ id: 4, x: 10, y: 10, width: 20, height: 20, label: "D1.1" }]}
+          selectedRegion={{ id: 4, x: 10, y: 10, width: 20, height: 20 }}
+          selectionLabel="Editando D1.1"
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onRegionCancel).toHaveBeenCalledTimes(2);
+    expect(onRegionChange).toHaveBeenLastCalledWith(null);
+
+    rerender(
+      <TooltipProvider>
+        <EcgViewer
+          imageUrl="/ecg-real.png"
+          onRegionCancel={onRegionCancel}
+          onRegionChange={onRegionChange}
+          regions={[{ id: 4, x: 10, y: 10, width: 20, height: 20, label: "D1.1" }]}
+        />
+      </TooltipProvider>,
+    );
+    expect(screen.getByRole("button", { name: "D1.1" })).toBeInTheDocument();
+  });
+
+  it("aplica atalhos somente com contexto do viewer e ignora campos de texto", () => {
+    renderWithTooltips(
+      <div>
+        <textarea aria-label="Campo externo" />
+        <EcgViewer imageUrl="/ecg-real.png" />
+      </div>,
+    );
+    const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    const textarea = screen.getByRole("textbox", { name: "Campo externo" });
+
+    fireEvent.keyDown(window, { key: "+" });
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "100%" });
+
+    fireEvent.pointerEnter(viewer);
+    fireEvent.keyDown(window, { key: "+" });
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" });
+    fireEvent.keyDown(window, { key: "v" });
+    expect(screen.getByRole("button", { name: "Mostrar marcações" })).toBeVisible();
+    fireEvent.keyDown(window, { key: "0" });
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "100%" });
+
+    textarea.focus();
+    fireEvent.keyDown(textarea, { key: "+" });
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "100%" });
+  });
+
+  it("faz zoom pelo wheel em torno do cursor e pan apenas no modo normal", async () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 30 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 20 });
+
+    const wheelEvent = new WheelEvent("wheel", { bubbles: true, cancelable: true, clientX: 40, clientY: 30, deltaY: -100 });
+    canvas.dispatchEvent(wheelEvent);
+    expect(wheelEvent.defaultPrevented).toBe(true);
+    await waitFor(() => expect(container.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" }));
+
+    canvas.scrollLeft = 30;
+    canvas.scrollTop = 20;
+    fireEvent.pointerDown(stage, { button: 0, clientX: 50, clientY: 50, pointerId: 2 });
+    fireEvent.pointerMove(stage, { clientX: 35, clientY: 30, pointerId: 2 });
+    expect(canvas.scrollLeft).toBe(45);
+    expect(canvas.scrollTop).toBe(40);
   });
 
   it("só desenha após ativar Marcar área e permite ciclos consecutivos", () => {

@@ -153,14 +153,22 @@ export default function ExamReviewPage() {
   const [hoveredRegionKey, setHoveredRegionKey] = useState(null);
   const [selectedRegionKey, setSelectedRegionKey] = useState(null);
   const decisionFeedbackTimersRef = useRef(new Map());
+  const notesSaveTimerRef = useRef(null);
+  const latestNotesRef = useRef("");
   const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [sidebarWidth, setSidebarWidth] = useState(null);
-  const [ecgControlsTarget, setEcgControlsTarget] = useState(null);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
+  const clearNotesSaveTimer = useCallback(() => {
+    if (!notesSaveTimerRef.current) return;
+    window.clearTimeout(notesSaveTimerRef.current);
+    notesSaveTimerRef.current = null;
+  }, []);
+
   const loadExam = useCallback(async () => {
+    clearNotesSaveTimer();
     setIsLoading(true);
     setError("");
     try {
@@ -171,7 +179,8 @@ export default function ExamReviewPage() {
       ]);
       setDiagnosisOptions(options);
       setValidationContext(contextData);
-      setNotes(examData.draft_notes || "");
+      latestNotesRef.current = examData.draft_notes || "";
+      setNotes(latestNotesRef.current);
       setSupportContact(contextData.support_contact || null);
       setActiveRegionTarget(null);
       setSelectedRegion(null);
@@ -199,12 +208,13 @@ export default function ExamReviewPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [clearNotesSaveTimer, id]);
 
   useEffect(() => () => {
     decisionFeedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     decisionFeedbackTimersRef.current.clear();
-  }, []);
+    clearNotesSaveTimer();
+  }, [clearNotesSaveTimer]);
 
   useEffect(() => {
     loadExam();
@@ -491,13 +501,23 @@ export default function ExamReviewPage() {
       return false;
     }
 
+    clearNotesSaveTimer();
     setIsBusy(true);
     setError("");
     setNotesSaveState({ status: "saving", message: "Salvando…" });
+    const submittedNotes = notes;
     try {
-      const updatedExam = await saveExamDraft(id, { notes });
+      const updatedExam = await saveExamDraft(id, { notes: submittedNotes });
       setExam(updatedExam);
-      setNotesSaveState({ status: "saved", message: "✓ Observações salvas" });
+      if (latestNotesRef.current !== submittedNotes) {
+        setNotesSaveState({ status: "idle", message: "" });
+        return true;
+      }
+      setNotesSaveState({ status: "saved", message: "✓ Salvas" });
+      notesSaveTimerRef.current = window.setTimeout(() => {
+        setNotesSaveState({ status: "idle", message: "" });
+        notesSaveTimerRef.current = null;
+      }, 1800);
       return true;
     } catch {
       setNotesSaveState({ status: "error", message: "Não foi possível salvar as observações. Tente novamente." });
@@ -653,9 +673,12 @@ export default function ExamReviewPage() {
     : null;
   const activeSelectionLabel = activeRegionTarget
     ? activeRegionTarget.regionId
-      ? `Editando ${activeRegionReference || "área"} · Arraste sobre o ECG · Esc para cancelar`
-      : `Marcando área para ${activeDiagnosisReference || "diagnóstico"} · Arraste sobre o ECG · Esc para cancelar`
+      ? `Editando ${activeRegionReference || "área"}`
+      : `Marcando área para ${activeDiagnosisReference || "diagnóstico"}`
     : "";
+  const activeSelectionDescription = activeRegionTarget?.regionId
+    ? "Ajuste a região · Esc para cancelar"
+    : "Arraste sobre o ECG · Esc para cancelar";
   const requiredDecisionComplete =
     !validationContext?.is_configured ||
     requiredDiagnoses.some(
@@ -925,7 +948,6 @@ export default function ExamReviewPage() {
             >
               <div className="flex min-h-full w-full flex-col gap-2">
                 <EcgViewer
-                  controlsTarget={ecgControlsTarget}
                   imageUrl={exam.image_endpoint || exam.image_url}
                   onImageAspectRatioChange={setImageAspectRatio}
                   onRegionCancel={handleCancelRegionSelection}
@@ -934,6 +956,7 @@ export default function ExamReviewPage() {
                   onRegionHover={handleSavedRegionHover}
                   onRegionSelect={handleSavedRegionSelect}
                   regions={viewerRegions}
+                  selectionDescription={activeSelectionDescription}
                   selectionLabel={activeSelectionLabel}
                   selectionReference={activeRegionReference}
                   selectionVisual={activeRegionVisual}
@@ -943,28 +966,35 @@ export default function ExamReviewPage() {
                     className="flex flex-wrap items-center justify-between gap-2"
                     data-testid="general-observations-header"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
                         <NotebookPen aria-hidden="true" data-icon="inline-start" />
                         Observações gerais
                       </FieldLabel>
                       <Badge variant="outline">Opcional</Badge>
+                      {notesSaveState.status === "saving" || notesSaveState.status === "saved" ? (
+                        <span className="text-xs text-muted-foreground" role="status">
+                          {notesSaveState.message}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="ml-auto" ref={setEcgControlsTarget} />
                   </div>
                   <Textarea
                     aria-label="Observações gerais"
                     id="general-observations"
                     value={notes}
                     onChange={(event) => {
-                      setNotes(event.target.value);
+                      clearNotesSaveTimer();
+                      latestNotesRef.current = event.target.value;
+                      setNotes(latestNotesRef.current);
                       setNotesSaveState({ status: "idle", message: "" });
                     }}
                     placeholder="Registre comentários gerais sobre o exame"
                     rows={2}
+                    className="field-sizing-fixed h-16 max-h-16 resize-none overflow-y-auto"
                   />
-                  {notesSaveState.message ? (
-                    <p className={notesSaveState.status === "error" ? "text-xs text-destructive" : "text-xs text-muted-foreground"} role={notesSaveState.status === "error" ? "alert" : "status"}>
+                  {notesSaveState.status === "error" ? (
+                    <p className="text-xs text-destructive" role="alert">
                       {notesSaveState.message}
                     </p>
                   ) : null}
