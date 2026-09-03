@@ -6,7 +6,7 @@ import {
   PanelRightOpen,
   Stethoscope,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import DiagnosisPanel from "../components/DiagnosisPanel.jsx";
@@ -243,20 +243,26 @@ export default function ExamReviewPage() {
     };
   }, [isSidebarExpanded]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const layout = reviewLayoutRef.current;
     if (!layout || isCompactLayout) return undefined;
 
     function updateSidebarWidth() {
-      const usesIntermediateLayout = layout.clientWidth <= 920;
+      const layoutHeight = layout.clientHeight;
+      const layoutWidth = layout.clientWidth;
+      if (layoutHeight <= 0 || layoutWidth <= 0) {
+        return;
+      }
+
+      const usesIntermediateLayout = layoutWidth <= 920;
       const nextWidth = getReviewSidebarWidth({
         imageAspectRatio,
-        layoutHeight: layout.clientHeight,
-        layoutWidth: layout.clientWidth,
+        layoutHeight,
+        layoutWidth,
         maximumSidebarRatio: usesIntermediateLayout ? 0.42 : 0.32,
         minimumSidebarWidth: usesIntermediateLayout
           ? 300
-          : Math.round(layout.clientWidth * 0.3),
+          : Math.round(layoutWidth * 0.3),
         viewerHorizontalChrome: 24,
         viewerVerticalChrome: 150,
       });
@@ -274,7 +280,7 @@ export default function ExamReviewPage() {
     const observer = new ResizeObserver(updateSidebarWidth);
     observer.observe(layout);
     return () => observer.disconnect();
-  }, [imageAspectRatio, isCompactLayout]);
+  }, [imageAspectRatio, isCompactLayout, isLoading]);
 
   const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
@@ -926,9 +932,9 @@ export default function ExamReviewPage() {
         >
           <h1 className="sr-only">Exame {exam.exam_code}</h1>
           <main
-            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]"
+            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(30%,var(--review-sidebar-width))_minmax(0,1fr)]"
             ref={reviewLayoutRef}
-            style={{ "--review-sidebar-width": `${sidebarWidth || 360}px` }}
+            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : "30%" }}
           >
             {!isCompactLayout ? (
               <aside

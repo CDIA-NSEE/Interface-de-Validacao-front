@@ -148,6 +148,11 @@ describe("ExamReviewPage", () => {
     const { container } = render(<ExamReviewPage />);
 
     expect(await screen.findByRole("heading", { name: "Exame ECG-42" })).toBeVisible();
+    const reviewLayout = container.querySelector("main");
+    expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "30%" });
+    expect(reviewLayout).toHaveClass(
+      "md:grid-cols-[max(30%,var(--review-sidebar-width))_minmax(0,1fr)]",
+    );
     expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
@@ -162,6 +167,27 @@ describe("ExamReviewPage", () => {
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
     expect(screen.getByText("Iniciar")).toBeVisible();
     expect(screen.getByRole("button", { name: "Salvar observações" })).toBeDisabled();
+  });
+
+  it("mede o painel quando o layout surge depois do carregamento", async () => {
+    const observe = vi.fn();
+    vi.stubGlobal("ResizeObserver", class ResizeObserver {
+      observe = observe;
+      disconnect() {}
+    });
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1080);
+    stubViewport(false);
+
+    const { container } = render(<ExamReviewPage />);
+    await screen.findByRole("heading", { name: "Exame ECG-42" });
+
+    const reviewLayout = container.querySelector("main");
+    await waitFor(() => expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "557px" }));
+    expect(observe).toHaveBeenCalledWith(reviewLayout);
+
+    widthSpy.mockRestore();
+    heightSpy.mockRestore();
   });
 
   it("explica por que Salvar e próximo está desabilitado", async () => {
