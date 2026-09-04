@@ -66,7 +66,7 @@ const REVIEW_LABELS = {
 const AI_AGREEMENT_DESCRIPTION =
   "Sugestão informativa; a decisão permanece médica.";
 
-function AiAgreementBadge() {
+function AiAgreementBadge({ isPrimaryContext = false }) {
   const descriptionId = useId();
 
   return (
@@ -77,6 +77,7 @@ function AiAgreementBadge() {
             <Badge
               aria-describedby={descriptionId}
               aria-label="IA concordou"
+              className={cn(isPrimaryContext && "h-5 px-2 py-0.5 text-xs")}
               tabIndex={0}
               variant="ai"
             />
@@ -124,7 +125,7 @@ function diagnosisCardVariant({ isRegionTarget, isRequired }) {
   return "default";
 }
 
-function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
+function DiagnosisBadges({ aiModeEnabled, diagnosis, isPrimaryDaily, isRequired }) {
   const hasBadges = isRequired
     || (aiModeEnabled && diagnosis.ai_suggested)
     || diagnosis.is_grouped
@@ -135,7 +136,7 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       {isRequired ? <Badge variant="info">Diagnóstico do dia</Badge> : null}
-      {aiModeEnabled && diagnosis.ai_suggested ? <AiAgreementBadge /> : null}
+      {aiModeEnabled && diagnosis.ai_suggested ? <AiAgreementBadge isPrimaryContext={isPrimaryDaily} /> : null}
       {diagnosis.is_grouped ? <Badge variant="outline">Agrupado</Badge> : null}
       {diagnosis.source !== "doctor_added" && diagnosis.region_required_missing ? <Badge variant="warning">Área necessária</Badge> : null}
     </div>
@@ -157,6 +158,7 @@ function DiagnosisDetails({
   regionError,
   selectedRegionKey,
   hoveredRegionKey,
+  isPrimaryDaily,
   isAreaListOpen,
   onAreaListOpenChange,
   decisionFeedback,
@@ -212,6 +214,74 @@ function DiagnosisDetails({
     if (nextDecision === "rejected") submitDisagreement(savedReviewNote);
   }
 
+  const savedJustificationContent = isPrimaryDaily && status === "rejected" && diagnosis.review_notes ? (
+    <Alert className="animate-in grid-cols-[minmax(0,1fr)_auto] items-center gap-2 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none" variant="info">
+      <AlertTitle>Justificativa adicionada</AlertTitle>
+      <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar</Button>
+    </Alert>
+  ) : null;
+
+  const regionListContent = regions.length ? (
+    <Collapsible onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
+      <CollapsibleTrigger
+        aria-label={markedRegionCountLabel(regions.length)}
+        className="flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <Check aria-hidden="true" data-icon="inline-start" />
+        <span>{markedRegionCountLabel(regions.length)}</span>
+        <ChevronDown aria-hidden="true" className={cn("transition-transform", isPrimaryDaily && "duration-200", isAreaListOpen && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent
+        aria-label={markedRegionCountLabel(regions.length)}
+        className={cn(
+          "mt-2 flex flex-col gap-2",
+          isPrimaryDaily && "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none",
+        )}
+      >
+      {regions.map((region, index) => {
+        const regionReference = getRegionReference(diagnosisReference, index);
+        const areaLabel = `Área ${index + 1}`;
+        const accessibleAreaLabel = regionReference || areaLabel;
+        const regionKey = `${diagnosis.id}:${region.id ?? `legacy-${index}`}`;
+        const isSelected = selectedRegionKey === regionKey;
+        const isHovered = hoveredRegionKey === regionKey;
+        return (
+          <div
+            className={cn(
+              "flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
+              isPrimaryDaily && "p-1.5",
+              isHovered && !isSelected && "bg-accent/60",
+              isSelected && "bg-accent ring-2 ring-ring/30",
+            )}
+            key={regionKey}
+            onBlur={() => onRegionHover?.(null)}
+            onFocus={() => onRegionHover?.(regionKey)}
+            onMouseEnter={() => onRegionHover?.(regionKey)}
+            onMouseLeave={() => onRegionHover?.(null)}
+          >
+            <button
+              aria-pressed={isSelected}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs outline-none"
+              onClick={() => onRegionSelect?.(regionKey)}
+              type="button"
+            >
+              {regionReference ? <Badge variant="outline">{regionReference}</Badge> : null}
+              <span>{areaLabel}</span>
+            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button aria-label={`Editar ${accessibleAreaLabel}`} disabled={isBusy} onClick={() => onEditRegion(diagnosis, region)} size="icon-sm" title={`Editar ${accessibleAreaLabel}`} type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>
+              <Button className="text-muted-foreground hover:text-destructive focus-visible:text-destructive" aria-label={`Remover ${accessibleAreaLabel}`} disabled={isBusy || !region.id} onClick={() => onRemoveRegion(diagnosis.id, region.id)} size="icon-sm" title={region.id ? `Remover ${accessibleAreaLabel}` : "Área legada sem id"} type="button" variant="ghost"><Trash2 aria-hidden="true" /></Button>
+            </div>
+          </div>
+        );
+      })}
+        <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+          <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
+        </Button>
+      </CollapsibleContent>
+    </Collapsible>
+  ) : null;
+
   return (
     <div className="flex flex-col gap-2.5">
       {shouldShowOriginal ? (
@@ -235,7 +305,7 @@ function DiagnosisDetails({
         </Tooltip>
       ) : null}
 
-      {status === "rejected" && diagnosis.review_notes ? (
+      {!isPrimaryDaily && status === "rejected" && diagnosis.review_notes ? (
         <Alert>
           <AlertTitle>Justificativa registrada</AlertTitle>
           <AlertDescription className="break-words">{diagnosis.review_notes}</AlertDescription>
@@ -243,70 +313,20 @@ function DiagnosisDetails({
         </Alert>
       ) : null}
 
-      {regions.length ? (
-        <Collapsible onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
-          <CollapsibleTrigger
-            aria-label={markedRegionCountLabel(regions.length)}
-            className="flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <Check aria-hidden="true" data-icon="inline-start" />
-            <span>{markedRegionCountLabel(regions.length)}</span>
-            <ChevronDown aria-hidden="true" className={cn("transition-transform", isAreaListOpen && "rotate-180")} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 flex flex-col gap-2" aria-label={markedRegionCountLabel(regions.length)}>
-          {regions.map((region, index) => {
-            const regionReference = getRegionReference(diagnosisReference, index);
-            const areaLabel = `Área ${index + 1}`;
-            const accessibleAreaLabel = regionReference || areaLabel;
-            const regionKey = `${diagnosis.id}:${region.id ?? `legacy-${index}`}`;
-            const isSelected = selectedRegionKey === regionKey;
-            const isHovered = hoveredRegionKey === regionKey;
-            return (
-              <div
-                className={cn(
-                  "flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
-                  isHovered && !isSelected && "bg-accent/60",
-                  isSelected && "bg-accent ring-2 ring-ring/30",
-                )}
-                key={regionKey}
-                onBlur={() => onRegionHover?.(null)}
-                onFocus={() => onRegionHover?.(regionKey)}
-                onMouseEnter={() => onRegionHover?.(regionKey)}
-                onMouseLeave={() => onRegionHover?.(null)}
-              >
-                <button
-                  aria-pressed={isSelected}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs outline-none"
-                  onClick={() => onRegionSelect?.(regionKey)}
-                  type="button"
-                >
-                  {regionReference ? <Badge variant="outline">{regionReference}</Badge> : null}
-                  <span>{areaLabel}</span>
-                </button>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button aria-label={`Editar ${accessibleAreaLabel}`} disabled={isBusy} onClick={() => onEditRegion(diagnosis, region)} size="icon-sm" title={`Editar ${accessibleAreaLabel}`} type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>
-                  <Button className="text-muted-foreground hover:text-destructive focus-visible:text-destructive" aria-label={`Remover ${accessibleAreaLabel}`} disabled={isBusy || !region.id} onClick={() => onRemoveRegion(diagnosis.id, region.id)} size="icon-sm" title={region.id ? `Remover ${accessibleAreaLabel}` : "Área legada sem id"} type="button" variant="ghost"><Trash2 aria-hidden="true" /></Button>
-                </div>
-              </div>
-            );
-          })}
-            <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
-              <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
-      ) : null}
+      {!isPrimaryDaily ? regionListContent : null}
 
       {diagnosis.source !== "doctor_added" ? <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
         <ToggleGroupItem className="w-full min-w-0 px-1.5" value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
         <ToggleGroupItem className="w-full min-w-0 px-1.5" value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
       </ToggleGroup> : null}
 
-      {decisionFeedback ? (
+      {decisionFeedback && (!isPrimaryDaily || decisionFeedback.type === "error") ? (
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
           {decisionFeedback.message}
         </p>
       ) : null}
+
+      {isPrimaryDaily ? regionListContent : null}
 
       {!regions.length && diagnosis.region_required_missing ? (
         <Alert variant="warning">
@@ -348,22 +368,31 @@ function DiagnosisDetails({
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
+      {isPrimaryDaily ? savedJustificationContent : null}
+
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
-        <Button className="w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Justificativa (opcional)</Button>
+        <Button className={cn("w-fit", isPrimaryDaily && "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none")} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">
+          {isPrimaryDaily ? <><Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa</> : "Justificativa (opcional)"}
+        </Button>
       ) : null}
 
       {isDisagreementOpen ? (
-        <Alert variant="destructive">
+        <Alert className={cn(isPrimaryDaily && "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none")} variant={isPrimaryDaily ? "info" : "destructive"}>
           <AlertDescription className="flex flex-col gap-2">
             <Field>
               <div className="flex items-center justify-between gap-2">
-                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Justificativa <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
-                <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
+                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Justificativa <span className="font-normal text-muted-foreground">{isPrimaryDaily ? "Opcional" : "(opcional)"}</span></FieldLabel>
+                {!isPrimaryDaily ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
               </div>
               <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
             <div className="flex flex-col gap-2 sm:flex-row">
-              {isReviewDraftDirty ? (
+              {isPrimaryDaily ? (
+                <>
+                  <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
+                  <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
+                </>
+              ) : isReviewDraftDirty ? (
                 <>
                   <Button disabled={isBusy} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
                   <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
@@ -383,6 +412,7 @@ function DiagnosisCard({
   diagnosis,
   diagnosisReference,
   isBusy,
+  isPrimaryDaily,
   isRequired,
   onEditRegion,
   onRemove,
@@ -406,17 +436,27 @@ function DiagnosisCard({
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const cardVariant = diagnosisCardVariant({ isRegionTarget, isRequired });
-  const statusDescription = isDisagreementOpen ? "Discordância em edição" : null;
+  const statusDescription = isDisagreementOpen && !isPrimaryDaily ? "Discordância em edição" : null;
+  const compactFeedback = decisionFeedback?.type === "success" ? "✓ Salvo" : decisionFeedback?.message;
   const isRegionConnected = [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`));
 
   return (
     <Card className={cn("gap-2.5 overflow-visible", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
-        <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
-        <CardTitle className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+        <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isPrimaryDaily={isPrimaryDaily} isRequired={isRequired} />
+        <CardTitle className={cn("grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-2", isPrimaryDaily ? "items-start" : "items-center")}>
           {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
           <span className="line-clamp-2 min-w-0 break-words" title={standardText}>{standardText}</span>
-          <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
+          {isPrimaryDaily ? (
+            <span className="flex shrink-0 flex-col items-end gap-0.5">
+              <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
+              <span className="h-3 max-w-32 truncate text-[0.7rem] leading-3 font-normal text-muted-foreground">
+                {decisionFeedback && decisionFeedback.type !== "error" ? (
+                  <span aria-label={decisionFeedback.message} role="status">{compactFeedback}</span>
+                ) : null}
+              </span>
+            </span>
+          ) : <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />}
         </CardTitle>
         {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
       </CardHeader>
@@ -426,6 +466,7 @@ function DiagnosisCard({
           diagnosis={diagnosis}
           diagnosisReference={diagnosisReference}
           isBusy={isBusy}
+          isPrimaryDaily={isPrimaryDaily}
           onEditRegion={onEditRegion}
           onRemove={onRemove}
           onRemoveRegion={onRemoveRegion}
@@ -644,7 +685,7 @@ export default function DiagnosisPanel({
           </div>
         ) : null}
         {requiredDiagnoses.length ? requiredDiagnoses.map((diagnosis) => (
-          <DiagnosisCard {...sharedCardProps} decisionFeedback={decisionFeedbacks[String(diagnosis.id)]} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isAreaListOpen={openAreaDiagnosisIds.has(String(diagnosis.id))} isRequired key={diagnosis.id} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[String(diagnosis.id)]} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
+          <DiagnosisCard {...sharedCardProps} decisionFeedback={decisionFeedbacks[String(diagnosis.id)]} diagnosis={diagnosis} diagnosisReference={getDiagnosisReference(diagnosisReferences, diagnosis.id)} isAreaListOpen={openAreaDiagnosisIds.has(String(diagnosis.id))} isPrimaryDaily={!isGeneralReviewDay} isRequired key={diagnosis.id} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[String(diagnosis.id)]} reviewDraft={reviewDrafts[String(diagnosis.id)]} />
         )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}
       </section>
 

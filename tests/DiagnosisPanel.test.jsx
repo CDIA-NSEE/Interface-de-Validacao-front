@@ -111,12 +111,14 @@ describe("DiagnosisPanel", () => {
     expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge).toHaveAttribute("data-variant", "ai");
     expect(aiBadge).toHaveClass(
-      "h-4",
+      "h-5",
       "border-info/15",
       "bg-info/8",
-      "px-1.5",
+      "px-2",
+      "text-xs",
       "font-normal",
     );
+    expect(within(dailyPanel).getByText("Diagnóstico do dia")).toHaveClass("h-5", "text-xs");
     expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleDescription(
       "Sugestão informativa; a decisão permanece médica.",
@@ -749,5 +751,87 @@ describe("DiagnosisPanel", () => {
       />,
     );
     expect(screen.getByRole("button", { name: /Fibrilação atrial/ })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("mantém as decisões antes das áreas e da justificativa no diagnóstico do dia", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", {
+          regions: [
+            { id: 9, x: 10, y: 20, width: 30, height: 15 },
+            { id: 10, x: 45, y: 25, width: 20, height: 10 },
+          ],
+          review_notes: "Alteração confirmada no traçado.",
+          review_status: "rejected",
+        })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const original = screen.getByRole("button", { name: "Original: Ritmo sinusal" });
+    const decisions = screen.getByRole("group", { name: "Revisão de Ritmo sinusal" });
+    const areaSummary = screen.getByRole("button", { name: "2 áreas marcadas" });
+    const savedJustification = screen.getByText("Justificativa adicionada");
+
+    expect(original.compareDocumentPosition(decisions)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(decisions.compareDocumentPosition(areaSummary)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(areaSummary.compareDocumentPosition(savedJustification)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByRole("button", { name: "Área 1" })).not.toBeInTheDocument();
+
+    fireEvent.click(areaSummary);
+    const firstArea = screen.getByRole("button", { name: "Área 1" });
+    expect(firstArea.parentElement).toHaveClass("p-1.5");
+    expect(firstArea.closest('[data-slot="collapsible-content"]')).toHaveClass(
+      "transition-[height,opacity]",
+      "duration-200",
+    );
+    expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
+  });
+
+  it("edita a justificativa diária em painel neutro e sem mensagem duplicada", () => {
+    const onReview = vi.fn().mockResolvedValue(true);
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    expect(screen.queryByText("Discordância em edição")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+
+    const editor = screen.getByRole("alert");
+    const textarea = within(editor).getByLabelText("Justificativa Opcional");
+    const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
+    expect(editor).toHaveClass("border-info/30", "bg-info/10", "text-info-subtle-foreground");
+    expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância, se necessário");
+    expect(save).toBeDisabled();
+    expect(within(editor).getByRole("button", { name: "Cancelar" })).toBeVisible();
+
+    fireEvent.change(textarea, { target: { value: "Traçado incompatível" } });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível", "justification");
+  });
+
+  it("reserva o feedback compacto junto ao status sem deslocar o cabeçalho", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        decisionFeedbacks={{ "1": { message: "✓ Decisão salva", type: "success" } }}
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "confirmed" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const feedback = screen.getByLabelText("✓ Decisão salva");
+    expect(feedback).toHaveTextContent("✓ Salvo");
+    expect(feedback.parentElement).toHaveClass("h-3", "leading-3");
+    expect(feedback.closest('[data-slot="card-title"]')).toBeTruthy();
   });
 });

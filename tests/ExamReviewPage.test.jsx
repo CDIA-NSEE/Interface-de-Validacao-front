@@ -629,7 +629,7 @@ describe("ExamReviewPage", () => {
 
     await screen.findByRole("heading", { name: "Exame ECG-42" });
     await user.click(screen.getByRole("button", { name: "Discordo" }));
-    await user.click(await screen.findByRole("button", { name: "Justificativa (opcional)" }));
+    await user.click(await screen.findByRole("button", { name: "Adicionar justificativa" }));
     await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
 
     act(() => viewport.setCompact(true));
@@ -681,7 +681,8 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Concordo" }));
-    expect(await screen.findByText("✓ Decisão salva")).toBeVisible();
+    const decisionFeedback = await screen.findByLabelText("✓ Decisão salva");
+    expect(decisionFeedback).toHaveTextContent("✓ Salvo");
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "confirmed", "");
   });
 
@@ -696,12 +697,13 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Justificativa (opcional)" }));
+    await user.click(await screen.findByRole("button", { name: "Adicionar justificativa" }));
     await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
     await user.click(screen.getByRole("button", { name: "Salvar justificativa" }));
 
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível");
-    expect(await screen.findByText("✓ Justificativa salva")).toBeVisible();
+    const justificationFeedback = await screen.findByLabelText("✓ Justificativa salva");
+    expect(justificationFeedback).toHaveTextContent("✓ Salvo");
   });
 
   it("explica junto ao diagnóstico quando a última área obrigatória não pode ser removida", async () => {
