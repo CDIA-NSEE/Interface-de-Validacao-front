@@ -19,10 +19,13 @@ describe("EcgViewer", () => {
     const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
 
     expect(canvas.parentElement).toContainElement(toolbar);
-    expect(toolbar).toHaveClass("absolute", "grid", "grid-cols-2");
+    expect(toolbar).toHaveClass("absolute", "right-3", "bottom-3", "grid", "grid-cols-2");
     expect(toolbar).not.toHaveTextContent("Controles do ECG");
     expect(canvas.parentElement).toHaveClass("min-h-72", "sm:min-h-88");
-    expect(screen.getAllByRole("button")).toHaveLength(4);
+    const controls = screen.getAllByRole("button");
+    expect(controls).toHaveLength(4);
+    controls.forEach((control) => expect(control).toHaveClass("size-8"));
+    expect(screen.getByRole("button", { name: "Restaurar visualização" })).not.toHaveTextContent("100%");
   });
 
   it("usa a proporção natural da imagem e a informa ao layout", async () => {
@@ -95,11 +98,14 @@ describe("EcgViewer", () => {
 
     const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
 
-    expect(screen.getByRole("button", { name: "Restaurar escala" })).toHaveTextContent("100%");
+    const reset = screen.getByRole("button", { name: "Restaurar visualização" });
+    expect(reset).toBeDisabled();
     fireEvent.click(zoomIn);
     expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" });
-    fireEvent.click(screen.getByRole("button", { name: "Restaurar escala" }));
+    expect(reset).toBeEnabled();
+    fireEvent.click(reset);
     expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "100%" });
+    expect(reset).toBeDisabled();
     fireEvent.click(zoomIn);
 
     for (let index = 0; index < 20; index += 1) {
@@ -172,6 +178,41 @@ describe("EcgViewer", () => {
     expect(container.querySelector(".saved-region-box")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Mostrar marcações" }));
     expect(container.querySelector(".saved-region-box")).toBeInTheDocument();
+  });
+
+  it("isola os eventos da toolbar das interações do visualizador", () => {
+    const onClick = vi.fn();
+    const onMouseDown = vi.fn();
+    const onPointerDown = vi.fn();
+    const onWheel = vi.fn();
+    const onRegionChange = vi.fn();
+    renderWithTooltips(
+      <div
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onPointerDown={onPointerDown}
+        onWheel={onWheel}
+      >
+        <EcgViewer
+          imageUrl="/ecg-real.png"
+          onRegionChange={onRegionChange}
+          selectionLabel="Marcando área para D1"
+        />
+      </div>,
+    );
+
+    const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
+    const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
+    fireEvent.pointerDown(zoomIn, { button: 0, pointerId: 1 });
+    fireEvent.mouseDown(zoomIn, { button: 0 });
+    fireEvent.click(zoomIn);
+    fireEvent.wheel(toolbar, { deltaY: -100 });
+
+    expect(onPointerDown).not.toHaveBeenCalled();
+    expect(onMouseDown).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
+    expect(onWheel).not.toHaveBeenCalled();
+    expect(onRegionChange).not.toHaveBeenCalled();
   });
 
   it("desabilita a visão limpa e oferece cancelamento contextual durante marcação", () => {

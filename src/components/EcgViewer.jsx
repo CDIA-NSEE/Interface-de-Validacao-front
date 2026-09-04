@@ -1,8 +1,8 @@
-import { Eye, EyeOff, Minus, Pencil, Plus, X } from "lucide-react";
+import { Eye, EyeOff, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import api from "../services/api.js";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
@@ -10,6 +10,12 @@ import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 2.4;
 const ZOOM_STEP = 0.15;
+const TOOLBAR_LEFT_TOOLTIP_PROPS = { side: "left", sideOffset: 8 };
+const TOOLBAR_RIGHT_TOOLTIP_PROPS = { side: "left", sideOffset: 48 };
+
+function stopToolbarEvent(event) {
+  event.stopPropagation();
+}
 
 function clamp(value, minimum = 0, maximum = 100) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -356,15 +362,20 @@ export default function EcgViewer({
   }, [changeZoom, clearSelection, hasSelectedSavedRegion, isSelectionActive, resetView, selectedRegion]);
 
   const cleanViewTooltip = isSelectionActive
-    ? "Conclua ou cancele a edição para ocultar as marcações."
+    ? isEditing
+      ? "Conclua ou cancele a edição para ocultar as marcações."
+      : "Conclua ou cancele a marcação para ocultar as marcações."
     : isCleanView
       ? "Mostrar marcações (V)"
       : "Ocultar marcações (V)";
-
   const controls = (
     <div
       aria-label="Controles do ECG"
       className="absolute right-3 bottom-3 z-10 grid grid-cols-2 gap-1 rounded-lg border bg-background/95 p-1"
+      onClick={stopToolbarEvent}
+      onMouseDown={stopToolbarEvent}
+      onPointerDown={stopToolbarEvent}
+      onWheel={stopToolbarEvent}
       role="toolbar"
     >
       <TooltipIconButton
@@ -372,7 +383,8 @@ export default function EcgViewer({
         label="Aumentar zoom"
         onClick={() => changeZoom(ZOOM_STEP)}
         size="icon"
-        tooltip="Zoom in (+)"
+        tooltip="Aumentar zoom (+)"
+        tooltipContentProps={TOOLBAR_LEFT_TOOLTIP_PROPS}
         variant="outline"
       >
         <Plus aria-hidden="true" data-icon="inline-start" />
@@ -382,7 +394,8 @@ export default function EcgViewer({
         label="Diminuir zoom"
         onClick={() => changeZoom(-ZOOM_STEP)}
         size="icon"
-        tooltip="Zoom out (-)"
+        tooltip="Diminuir zoom (-)"
+        tooltipContentProps={TOOLBAR_RIGHT_TOOLTIP_PROPS}
         variant="outline"
       >
         <Minus aria-hidden="true" data-icon="inline-start" />
@@ -396,6 +409,7 @@ export default function EcgViewer({
         }}
         size="icon"
         tooltip={cleanViewTooltip}
+        tooltipContentProps={TOOLBAR_LEFT_TOOLTIP_PROPS}
         variant="outline"
       >
         {isCleanView
@@ -403,20 +417,21 @@ export default function EcgViewer({
           : <EyeOff aria-hidden="true" data-icon="inline-start" />}
       </TooltipIconButton>
       <TooltipIconButton
-        className="text-xs tabular-nums"
-        label="Restaurar escala"
+        disabled={zoom === 1}
+        label="Restaurar visualização"
         onClick={resetView}
         size="icon"
-        tooltip="Restaurar escala (0)"
+        tooltip="Restaurar visualização (0)"
+        tooltipContentProps={TOOLBAR_RIGHT_TOOLTIP_PROPS}
         variant="outline"
       >
-        100%
+        <RotateCcw aria-hidden="true" data-icon="inline-start" />
       </TooltipIconButton>
     </div>
   );
 
   return (
-    <>
+    <TooltipProvider delay={400}>
       <div
         aria-label="Visualizador do traçado de ECG"
         className="relative flex min-h-72 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-88"
@@ -505,7 +520,7 @@ export default function EcgViewer({
               className="size-5 rounded-full border-0 bg-transparent hover:bg-info/20"
               label={isEditing ? "Cancelar edição" : "Cancelar marcação"}
               onClick={clearSelection}
-              tooltip={selectionDescription}
+              tooltip={isEditing ? "Cancelar edição (Esc)" : "Cancelar marcação (Esc)"}
               variant="ghost"
             >
               <X aria-hidden="true" data-icon="inline-start" />
@@ -514,6 +529,6 @@ export default function EcgViewer({
         ) : null}
         {controls}
       </div>
-    </>
+    </TooltipProvider>
   );
 }
