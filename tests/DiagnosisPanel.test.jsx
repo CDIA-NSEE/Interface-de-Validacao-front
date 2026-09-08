@@ -807,7 +807,7 @@ describe("DiagnosisPanel", () => {
     const editor = screen.getByRole("alert");
     const textarea = within(editor).getByLabelText("Justificativa Opcional");
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
-    expect(editor).toHaveClass("border-info/30", "bg-info/10", "text-info-subtle-foreground");
+    expect(editor).toHaveClass("border-info/50", "bg-info/10", "text-info-subtle-foreground");
     expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância, se necessário");
     expect(save).toBeDisabled();
     expect(within(editor).getByRole("button", { name: "Cancelar" })).toBeVisible();

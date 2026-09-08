@@ -103,7 +103,7 @@ function reviewBadgeVariant(status) {
   return "pending";
 }
 
-function DiagnosisStatusBadge({ diagnosis, status }) {
+function DiagnosisStatusBadge({ diagnosis, status, isPrimaryDaily = false }) {
   if (diagnosis?.source === "doctor_added") {
     return (
       <Badge className="shrink-0" variant={diagnosis.region_required_missing ? "warning" : "secondary"}>
@@ -113,7 +113,12 @@ function DiagnosisStatusBadge({ diagnosis, status }) {
   }
 
   return (
-    <Badge className="shrink-0" variant={reviewBadgeVariant(status)}>
+    <Badge className={cn(
+      "shrink-0",
+      isPrimaryDaily && status !== "pending" && "font-semibold",
+      isPrimaryDaily && status === "confirmed" && "border-success/50 bg-success/10",
+      isPrimaryDaily && status === "rejected" && "border-destructive/50 text-[color-mix(in_oklab,var(--destructive)_85%,var(--foreground))]",
+    )} variant={reviewBadgeVariant(status)}>
       {REVIEW_LABELS[status]}
     </Badge>
   );
@@ -252,9 +257,9 @@ function DiagnosisDetails({
           <div
             className={cn(
               "flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
-              isPrimaryDaily && "p-1.5",
-              isHovered && !isSelected && "bg-accent/60",
-              isSelected && "bg-accent ring-2 ring-ring/30",
+              isPrimaryDaily && "border-muted-foreground/30 bg-background p-1.5 duration-150 motion-reduce:transition-none",
+              isHovered && !isSelected && (isPrimaryDaily ? "border-info/50 bg-info/5" : "bg-accent/60"),
+              isSelected && (isPrimaryDaily ? "border-info/70 bg-info/10 ring-1 ring-inset ring-info/30" : "bg-accent ring-2 ring-ring/30"),
             )}
             key={regionKey}
             onBlur={() => onRegionHover?.(null)}
@@ -264,14 +269,14 @@ function DiagnosisDetails({
           >
             <button
               aria-pressed={isSelected}
-              className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs outline-none"
+              className={cn("flex min-w-0 flex-1 items-center gap-2 text-left text-xs outline-none", isPrimaryDaily && "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50")}
               onClick={() => onRegionSelect?.(regionKey)}
               type="button"
             >
-              {regionReference ? <Badge variant="outline">{regionReference}</Badge> : null}
+              {regionReference ? <Badge className={cn(isPrimaryDaily && "border-info/30 bg-info/10 text-info-subtle-foreground")} variant="outline">{regionReference}</Badge> : null}
               <span>{areaLabel}</span>
             </button>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className={cn("flex shrink-0 items-center gap-1", isPrimaryDaily && "border-l border-muted-foreground/20 pl-1.5")}>
               <Button aria-label={`Editar ${accessibleAreaLabel}`} disabled={isBusy} onClick={() => onEditRegion(diagnosis, region)} size="icon-sm" title={`Editar ${accessibleAreaLabel}`} type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>
               <Button className="text-muted-foreground hover:text-destructive focus-visible:text-destructive" aria-label={`Remover ${accessibleAreaLabel}`} disabled={isBusy || !region.id} onClick={() => onRemoveRegion(diagnosis.id, region.id)} size="icon-sm" title={region.id ? `Remover ${accessibleAreaLabel}` : "Área legada sem id"} type="button" variant="ghost"><Trash2 aria-hidden="true" /></Button>
             </div>
@@ -301,7 +306,7 @@ function DiagnosisDetails({
           >
             <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
               <span className="text-[0.7rem] text-muted-foreground/80">Original:</span>{" "}
-              {originalPreview}
+              <span className={cn(isPrimaryDaily && "text-foreground/75")}>{originalPreview}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent>{originalText}</TooltipContent>
@@ -319,8 +324,8 @@ function DiagnosisDetails({
       {!isPrimaryDaily ? regionListContent : null}
 
       {diagnosis.source !== "doctor_added" ? <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
-        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:text-success-subtle-foreground")} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:text-destructive")} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-success-subtle-foreground")} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-[color-mix(in_oklab,var(--destructive)_85%,var(--foreground))]")} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
       </ToggleGroup> : null}
 
       {decisionFeedback && (!isPrimaryDaily || decisionFeedback.type === "error") ? (
@@ -380,14 +385,14 @@ function DiagnosisDetails({
       ) : null}
 
       {isDisagreementOpen ? (
-        <Alert className={cn(isPrimaryDaily && "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none")} variant={isPrimaryDaily ? "info" : "destructive"}>
+        <Alert className={cn(isPrimaryDaily && "animate-in border-info/50 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none")} variant={isPrimaryDaily ? "info" : "destructive"}>
           <AlertDescription className="flex flex-col gap-2">
             <Field>
               <div className="flex items-center justify-between gap-2">
                 <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`}>Justificativa <span className="font-normal text-muted-foreground">{isPrimaryDaily ? "Opcional" : "(opcional)"}</span></FieldLabel>
                 {!isPrimaryDaily ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
               </div>
-              <Textarea id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
+              <Textarea className={cn(isPrimaryDaily && "border-muted-foreground/50 bg-background text-foreground dark:bg-background")} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
             <div className="flex flex-col gap-2 sm:flex-row">
               {isPrimaryDaily ? (
@@ -449,10 +454,10 @@ function DiagnosisCard({
         <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isPrimaryDaily={isPrimaryDaily} isRequired={isRequired} />
         <CardTitle className={cn("grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-2", isPrimaryDaily ? "items-start" : "items-center")}>
           {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
-          <span className="line-clamp-2 min-w-0 break-words" title={standardText}>{standardText}</span>
+          <span className={cn("line-clamp-2 min-w-0 break-words", isPrimaryDaily && "font-semibold")} title={standardText}>{standardText}</span>
           {isPrimaryDaily ? (
             <span className="flex shrink-0 flex-col items-end gap-0.5">
-              <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
+              <DiagnosisStatusBadge diagnosis={diagnosis} status={status} isPrimaryDaily />
               <span className="h-3 max-w-32 truncate text-[0.7rem] leading-3 font-normal text-muted-foreground">
                 {decisionFeedback && decisionFeedback.type !== "error" ? (
                   <span className="animate-in fade-in-0 duration-150 motion-reduce:animate-none" aria-label={decisionFeedback.message} role="status">{compactFeedback}</span>
