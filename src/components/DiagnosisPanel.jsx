@@ -214,9 +214,9 @@ function DiagnosisDetails({
     if (nextDecision === "rejected") submitDisagreement(savedReviewNote);
   }
 
-  const savedJustificationContent = isPrimaryDaily && status === "rejected" && diagnosis.review_notes ? (
+  const savedJustificationContent = isPrimaryDaily && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
     <Alert className="animate-in grid-cols-[minmax(0,1fr)_auto] items-center gap-2 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none" variant="info">
-      <AlertTitle>Justificativa adicionada</AlertTitle>
+      <AlertTitle className="min-w-0 truncate" title="Justificativa adicionada">Justificativa adicionada</AlertTitle>
       <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar</Button>
     </Alert>
   ) : null;
@@ -225,11 +225,14 @@ function DiagnosisDetails({
     <Collapsible onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
-        className="flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        className={cn(
+          "flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+          isPrimaryDaily && "w-full cursor-pointer py-1 text-left hover:bg-muted/50 motion-reduce:transition-none",
+        )}
       >
         <Check aria-hidden="true" data-icon="inline-start" />
         <span>{markedRegionCountLabel(regions.length)}</span>
-        <ChevronDown aria-hidden="true" className={cn("transition-transform", isPrimaryDaily && "duration-200", isAreaListOpen && "rotate-180")} />
+        <ChevronDown aria-hidden="true" className={cn("transition-transform", isPrimaryDaily && "ml-auto shrink-0 duration-200 motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
       </CollapsibleTrigger>
       <CollapsibleContent
         aria-label={markedRegionCountLabel(regions.length)}
@@ -316,8 +319,8 @@ function DiagnosisDetails({
       {!isPrimaryDaily ? regionListContent : null}
 
       {diagnosis.source !== "doctor_added" ? <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
-        <ToggleGroupItem className="w-full min-w-0 px-1.5" value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-        <ToggleGroupItem className="w-full min-w-0 px-1.5" value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:text-success-subtle-foreground")} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:text-destructive")} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
       </ToggleGroup> : null}
 
       {decisionFeedback && (!isPrimaryDaily || decisionFeedback.type === "error") ? (
@@ -452,7 +455,7 @@ function DiagnosisCard({
               <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />
               <span className="h-3 max-w-32 truncate text-[0.7rem] leading-3 font-normal text-muted-foreground">
                 {decisionFeedback && decisionFeedback.type !== "error" ? (
-                  <span aria-label={decisionFeedback.message} role="status">{compactFeedback}</span>
+                  <span className="animate-in fade-in-0 duration-150 motion-reduce:animate-none" aria-label={decisionFeedback.message} role="status">{compactFeedback}</span>
                 ) : null}
               </span>
             </span>
