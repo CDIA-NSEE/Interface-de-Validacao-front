@@ -115,9 +115,9 @@ function DiagnosisStatusBadge({ diagnosis, status, isPrimaryDaily = false }) {
   return (
     <Badge className={cn(
       "shrink-0",
-      isPrimaryDaily && status !== "pending" && "font-semibold",
+      isPrimaryDaily && status !== "pending" && "font-semibold text-foreground",
       isPrimaryDaily && status === "confirmed" && "border-success/50 bg-success/10",
-      isPrimaryDaily && status === "rejected" && "border-destructive/50 text-[color-mix(in_oklab,var(--destructive)_85%,var(--foreground))]",
+      isPrimaryDaily && status === "rejected" && "border-destructive/50",
     )} variant={reviewBadgeVariant(status)}>
       {REVIEW_LABELS[status]}
     </Badge>
@@ -324,8 +324,8 @@ function DiagnosisDetails({
       {!isPrimaryDaily ? regionListContent : null}
 
       {diagnosis.source !== "doctor_added" ? <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
-        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-success-subtle-foreground")} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-[color-mix(in_oklab,var(--destructive)_85%,var(--foreground))]")} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-foreground")} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", isPrimaryDaily && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-foreground")} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
       </ToggleGroup> : null}
 
       {decisionFeedback && (!isPrimaryDaily || decisionFeedback.type === "error") ? (
