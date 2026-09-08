@@ -633,12 +633,12 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
     const disagreementAlert = screen.getByRole("alert");
-    expect(disagreementAlert.textContent.match(/Justificativa \(opcional\)/g)).toHaveLength(1);
-    expect(within(disagreementAlert).getByLabelText("Justificativa (opcional)")).toBeVisible();
-    fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa (opcional)"), { target: { value: "Traçado incompatível" } });
+    expect(disagreementAlert).toHaveClass("bg-info/10");
+    expect(within(disagreementAlert).getByLabelText("Justificativa Opcional")).toBeVisible();
+    fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa Opcional"), { target: { value: "Traçado incompatível" } });
     fireEvent.click(within(disagreementAlert).getByRole("button", { name: "Salvar justificativa" }));
     expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
@@ -816,6 +816,38 @@ describe("DiagnosisPanel", () => {
     expect(save).toBeEnabled();
     fireEvent.click(save);
     expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível", "justification");
+  });
+
+  it("mantém decisões antes das áreas e reabre a justificativa salva do adicional", async () => {
+    const user = userEvent.setup();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Bloqueio de ramo direito", {
+            review_status: "rejected", review_notes: "Justificativa salva",
+            regions: [{ id: 9, x: 10, y: 10, width: 20, height: 20 }],
+          }),
+        ]}
+        decisionFeedbacks={{ "2": { type: "success", message: "✓ Decisão salva" } }}
+        isGeneralReviewDay={false}
+      />,
+    );
+    const header = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    expect(within(header).getByRole("status")).toHaveTextContent("✓ Salvo");
+    await user.click(header);
+    const decisions = screen.getByRole("group", { name: "Revisão de Bloqueio de ramo direito" });
+    const areas = screen.getByRole("button", { name: "1 área marcada" });
+    expect(decisions.compareDocumentPosition(areas)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(areas).toHaveAttribute("aria-expanded", "false");
+    await user.click(screen.getByRole("button", { name: "Editar", exact: true }));
+    expect(screen.getByRole("textbox")).toHaveValue("Justificativa salva");
+    expect(screen.queryByText("Justificativa adicionada")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancelar", exact: true }));
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Justificativa adicionada")).toBeVisible();
   });
 
   it("reserva o feedback compacto junto ao status sem deslocar o cabeçalho", () => {
