@@ -230,17 +230,22 @@ function DiagnosisDetails({
 
   const regionListContent = regions.length ? (
     <Collapsible onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
+      <div className="flex items-center gap-3">
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
         className={cn(
           "flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
-          useRefinedLayout && "w-full cursor-pointer py-1 text-left hover:bg-muted/50 motion-reduce:transition-none",
+          useRefinedLayout && "min-h-8 flex-1 cursor-pointer py-1 text-left hover:bg-muted/50 motion-reduce:transition-none",
         )}
       >
         <Check aria-hidden="true" data-icon="inline-start" />
         <span>{markedRegionCountLabel(regions.length)}</span>
         <ChevronDown aria-hidden="true" className={cn("transition-transform", useRefinedLayout && "ml-auto shrink-0 duration-200 motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
       </CollapsibleTrigger>
+        <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+          <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
+        </Button>
+      </div>
       <CollapsibleContent
         aria-label={markedRegionCountLabel(regions.length)}
         className={cn(
@@ -285,9 +290,6 @@ function DiagnosisDetails({
           </div>
         );
       })}
-        <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
-          <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
-        </Button>
       </CollapsibleContent>
     </Collapsible>
   ) : null;
@@ -420,10 +422,10 @@ function DiagnosisStatusSummary({ diagnosis, status, feedback }) {
   return (
     <span className="flex shrink-0 flex-col items-end gap-0.5">
       <DiagnosisStatusBadge diagnosis={diagnosis} status={status} useRefinedLayout />
-      <span className="h-3 max-w-32 truncate text-[0.7rem] leading-3 font-normal text-muted-foreground">
-        {feedback && feedback.type !== "error" ? (
-          <span className="animate-in fade-in-0 duration-150 motion-reduce:animate-none" aria-label={feedback.message} role="status">
-            {feedback.type === "success" ? "✓ Salvo" : feedback.message}
+      <span className="h-3 max-w-32 truncate text-xs leading-3 font-normal text-muted-foreground">
+        {feedback ? (
+          <span className={cn(feedback.type === "error" && "text-destructive")} aria-label={feedback.message} title={feedback.message} role="status">
+            {feedback.type === "success" ? "✓ Salvo" : feedback.type === "error" ? "Falha ao salvar" : feedback.message}
           </span>
         ) : null}
       </span>
@@ -541,6 +543,7 @@ export default function DiagnosisPanel({
   const [openAreaDiagnosisIds, setOpenAreaDiagnosisIds] = useState(() => new Set());
   const addDiagnosisTriggerRef = useRef(null);
   const addDiagnosisSelectRef = useRef(null);
+  const secondaryScrollRef = useRef(null);
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
     () => getDiagnosisDisplayGroups(diagnoses, { dailyStandardDiagnosis, isGeneralReviewDay }),
@@ -578,7 +581,14 @@ export default function DiagnosisPanel({
 
   const scrollDiagnosisIntoView = useCallback((diagnosisId) => {
     const scrollTimer = window.setTimeout(() => {
-      document.querySelector(`[data-diagnosis-id="${diagnosisId}"]`)?.scrollIntoView?.({ block: "nearest" });
+      const viewport = secondaryScrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
+      const header = viewport?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="accordion-trigger"]`);
+      if (!header || !viewport) return;
+      const bounds = viewport.getBoundingClientRect();
+      const target = header.getBoundingClientRect();
+      // Reveal only a clipped header, without scrolling the surrounding panel or page.
+      if (target.top < bounds.top) viewport.scrollTop += target.top - bounds.top;
+      else if (target.bottom > bounds.bottom) viewport.scrollTop += Math.min(target.top - bounds.top, target.bottom - bounds.bottom);
     }, 0);
     return () => window.clearTimeout(scrollTimer);
   }, []);
@@ -746,7 +756,7 @@ export default function DiagnosisPanel({
                 <CardContent className="border-t px-0 py-0">
                 {secondaryDiagnoses.length ? (
                   <div className="grid min-w-0 max-h-[min(32svh,20rem)] grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
-                    <ScrollArea className="min-h-0 min-w-0" data-testid="optional-diagnoses-scroll">
+                    <ScrollArea className="min-h-0 min-w-0 [&_[data-slot=scroll-area-viewport]]:overscroll-contain" data-testid="optional-diagnoses-scroll" ref={secondaryScrollRef}>
                       <Accordion
                         onValueChange={handleExpandedDiagnosisChange}
                         value={(forcedExpandedDiagnosisId ?? expandedDiagnosisId) ? [String(forcedExpandedDiagnosisId ?? expandedDiagnosisId)] : []}
@@ -757,15 +767,15 @@ export default function DiagnosisPanel({
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
-                          <AccordionItem className="px-3" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:bg-card" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             <AccordionTrigger className={cn(
                               "cursor-pointer items-start gap-2 py-2.5 hover:bg-muted/50 hover:no-underline [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
-                              selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent ring-2 ring-inset ring-ring/30",
+                              selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                             )}>
                               <span className="grid min-h-10 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
                                 {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
-                                <span className="line-clamp-2 min-w-0 break-words text-left font-semibold" title={standardText}>{standardText}</span>
+                                <span className="line-clamp-2 min-w-0 break-words text-left font-semibold group-aria-expanded/accordion-trigger:line-clamp-none" title={standardText}>{standardText}</span>
                                 <DiagnosisStatusSummary diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                               </span>
                             </AccordionTrigger>
