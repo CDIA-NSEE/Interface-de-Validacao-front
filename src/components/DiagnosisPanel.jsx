@@ -723,7 +723,7 @@ export default function DiagnosisPanel({
                 <CollapsibleTrigger
                   render={
                     <Button
-                      className="h-[52px] min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors focus-visible:ring-inset active:translate-y-0"
+                      className="h-[52px] min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
                       type="button"
                       variant="collapsible"
                     />
@@ -740,6 +740,7 @@ export default function DiagnosisPanel({
                       aria-controls={addDiagnosisContentId}
                       aria-expanded={isAddDiagnosisOpen}
                       aria-label="Adicionar diagnóstico"
+                      className="cursor-pointer transition-colors duration-150 hover:bg-muted/50 aria-expanded:bg-transparent aria-expanded:hover:bg-muted/50 active:translate-y-0 motion-reduce:transition-none"
                       onClick={() => handleAddDiagnosisToggle(!isAddDiagnosisOpen)}
                       size="sm"
                       type="button"
@@ -769,7 +770,7 @@ export default function DiagnosisPanel({
                         return (
                           <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3:has([aria-expanded=true])]:shadow-[0_3px_0_var(--card),0_4px_0_var(--border)]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             <AccordionTrigger className={cn(
-                              "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2.5 transition-colors hover:bg-muted/50 hover:no-underline focus-visible:ring-inset aria-expanded:bg-muted/40 [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                              "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                               selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                             )}>
