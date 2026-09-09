@@ -89,6 +89,45 @@ function originalDiagnosis(id, standardText, extra = {}) {
 }
 
 describe("DiagnosisPanel", () => {
+  it("preserva a expansão das áreas ao recolher o diagnóstico e separa a ação de adicionar", async () => {
+    const user = userEvent.setup();
+    const diagnosis = originalDiagnosis(2, "Bloqueio de ramo direito", {
+      regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
+      review_status: "rejected",
+      review_notes: "Justificativa salva",
+    });
+    const props = createProps({
+      dailyStandardDiagnosis: "Ritmo sinusal", isGeneralReviewDay: false,
+      diagnoses: [originalDiagnosis(1, "Ritmo sinusal"), diagnosis],
+    });
+    render(<AutoRevealHarness {...props} />);
+    const section = screen.getByRole("button", { name: "Diagnósticos adicionais" });
+    await user.click(section);
+    const diagnosisTrigger = () => screen.getAllByRole("button", { name: /Bloqueio de ramo direito/ })
+      .find((button) => button.getAttribute("data-slot") === "accordion-trigger");
+    await user.click(diagnosisTrigger());
+    const areas = await screen.findByRole("button", { name: "1 área marcada" });
+    areas.focus();
+    await user.keyboard("{Enter}");
+    expect(areas).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "Adicionar área" }));
+    expect(props.onStartRegion).toHaveBeenCalledWith(diagnosis, undefined);
+    expect(areas).toHaveAttribute("aria-expanded", "true");
+    await user.click(diagnosisTrigger());
+    await user.click(diagnosisTrigger());
+    expect(screen.getByRole("button", { name: "1 área marcada" })).toHaveAttribute("aria-expanded", "true");
+    await user.click(section);
+    await user.click(section);
+    expect(diagnosisTrigger()).toHaveAttribute("aria-expanded", "true");
+    const reopenedAreas = screen.getByRole("button", { name: "1 área marcada" });
+    expect(reopenedAreas).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Justificativa adicionada")).toBeVisible();
+    reopenedAreas.focus();
+    await user.keyboard(" ");
+    expect(reopenedAreas).toHaveAttribute("aria-expanded", "false");
+    expect(props.onReview).not.toHaveBeenCalled();
+  });
+
   it.each([true, false])("permite adicionar área com a lista recolhida (diário: %s)", (isDaily) => {
     const diagnosis = originalDiagnosis(2, "Bloqueio de ramo direito", {
       regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
@@ -326,7 +365,7 @@ describe("DiagnosisPanel", () => {
 
     const optionalDiagnosis = (await screen.findAllByRole("button", { name: /Bloqueio de ramo direito/ }))
       .find((button) => button.hasAttribute("aria-controls"));
-    expect(screen.getByRole("button", { name: "Recolher opcionais" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Diagnósticos adicionais" })).toHaveAttribute("aria-expanded", "true");
     expect(optionalDiagnosis).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(2);
   });
@@ -390,7 +429,7 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByLabelText("2 áreas marcadas"));
     const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
     expect(addAreaButton).toBeVisible();
-    expect(addAreaButton).toHaveClass("border-x-0", "px-0");
+    expect(addAreaButton.parentElement.closest("button")).toBeNull();
     expect(addAreaButton.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
       "size-5",
       "shrink-0",
@@ -487,8 +526,8 @@ describe("DiagnosisPanel", () => {
 
     expect(secondaryTitle).toBeVisible();
     expect(secondaryCard).toHaveClass("py-0");
-    expect(secondaryHeader).toHaveClass("py-3");
-    const secondaryToggle = screen.getByRole("button", { name: "Recolher opcionais" });
+    expect(secondaryHeader).toHaveClass("p-0");
+    const secondaryToggle = screen.getByRole("button", { name: "Diagnósticos adicionais" });
     const secondaryContent = document.getElementById(secondaryToggle.getAttribute("aria-controls"));
     expect(secondaryContent).toHaveClass(
       "h-(--collapsible-panel-height)",
@@ -530,16 +569,8 @@ describe("DiagnosisPanel", () => {
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
 
     expect(headerToggle).toHaveAttribute("aria-expanded", "false");
-    expect(headerToggle).toHaveClass(
-      "min-w-0",
-      "w-full",
-      "justify-start",
-      "cursor-pointer",
-      "rounded-none",
-      "hover:bg-muted/40",
-      "aria-expanded:bg-transparent",
-      "aria-expanded:hover:bg-muted/40",
-    );
+    const header = headerToggle.closest('[data-slot="card-header"]');
+    expect(within(header).getAllByRole("button")).toHaveLength(2);
     expect(headerToggle.querySelector("button")).not.toBeInTheDocument();
     expect(addDiagnosisButton.parentElement.closest("button")).toBeNull();
 
@@ -555,14 +586,19 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
 
-    const chevronToggle = screen.getByRole("button", { name: "Recolher opcionais" });
-    chevronToggle.focus();
-    await user.keyboard("{Enter}");
+    await user.click(headerToggle.querySelector("svg"));
     expect(headerToggle).toHaveAttribute("aria-expanded", "false");
 
     headerToggle.focus();
-    await user.keyboard(" ");
+    await user.keyboard("{Enter}");
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.keyboard(" ");
+    expect(headerToggle).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(addDiagnosisButton);
+    expect(headerToggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
   });
 
   it("comunica a decisão pelo badge padronizado e pelo botão selecionado", () => {

@@ -230,21 +230,21 @@ function DiagnosisDetails({
 
   const regionListContent = regions.length ? (
     <Collapsible onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center">
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
-        className={cn(
-          "flex w-fit items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
-          useRefinedLayout && "min-h-8 flex-1 cursor-pointer py-1 text-left hover:bg-muted/50 motion-reduce:transition-none",
-        )}
+        className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
       >
-        <Check aria-hidden="true" data-icon="inline-start" />
         <span>{markedRegionCountLabel(regions.length)}</span>
-        <ChevronDown aria-hidden="true" className={cn("transition-transform", useRefinedLayout && "ml-auto shrink-0 duration-200 motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
+        <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
+          <ChevronDown className={cn("transition-transform duration-[180ms] motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
+        </span>
       </CollapsibleTrigger>
-        <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+        <div className="flex shrink-0 items-center border-l px-2">
+        <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
           <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
         </Button>
+        </div>
       </div>
       <CollapsibleContent
         aria-label={markedRegionCountLabel(regions.length)}
@@ -719,20 +719,23 @@ export default function DiagnosisPanel({
       {secondaryDiagnoses.length || options.length ? (
         <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden py-0" size="sm">
-              <CardHeader className="items-center py-3">
+              <CardHeader className="items-center gap-0 p-0">
                 <CollapsibleTrigger
                   render={
                     <Button
-                      className="h-7 min-w-0 w-full cursor-pointer justify-start rounded-none border-x-0 px-0 text-left font-heading text-sm hover:bg-muted/40 aria-expanded:bg-transparent aria-expanded:hover:bg-muted/40"
+                      className="h-[52px] min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors focus-visible:ring-inset active:translate-y-0"
                       type="button"
-                      variant="ghost"
+                      variant="collapsible"
                     />
                   }
                 >
                   Diagnósticos adicionais
+                  <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
+                    <ChevronDown className={cn("text-muted-foreground transition-transform duration-[180ms] ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
+                  </span>
                 </CollapsibleTrigger>
-                <CardAction className="row-span-1 flex items-center gap-1 self-center">
-                  {options.length ? (
+                {options.length ? (
+                  <CardAction className="row-span-1 flex items-center self-center border-l px-2">
                     <Button
                       aria-controls={addDiagnosisContentId}
                       aria-expanded={isAddDiagnosisOpen}
@@ -746,11 +749,8 @@ export default function DiagnosisPanel({
                       <Plus aria-hidden="true" data-icon="inline-start" />
                       Adicionar
                     </Button>
-                  ) : null}
-                  <CollapsibleTrigger render={<Button aria-label={isSecondaryOpen ? "Recolher opcionais" : "Expandir opcionais"} className="mr-px aria-expanded:bg-transparent aria-expanded:hover:bg-muted" size="icon-sm" type="button" variant="ghost" />}>
-                    <ChevronDown aria-hidden="true" className={cn("text-muted-foreground transition-transform duration-[180ms] ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
-                  </CollapsibleTrigger>
-                </CardAction>
+                  </CardAction>
+                ) : null}
               </CardHeader>
               <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
                 <CardContent className="border-t px-0 py-0">
@@ -767,9 +767,9 @@ export default function DiagnosisPanel({
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
-                          <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3]:px-3 [&>h3:has([aria-expanded=true])]:shadow-[0_3px_0_var(--card),0_4px_0_var(--border)]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3:has([aria-expanded=true])]:shadow-[0_3px_0_var(--card),0_4px_0_var(--border)]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             <AccordionTrigger className={cn(
-                              "cursor-pointer items-start gap-2 py-2.5 hover:bg-muted/50 hover:no-underline [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                              "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2.5 transition-colors hover:bg-muted/50 hover:no-underline focus-visible:ring-inset aria-expanded:bg-muted/40 [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                               selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                             )}>
