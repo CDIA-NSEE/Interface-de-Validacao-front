@@ -89,6 +89,45 @@ function originalDiagnosis(id, standardText, extra = {}) {
 }
 
 describe("DiagnosisPanel", () => {
+  it.each([true, false])("permite adicionar área com a lista recolhida (diário: %s)", (isDaily) => {
+    const diagnosis = originalDiagnosis(2, "Bloqueio de ramo direito", {
+      regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
+    });
+    const onStartRegion = vi.fn();
+    render(<DiagnosisPanelHarness {...createProps({ onStartRegion, options: [] })}
+      dailyStandardDiagnosis={isDaily ? diagnosis.name : "Ritmo sinusal"}
+      diagnoses={[originalDiagnosis(1, "Ritmo sinusal"), diagnosis]} isGeneralReviewDay={false} />);
+    if (!isDaily) fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
+    expect(screen.getByRole("button", { name: "1 área marcada" })).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar área" }));
+    expect(onStartRegion).toHaveBeenCalledWith(diagnosis, undefined);
+  });
+
+  it("rola apenas a lista quando o cabeçalho está cortado e preserva a posição ao trocar áreas", async () => {
+    const props = createProps({
+      options: [], dailyStandardDiagnosis: "Ritmo sinusal", isGeneralReviewDay: false,
+      diagnoses: [originalDiagnosis(1, "Ritmo sinusal"), originalDiagnosis(2, "Bloqueio de ramo direito", {
+        regions: [{ id: 9 }, { id: 10 }],
+      })],
+    });
+    const { rerender } = render(<DiagnosisPanelHarness {...props} />);
+    const viewport = screen.getByTestId("optional-diagnoses-scroll").querySelector('[data-slot="scroll-area-viewport"]');
+    const header = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    const bounds = vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue({ top: 100, bottom: 400 });
+    const target = vi.spyOn(header, "getBoundingClientRect").mockReturnValue({ top: 420, bottom: 480 });
+    fireEvent.click(header);
+    await waitFor(() => expect(viewport.scrollTop).toBe(80));
+    target.mockReturnValue({ top: 100, bottom: 160 });
+    rerender(<DiagnosisPanelHarness {...props} selectedRegionKey="2:9" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Área 1" })).toHaveAttribute("aria-pressed", "true"));
+    rerender(<DiagnosisPanelHarness {...props} selectedRegionKey="2:10" />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Área 2" })).toHaveAttribute("aria-pressed", "true"));
+    await new Promise((resolve) => window.setTimeout(resolve, 10));
+    expect(viewport.scrollTop).toBe(80);
+    bounds.mockRestore();
+    target.mockRestore();
+  });
+
   it("destaca a concordância da IA no diagnóstico diário sem tomar a decisão médica", async () => {
     const onReview = vi.fn().mockResolvedValue(true);
     render(
@@ -347,7 +386,7 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
     expect(screen.getByText("2 áreas marcadas")).toBeVisible();
     expect(screen.getByLabelText("2 áreas marcadas")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
     fireEvent.click(screen.getByLabelText("2 áreas marcadas"));
     const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
     expect(addAreaButton).toBeVisible();
