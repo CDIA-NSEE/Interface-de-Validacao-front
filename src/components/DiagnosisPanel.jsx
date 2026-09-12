@@ -222,14 +222,14 @@ function DiagnosisDetails({
   }
 
   const savedJustificationContent = useRefinedLayout && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
-    <Alert className="animate-in grid-cols-[minmax(0,1fr)_auto] items-center gap-2 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none" variant="info">
+    <Alert className="animate-in grid-cols-[minmax(0,1fr)_auto] items-center gap-2 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none" variant={isPrimaryDaily ? "default" : "info"}>
       <AlertTitle className="min-w-0 truncate" title="Justificativa adicionada">Justificativa adicionada</AlertTitle>
       <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar</Button>
     </Alert>
   ) : null;
 
   const regionListContent = regions.length ? (
-    <Collapsible onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
+    <Collapsible className={cn(isPrimaryDaily && "border-t pt-1.5")} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
       <div className="flex items-center">
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
@@ -301,7 +301,7 @@ function DiagnosisDetails({
           <TooltipTrigger
             render={
               <Button
-                className="h-auto w-fit max-w-full justify-start truncate px-0 py-0"
+                className={cn("h-auto w-fit max-w-full justify-start truncate px-0 py-0", isPrimaryDaily && "active:translate-y-0 motion-reduce:transition-none")}
                 size="sm"
                 type="button"
                 variant="ghost"
@@ -309,8 +309,8 @@ function DiagnosisDetails({
             }
           >
             <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-              <span className="text-[0.7rem] text-muted-foreground/80">Original:</span>{" "}
-              <span className={cn(useRefinedLayout && "text-foreground/75")}>{originalPreview}</span>
+              <span className={cn(isPrimaryDaily ? "font-medium" : "text-[0.7rem] text-muted-foreground/80")}>Original:</span>{" "}
+              <span className={cn(useRefinedLayout && !isPrimaryDaily && "text-foreground/75")}>{originalPreview}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent>{originalText}</TooltipContent>
@@ -327,10 +327,20 @@ function DiagnosisDetails({
 
       {!useRefinedLayout ? regionListContent : null}
 
-      {diagnosis.source !== "doctor_added" ? <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} spacing={1} value={decisionValue}>
-        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-foreground")} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-        <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-foreground")} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
-      </ToggleGroup> : null}
+      {diagnosis.source !== "doctor_added" ? (
+        <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={isPrimaryDaily ? "lg" : undefined} spacing={isPrimaryDaily ? 2 : 1} value={decisionValue}>
+          <ToggleGroupItem className={cn(
+            "w-full min-w-0 px-1.5",
+            useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-foreground",
+            isPrimaryDaily && "gap-1.5 border-input bg-card transition-colors duration-150 aria-pressed:border-success aria-pressed:text-success-subtle-foreground motion-reduce:transition-none",
+          )} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+          <ToggleGroupItem className={cn(
+            "w-full min-w-0 px-1.5",
+            useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-foreground",
+            isPrimaryDaily && "gap-1.5 border-input bg-card transition-colors duration-150 aria-pressed:border-destructive aria-pressed:[&_svg]:text-destructive motion-reduce:transition-none",
+          )} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+        </ToggleGroup>
+      ) : null}
 
       {decisionFeedback && (!useRefinedLayout || decisionFeedback.type === "error") ? (
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
@@ -352,7 +362,7 @@ function DiagnosisDetails({
           </AlertDescription>
         </Alert>
       ) : !regions.length ? (
-        <Button aria-pressed={isRegionTarget} className="w-fit border-x-0 px-0" disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+        <Button aria-pressed={isRegionTarget} className={cn("w-fit", !isPrimaryDaily && "border-x-0 px-0")} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : isPrimaryDaily ? "outline" : "ghost"}>
           <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
         </Button>
       ) : null}
@@ -389,7 +399,7 @@ function DiagnosisDetails({
       ) : null}
 
       {isDisagreementOpen ? (
-        <Alert className={cn(useRefinedLayout && "animate-in border-info/50 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none")} variant={useRefinedLayout ? "info" : "destructive"}>
+        <Alert className={cn(useRefinedLayout && "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none", useRefinedLayout && !isPrimaryDaily && "border-info/50")} variant={isPrimaryDaily ? "default" : useRefinedLayout ? "info" : "destructive"}>
           <AlertDescription className="flex flex-col gap-2">
             <Field>
               <div className="flex items-center justify-between gap-2">
@@ -462,20 +472,24 @@ function DiagnosisCard({
   const standardText = diagnosis.standard_text || diagnosis.name;
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
-  const cardVariant = diagnosisCardVariant({ isRegionTarget, isRequired });
+  const cardVariant = isPrimaryDaily && !isRegionTarget ? "default" : diagnosisCardVariant({ isRegionTarget, isRequired });
   const statusDescription = isDisagreementOpen && !isPrimaryDaily ? "Discordância em edição" : null;
   const isRegionConnected = [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`));
 
   return (
-    <Card className={cn("gap-2.5 overflow-visible", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    <Card className={cn("gap-2.5 overflow-visible", isPrimaryDaily && "border-t-2 border-t-primary/70 shadow-sm", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
-        <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isPrimaryDaily={isPrimaryDaily} isRequired={isRequired} />
-        <CardTitle className={cn("grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-2", isPrimaryDaily ? "items-start" : "items-center")}>
-          {diagnosisReference ? <Badge variant="outline">{diagnosisReference}</Badge> : null}
-          <span className={cn("line-clamp-2 min-w-0 break-words", isPrimaryDaily && "font-semibold")} title={standardText}>{standardText}</span>
-          {isPrimaryDaily ? (
-            <DiagnosisStatusSummary diagnosis={diagnosis} status={status} feedback={decisionFeedback} />
-          ) : <DiagnosisStatusBadge diagnosis={diagnosis} status={status} />}
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isPrimaryDaily={isPrimaryDaily} isRequired={isRequired} />
+          {isPrimaryDaily ? <DiagnosisStatusSummary diagnosis={diagnosis} status={status} feedback={decisionFeedback} /> : null}
+        </div>
+        <CardTitle className={cn(
+          "grid min-w-0 gap-2",
+          isPrimaryDaily ? "grid-cols-[auto_minmax(0,1fr)] items-start group-data-[size=sm]/card:text-base" : "grid-cols-[auto_minmax(0,1fr)_auto] items-center",
+        )}>
+          {diagnosisReference ? <Badge className={cn(isPrimaryDaily && "mt-0.5 rounded-md")} variant="outline">{diagnosisReference}</Badge> : null}
+          <span className={cn("min-w-0 break-words", isPrimaryDaily ? "font-semibold" : "line-clamp-2")} title={standardText}>{standardText}</span>
+          {!isPrimaryDaily ? <DiagnosisStatusBadge diagnosis={diagnosis} status={status} /> : null}
         </CardTitle>
         {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
       </CardHeader>

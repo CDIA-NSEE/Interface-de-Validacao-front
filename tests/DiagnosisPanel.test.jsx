@@ -184,7 +184,7 @@ describe("DiagnosisPanel", () => {
     const pendingStatus = within(dailyPanel).getByText("Aguardando decisão");
 
     expect(aiBadge).toBeVisible();
-    expect(pendingStatus.closest("[data-slot='card-title']")).toBeTruthy();
+    expect(pendingStatus.closest("[data-slot='card-header']")).toBeTruthy();
     expect(pendingStatus).toHaveAttribute("data-variant", "pending");
     expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge).toHaveAttribute("data-variant", "ai");
@@ -320,7 +320,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.getAllByRole("button", { name: "Concordo" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(1);
     const markAreaButton = screen.getByRole("button", { name: "Marcar área" });
-    expect(markAreaButton).toHaveClass("border-x-0", "px-0");
+    expect(markAreaButton).toHaveClass("border-border");
     const markAreaIconSlot = markAreaButton.querySelector('[data-slot="validation-panel-icon"]');
     expect(markAreaIconSlot).toHaveClass(
       "size-5",
@@ -486,10 +486,7 @@ describe("DiagnosisPanel", () => {
     const original = screen.getByRole("button", {
       name: "Original: RITMO SINUSAL DO TRAÇADO ORIGINAL",
     });
-    expect(within(original).getByText("Original:")).toHaveClass(
-      "text-[0.7rem]",
-      "text-muted-foreground/80",
-    );
+    expect(within(original).getByText("Original:")).toHaveClass("font-medium");
     expect(original.firstElementChild).toHaveClass(
       "text-xs",
       "font-normal",
@@ -882,7 +879,7 @@ describe("DiagnosisPanel", () => {
     const editor = screen.getByRole("alert");
     const textarea = within(editor).getByLabelText("Justificativa Opcional");
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
-    expect(editor).toHaveClass("border-info/50", "bg-info/10", "text-info-subtle-foreground");
+    expect(editor).toHaveClass("bg-card", "text-card-foreground");
     expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância, se necessário");
     expect(save).toBeDisabled();
     expect(within(editor).getByRole("button", { name: "Cancelar" })).toBeVisible();
@@ -939,6 +936,6 @@ describe("DiagnosisPanel", () => {
     const feedback = screen.getByLabelText("✓ Decisão salva");
     expect(feedback).toHaveTextContent("✓ Salvo");
     expect(feedback.parentElement).toHaveClass("h-3", "leading-3");
-    expect(feedback.closest('[data-slot="card-title"]')).toBeTruthy();
+    expect(feedback.closest('[data-slot="card-header"]')).toBeTruthy();
   });
 });
