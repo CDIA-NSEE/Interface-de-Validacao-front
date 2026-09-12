@@ -771,7 +771,7 @@ export default function DiagnosisPanel({
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
-                          <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3:has([aria-expanded=true])]:shadow-[0_3px_0_var(--card),0_4px_0_var(--border)]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             <AccordionTrigger className={cn(
                               "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
