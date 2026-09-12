@@ -248,6 +248,8 @@ export default function EcgViewer({
       event.currentTarget.setPointerCapture?.(event.pointerId);
       return;
     }
+    // Prevent native dragging of selected page content from cancelling the gesture.
+    event.preventDefault();
     const point = getPoint(event);
     setSelectionStart(point);
     setDraftRegion({ x: point.x, y: point.y, width: 0, height: 0 });

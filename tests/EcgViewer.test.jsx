@@ -346,10 +346,21 @@ describe("EcgViewer", () => {
     expect(activeStage).toHaveClass("touch-none", "cursor-crosshair");
 
     for (const pointerId of [2, 3]) {
-      fireEvent.pointerDown(activeStage, { button: 0, clientX: 10, clientY: 10, pointerId });
+      const pointerDown = new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+        pointerId,
+      });
+      fireEvent(activeStage, pointerDown);
+      // Native dragging of selected page content would cancel the drawing gesture.
+      expect(pointerDown.defaultPrevented).toBe(true);
       fireEvent.pointerUp(activeStage, { button: 0, clientX: 40, clientY: 40, pointerId });
     }
     expect(onRegionChange).toHaveBeenCalledTimes(2);
+    expect(onRegionChange).toHaveBeenLastCalledWith({ x: 10, y: 10, width: 30, height: 30 });
   });
 
   it("sincroniza hover, foco e seleção das regiões salvas", () => {
