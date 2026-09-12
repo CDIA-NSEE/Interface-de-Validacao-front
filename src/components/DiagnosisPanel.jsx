@@ -233,7 +233,7 @@ function DiagnosisDetails({
       <div className="flex items-center">
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
-        className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
+        className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
       >
         <span>{markedRegionCountLabel(regions.length)}</span>
         <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
