@@ -320,7 +320,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.getAllByRole("button", { name: "Concordo" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(1);
     const markAreaButton = screen.getByRole("button", { name: "Marcar área" });
-    expect(markAreaButton).toHaveClass("border-border");
+    expect(markAreaButton).toHaveClass("border-muted-foreground/60", "bg-card");
     const markAreaIconSlot = markAreaButton.querySelector('[data-slot="validation-panel-icon"]');
     expect(markAreaIconSlot).toHaveClass(
       "size-5",
@@ -537,7 +537,7 @@ describe("DiagnosisPanel", () => {
     expect(secondaryToggle.querySelector("svg")).toHaveClass(
       "text-muted-foreground",
       "transition-transform",
-      "duration-[180ms]",
+      "duration-200",
       "rotate-180",
     );
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
@@ -707,7 +707,7 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
-    const disagreementAlert = screen.getByRole("alert");
+    const disagreementAlert = screen.getByRole("group", { name: /Justificativa/ });
     expect(disagreementAlert).toHaveClass("bg-info/10");
     expect(within(disagreementAlert).getByLabelText("Justificativa Opcional")).toBeVisible();
     fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa Opcional"), { target: { value: "Traçado incompatível" } });
@@ -876,7 +876,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByText("Discordância em edição")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
-    const editor = screen.getByRole("alert");
+    const editor = screen.getByRole("group", { name: /Justificativa/ });
     const textarea = within(editor).getByLabelText("Justificativa Opcional");
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
     expect(editor).toHaveClass("bg-card", "text-card-foreground");

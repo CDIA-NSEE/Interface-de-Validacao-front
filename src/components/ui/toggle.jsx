@@ -4,24 +4,24 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils"
 
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-pressed:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
         success:
-          "border border-success/30 bg-transparent text-success-subtle-foreground hover:bg-success/12 data-[state=on]:border-success data-[state=on]:bg-success data-[state=on]:text-success-foreground",
+          "border border-success/30 bg-transparent text-success-subtle-foreground hover:bg-success/12 data-pressed:border-success data-pressed:bg-success data-pressed:text-success-foreground",
         destructive:
-          "border border-destructive/30 bg-transparent text-destructive hover:bg-destructive/10 data-[state=on]:border-destructive data-[state=on]:bg-destructive data-[state=on]:text-destructive-foreground",
+          "border border-destructive/30 bg-transparent text-destructive hover:bg-destructive/10 data-pressed:border-destructive data-pressed:bg-destructive data-pressed:text-destructive-foreground",
         decisionSuccess:
-          "border border-input bg-transparent text-foreground hover:bg-success/10 data-[state=on]:border-success data-[state=on]:bg-success/12 data-[state=on]:text-success-subtle-foreground",
+          "border border-muted-foreground/60 bg-transparent text-foreground hover:bg-success/10 data-pressed:border-success data-pressed:bg-success/12 data-pressed:font-semibold data-pressed:text-success-subtle-foreground",
         decisionDestructive:
-          "border border-input bg-transparent text-foreground hover:bg-destructive/8 data-[state=on]:border-destructive data-[state=on]:bg-destructive/10 data-[state=on]:text-destructive",
+          "border border-muted-foreground/60 bg-transparent text-foreground hover:bg-destructive/8 data-pressed:border-destructive data-pressed:bg-destructive/10 data-pressed:font-semibold data-pressed:text-destructive-subtle-foreground",
         info:
-          "border border-info/30 bg-transparent text-info-subtle-foreground hover:bg-info/12 data-[state=on]:border-info data-[state=on]:bg-info data-[state=on]:text-info-foreground",
+          "border border-info/30 bg-transparent text-info-subtle-foreground hover:bg-info/12 data-pressed:border-info data-pressed:bg-info data-pressed:text-info-foreground",
         warning:
-          "border border-warning/35 bg-transparent text-warning-subtle-foreground hover:bg-warning/14 data-[state=on]:border-warning data-[state=on]:bg-warning data-[state=on]:text-warning-foreground",
+          "border border-warning/35 bg-transparent text-warning-subtle-foreground hover:bg-warning/14 data-pressed:border-warning data-pressed:bg-warning data-pressed:text-warning-foreground",
       },
       size: {
         default:

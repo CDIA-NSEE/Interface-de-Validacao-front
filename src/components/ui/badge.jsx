@@ -15,7 +15,7 @@ const badgeVariants = cva(
         pending:
           "border-muted-foreground/35 bg-background/80 text-foreground focus-visible:ring-ring/25 [a]:hover:bg-background",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+          "bg-destructive/10 text-destructive-subtle-foreground focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
         success:
           "border-success/25 bg-success/14 text-success-subtle-foreground focus-visible:ring-success/25 [a]:hover:bg-success/22",
         warning:
@@ -23,7 +23,7 @@ const badgeVariants = cva(
         info:
           "border-info/25 bg-info/14 text-info-subtle-foreground focus-visible:ring-info/25 [a]:hover:bg-info/22",
         ai:
-          "h-4 border-info/15 bg-info/8 px-1.5 py-0 text-[0.7rem] font-normal text-info-subtle-foreground focus-visible:ring-info/20 [a]:hover:bg-info/14",
+          "border-info/15 bg-info/8 font-normal text-info-subtle-foreground focus-visible:ring-info/20 [a]:hover:bg-info/14",
         outline:
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:
