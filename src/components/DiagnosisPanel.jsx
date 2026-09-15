@@ -115,6 +115,7 @@ function DiagnosisStatusBadge({ diagnosis, status, useRefinedLayout = false }) {
   return (
     <Badge className={cn(
       "shrink-0",
+      useRefinedLayout && status === "pending" && "border-transparent bg-transparent font-normal text-muted-foreground",
       useRefinedLayout && status !== "pending" && "font-semibold text-foreground",
       useRefinedLayout && status === "confirmed" && "border-success/50 bg-success/10",
       useRefinedLayout && status === "rejected" && "border-destructive/50",
@@ -294,8 +295,32 @@ function DiagnosisDetails({
     </Collapsible>
   ) : null;
 
+  const decisionToggle = diagnosis.source !== "doctor_added" ? (
+    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={isPrimaryDaily ? "lg" : undefined} spacing={isPrimaryDaily ? 2 : 1} value={decisionValue}>
+      <ToggleGroupItem className={cn(
+        "w-full min-w-0 px-1.5",
+        useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-foreground",
+        isPrimaryDaily && "h-10 gap-1.5 border-input bg-card transition-colors duration-150 aria-pressed:border-success aria-pressed:text-success-subtle-foreground motion-reduce:transition-none",
+      )} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+      <ToggleGroupItem className={cn(
+        "w-full min-w-0 px-1.5",
+        useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-foreground",
+        isPrimaryDaily && "h-10 gap-1.5 border-input bg-card transition-colors duration-150 aria-pressed:border-destructive aria-pressed:[&_svg]:text-destructive motion-reduce:transition-none",
+      )} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+    </ToggleGroup>
+  ) : null;
+
+  const showPlainMarkAreaButton = !regions.length && !diagnosis.region_required_missing;
+  const plainMarkAreaButton = showPlainMarkAreaButton ? (
+    <Button aria-pressed={isRegionTarget} className={cn(isPrimaryDaily ? "h-10 shrink-0" : "w-fit border-x-0 px-0")} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : isPrimaryDaily ? "outline" : "ghost"}>
+      <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
+    </Button>
+  ) : null;
+  // No diagnóstico do dia, o botão de área divide a linha com a decisão; nos demais fica abaixo.
+  const inlineMarkAreaButton = isPrimaryDaily ? plainMarkAreaButton : null;
+
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       {shouldShowOriginal ? (
         <Tooltip>
           <TooltipTrigger
@@ -327,20 +352,12 @@ function DiagnosisDetails({
 
       {!useRefinedLayout ? regionListContent : null}
 
-      {diagnosis.source !== "doctor_added" ? (
-        <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={isPrimaryDaily ? "lg" : undefined} spacing={isPrimaryDaily ? 2 : 1} value={decisionValue}>
-          <ToggleGroupItem className={cn(
-            "w-full min-w-0 px-1.5",
-            useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-success/50 aria-pressed:bg-success/12 aria-pressed:font-semibold aria-pressed:text-foreground",
-            isPrimaryDaily && "gap-1.5 border-input bg-card transition-colors duration-150 aria-pressed:border-success aria-pressed:text-success-subtle-foreground motion-reduce:transition-none",
-          )} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-          <ToggleGroupItem className={cn(
-            "w-full min-w-0 px-1.5",
-            useRefinedLayout && "border-muted-foreground/35 bg-background/60 aria-pressed:border-destructive/50 aria-pressed:bg-destructive/10 aria-pressed:font-semibold aria-pressed:text-foreground",
-            isPrimaryDaily && "gap-1.5 border-input bg-card transition-colors duration-150 aria-pressed:border-destructive aria-pressed:[&_svg]:text-destructive motion-reduce:transition-none",
-          )} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
-        </ToggleGroup>
-      ) : null}
+      {decisionToggle && inlineMarkAreaButton ? (
+        <div className="flex items-center gap-2">
+          {decisionToggle}
+          {inlineMarkAreaButton}
+        </div>
+      ) : decisionToggle}
 
       {decisionFeedback && (!useRefinedLayout || decisionFeedback.type === "error") ? (
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
@@ -361,11 +378,7 @@ function DiagnosisDetails({
             </Button>
           </AlertDescription>
         </Alert>
-      ) : !regions.length ? (
-        <Button aria-pressed={isRegionTarget} className={cn("w-fit", !isPrimaryDaily && "border-x-0 px-0")} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : isPrimaryDaily ? "outline" : "ghost"}>
-          <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
-        </Button>
-      ) : null}
+      ) : !inlineMarkAreaButton ? plainMarkAreaButton : null}
 
       {diagnosis.source === "doctor_added" ? (
         <AlertDialog>
@@ -477,7 +490,7 @@ function DiagnosisCard({
   const isRegionConnected = [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`));
 
   return (
-    <Card className={cn("gap-2.5 overflow-visible", isPrimaryDaily && "border-t-2 border-t-primary/70 shadow-sm", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    <Card className={cn("gap-2.5 overflow-visible", isPrimaryDaily && "border-t-2 border-t-primary/70", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/40")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isPrimaryDaily={isPrimaryDaily} isRequired={isRequired} />
@@ -717,7 +730,7 @@ export default function DiagnosisPanel({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <section aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"} className="flex flex-col gap-2" role="region">
         {isGeneralReviewDay ? (
           <div className="px-0.5">
@@ -738,7 +751,7 @@ export default function DiagnosisPanel({
                   render={
                     <Button
                       className={cn(
-                        "h-[52px] min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none",
+                        "h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none",
                         options.length > 0 && "rounded-r-lg aria-expanded:rounded-br-lg",
                       )}
                       type="button"
@@ -787,7 +800,7 @@ export default function DiagnosisPanel({
                         return (
                           <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             <AccordionTrigger className={cn(
-                              "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                              "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                               selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                             )}>
