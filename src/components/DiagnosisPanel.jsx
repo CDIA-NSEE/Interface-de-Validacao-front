@@ -67,10 +67,22 @@ const REVIEW_LABELS = {
 const AI_AGREEMENT_DESCRIPTION =
   "Sugestão informativa; a decisão permanece médica.";
 
-// Altura e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha do diagnóstico do dia.
+// Altura e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha (diário e adicionais).
 // `disabled:opacity-100` evita o "apagão" da linha durante o salvamento; o pointer-events-none continua bloqueando duplo envio.
-const DAILY_DECISION_CONTROL_CLASS =
+const INLINE_DECISION_CONTROL_CLASS =
   "h-10 bg-card transition-colors duration-150 disabled:opacity-100 motion-reduce:transition-none dark:bg-card";
+
+// Linha única "Concordo | Discordo | Marcar área": o mesmo bloco no diagnóstico do dia e nos adicionais,
+// para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo nos dois cartões.
+const INLINE_DECISION_ROW_STYLES = {
+  decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
+  // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
+  markAreaButton: cn("shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
+  // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
+  markAreaButtonActive: "h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
+  markAreaSize: "lg",
+  markAreaVariant: "outline",
+};
 
 const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
 
@@ -85,13 +97,7 @@ const REFINED_DETAILS_STYLES = {
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
-  // `disabled:opacity-100` evita o "apagão" durante "Salvando…" (como no diário); bg-card mantém o toggle no mesmo plano do cartão no escuro.
-  decisionItem: "bg-card disabled:opacity-100 dark:bg-card",
-  markAreaButton: "w-fit border-x-0 px-0 disabled:opacity-100",
-  // Marcando área: mesma tinta "info" do diário; -ml-2 mantém o ícone alinhado à margem como no estado inativo.
-  markAreaButtonActive: "-ml-2 w-fit bg-info/10 px-2 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground",
-  markAreaSize: "sm",
-  markAreaVariant: "ghost",
+  ...INLINE_DECISION_ROW_STYLES,
   originalTrigger: "",
   originalLabel: "",
   originalPreview: "text-foreground/75",
@@ -132,13 +138,6 @@ const DETAILS_STYLES = {
   daily: {
     ...REFINED_DETAILS_STYLES,
     areaCollapsible: "border-t pt-1.5",
-    decisionItem: cn("gap-1.5 border-input", DAILY_DECISION_CONTROL_CLASS),
-    // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
-    markAreaButton: cn("shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", DAILY_DECISION_CONTROL_CLASS),
-    // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
-    markAreaButtonActive: "h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
-    markAreaSize: "lg",
-    markAreaVariant: "outline",
     originalTrigger: "active:translate-y-0 motion-reduce:transition-none",
     savedJustificationVariant: "default",
     editorVariant: "default",
@@ -248,6 +247,8 @@ function DiagnosisDetails({
   const layout = isPrimaryDaily ? "daily" : isAdditional ? "additional" : "plain";
   const styles = DETAILS_STYLES[layout];
   const isPlain = layout === "plain";
+  // Diário e adicionais compartilham a linha única "Concordo | Discordo | Marcar área" (mesma forma e mesmo lugar).
+  const usesInlineDecisionRow = !isPlain;
   const disagreementLabelId = useId();
   const status = getDiagnosisReviewStatus(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
@@ -402,7 +403,7 @@ function DiagnosisDetails({
   ) : null;
 
   const decisionToggle = diagnosis.source !== "doctor_added" ? (
-    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={isPrimaryDaily ? "lg" : undefined} spacing={isPrimaryDaily ? 2 : 1} value={decisionValue}>
+    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={usesInlineDecisionRow ? "lg" : undefined} spacing={usesInlineDecisionRow ? 2 : 1} value={decisionValue}>
       <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
       <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
     </ToggleGroup>
@@ -419,14 +420,14 @@ function DiagnosisDetails({
       type="button"
       variant={isRegionTarget && isPlain ? "secondary" : styles.markAreaVariant}
     >
-      {/* No cartão do dia o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X na mesma linha. */}
-      {isPrimaryDaily
+      {/* Na linha única o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X. */}
+      {usesInlineDecisionRow
         ? <><MapPinned aria-hidden="true" data-icon="inline-start" />Marcar área</>
         : <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>}
     </Button>
   ) : null;
-  // No diagnóstico do dia, o botão de área divide a linha com a decisão; nos demais fica abaixo.
-  const inlineMarkAreaButton = isPrimaryDaily ? plainMarkAreaButton : null;
+  // No diário e nos adicionais, o botão de área divide a linha com a decisão; na revalidação geral fica abaixo.
+  const inlineMarkAreaButton = usesInlineDecisionRow ? plainMarkAreaButton : null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -442,12 +443,13 @@ function DiagnosisDetails({
 
       {isPlain ? regionListContent : null}
 
-      {decisionToggle && inlineMarkAreaButton ? (
+      {/* A linha existe mesmo sem decisão (diagnóstico adicionado pelo médico): fica só o "Marcar área". */}
+      {decisionToggle || inlineMarkAreaButton ? (
         <div className="flex items-center gap-2">
           {decisionToggle}
           {inlineMarkAreaButton}
         </div>
-      ) : decisionToggle}
+      ) : null}
 
       {decisionFeedback && (isPlain || decisionFeedback.type === "error") ? (
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
