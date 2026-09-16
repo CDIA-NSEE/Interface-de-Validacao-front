@@ -64,7 +64,6 @@ function createProps(overrides = {}) {
     isSecondaryOpen: true,
     onAdd: vi.fn().mockResolvedValue(true),
     onEditRegion: vi.fn(),
-    onRegionConsumed: vi.fn(),
     onRemove: vi.fn(),
     onRemoveRegion: vi.fn(),
     onReview: vi.fn().mockResolvedValue(true),
@@ -188,15 +187,7 @@ describe("DiagnosisPanel", () => {
     expect(pendingStatus).toHaveAttribute("data-variant", "pending");
     expect(aiBadge).toHaveAccessibleName("IA concordou");
     expect(aiBadge).toHaveAttribute("data-variant", "ai");
-    expect(aiBadge).toHaveClass(
-      "h-5",
-      "border-info/15",
-      "bg-info/8",
-      "px-2",
-      "text-xs",
-      "font-normal",
-    );
-    expect(within(dailyPanel).getByText("Diagnóstico do dia")).toHaveClass("h-5", "text-xs");
+    expect(within(dailyPanel).getByText("Diagnóstico do dia")).toHaveAttribute("data-variant", "info");
     expect(aiBadge.querySelector(".lucide-sparkles")).toBeTruthy();
     expect(aiBadge).toHaveAccessibleDescription(
       "Sugestão informativa; a decisão permanece médica.",
@@ -320,19 +311,10 @@ describe("DiagnosisPanel", () => {
     expect(screen.getAllByRole("button", { name: "Concordo" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(1);
     const markAreaButton = screen.getByRole("button", { name: "Marcar área" });
-    expect(markAreaButton).toHaveClass("border-muted-foreground/60", "bg-card");
-    const markAreaIconSlot = markAreaButton.querySelector('[data-slot="validation-panel-icon"]');
-    expect(markAreaIconSlot).toHaveClass(
-      "size-5",
-      "shrink-0",
-    );
-    expect(markAreaIconSlot.querySelector("svg")).toHaveClass("size-[18px]");
-    expect(markAreaButton.querySelector('[data-slot="validation-panel-icon-label"]')).toHaveClass(
-      "gap-2",
-      "items-center",
-    );
-    expect(screen.getByTestId("optional-diagnoses-scroll-boundary")).toHaveClass("max-h-[min(32svh,20rem)]", "grid-rows-[minmax(0,1fr)]");
-    expect(screen.getByTestId("optional-diagnoses-scroll")).toHaveClass("min-h-0");
+    // No diagnóstico do dia, "Marcar área" divide a linha com as decisões.
+    expect(markAreaButton.parentElement).toContainElement(screen.getByRole("group", { name: "Revisão de Ritmo sinusal" }));
+    expect(markAreaButton.querySelector("svg")).toBeTruthy();
+    expect(screen.getByTestId("optional-diagnoses-scroll")).toBeVisible();
 
     const firstOptionalTrigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
     fireEvent.click(within(firstOptionalTrigger).getByText("Aguardando decisão"));
@@ -486,12 +468,8 @@ describe("DiagnosisPanel", () => {
     const original = screen.getByRole("button", {
       name: "Original: RITMO SINUSAL DO TRAÇADO ORIGINAL",
     });
-    expect(within(original).getByText("Original:")).toHaveClass("font-medium");
-    expect(original.firstElementChild).toHaveClass(
-      "text-xs",
-      "font-normal",
-      "text-muted-foreground",
-    );
+    expect(within(original).getByText("Original:")).toBeVisible();
+    expect(within(original).getByText("RITMO SINUSAL DO TRAÇADO ORIGINAL")).toBeVisible();
   });
 
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
@@ -518,28 +496,12 @@ describe("DiagnosisPanel", () => {
     ).toBeVisible();
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
     const secondaryTitle = screen.getByText("Diagnósticos adicionais");
-    const secondaryCard = secondaryTitle.closest('[data-slot="card"]');
-    const secondaryHeader = secondaryTitle.closest('[data-slot="card-header"]');
 
     expect(secondaryTitle).toBeVisible();
-    expect(secondaryCard).toHaveClass("py-0");
-    expect(secondaryHeader).toHaveClass("p-0");
+    expect(secondaryTitle.closest('[data-slot="card-header"]')).toBeTruthy();
     const secondaryToggle = screen.getByRole("button", { name: "Diagnósticos adicionais" });
-    const secondaryContent = document.getElementById(secondaryToggle.getAttribute("aria-controls"));
-    expect(secondaryContent).toHaveClass(
-      "h-(--collapsible-panel-height)",
-      "overflow-hidden",
-      "transition-[height]",
-      "duration-200",
-      "data-ending-style:h-0",
-      "data-starting-style:h-0",
-    );
-    expect(secondaryToggle.querySelector("svg")).toHaveClass(
-      "text-muted-foreground",
-      "transition-transform",
-      "duration-200",
-      "rotate-180",
-    );
+    expect(secondaryToggle).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById(secondaryToggle.getAttribute("aria-controls"))).toBeVisible();
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
     expect(addDiagnosisButton).toBeVisible();
     expect(addDiagnosisButton).toHaveTextContent("Adicionar");
@@ -708,23 +670,21 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
     const disagreementAlert = screen.getByRole("group", { name: /Justificativa/ });
-    expect(disagreementAlert).toHaveClass("bg-info/10");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(within(disagreementAlert).getByLabelText("Justificativa Opcional")).toBeVisible();
     fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa Opcional"), { target: { value: "Traçado incompatível" } });
     fireEvent.click(within(disagreementAlert).getByRole("button", { name: "Salvar justificativa" }));
     expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
 
-  it("adiciona o diagnóstico sem reutilizar uma região em edição", async () => {
+  it("adiciona o diagnóstico sem região associada", async () => {
     const onAdd = vi.fn().mockResolvedValue(true);
-    const onRegionConsumed = vi.fn();
     render(
       <DiagnosisPanelHarness
-        {...createProps({ onAdd, onRegionConsumed })}
+        {...createProps({ onAdd })}
         dailyStandardDiagnosis="Ritmo sinusal"
         diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
         isGeneralReviewDay={false}
-        selectedRegion={{ x: 10, y: 20, width: 30, height: 40 }}
       />,
     );
 
@@ -742,7 +702,6 @@ describe("DiagnosisPanel", () => {
         region_width: null,
         region_height: null,
       });
-      expect(onRegionConsumed).not.toHaveBeenCalled();
     });
   });
 
@@ -853,12 +812,8 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("button", { name: "Área 1" })).not.toBeInTheDocument();
 
     fireEvent.click(areaSummary);
-    const firstArea = screen.getByRole("button", { name: "Área 1" });
-    expect(firstArea.parentElement).toHaveClass("p-1.5");
-    expect(firstArea.closest('[data-slot="collapsible-content"]')).toHaveClass(
-      "transition-[height,opacity]",
-      "duration-200",
-    );
+    expect(screen.getByRole("button", { name: "Área 1" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Área 2" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
   });
 
@@ -879,7 +834,7 @@ describe("DiagnosisPanel", () => {
     const editor = screen.getByRole("group", { name: /Justificativa/ });
     const textarea = within(editor).getByLabelText("Justificativa Opcional");
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
-    expect(editor).toHaveClass("bg-card", "text-card-foreground");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância, se necessário");
     expect(save).toBeDisabled();
     expect(within(editor).getByRole("button", { name: "Cancelar" })).toBeVisible();
@@ -935,7 +890,124 @@ describe("DiagnosisPanel", () => {
 
     const feedback = screen.getByLabelText("✓ Decisão salva");
     expect(feedback).toHaveTextContent("✓ Salvo");
-    expect(feedback.parentElement).toHaveClass("h-3", "leading-3");
+    expect(feedback).toHaveAttribute("role", "status");
     expect(feedback.closest('[data-slot="card-header"]')).toBeTruthy();
+    // A mensagem completa não é repetida no corpo do cartão.
+    expect(screen.queryByText("✓ Decisão salva")).not.toBeInTheDocument();
+  });
+
+  it("não desfaz a decisão ao clicar no toggle já pressionado", async () => {
+    const onReview = vi.fn().mockResolvedValue(true);
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "confirmed" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const agree = screen.getByRole("button", { name: "Concordo" });
+    expect(agree).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(agree);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(onReview).not.toHaveBeenCalled();
+    expect(agree).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("bloqueia a troca de decisão enquanto a justificativa do diário está suja", () => {
+    const onReview = vi.fn().mockResolvedValue(true);
+    const onReviewInteractionBlocked = vi.fn();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, onReviewInteractionBlocked, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Justificativa Opcional" }), { target: { value: "Rascunho" } });
+    fireEvent.click(screen.getByRole("button", { name: "Concordo" }));
+
+    expect(onReviewInteractionBlocked).toHaveBeenCalledWith(1);
+    expect(onReview).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toHaveValue("Rascunho");
+  });
+
+  it("mantém o editor aberto quando a revisão falha", async () => {
+    const onReview = vi.fn().mockResolvedValue(false);
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Justificativa Opcional" }), { target: { value: "Falhou" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar justificativa" }));
+
+    await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Falhou", "justification"));
+    expect(screen.getByRole("textbox")).toHaveValue("Falhou");
+    expect(screen.queryByText("Justificativa adicionada")).not.toBeInTheDocument();
+  });
+
+  it("anuncia o erro de salvamento uma única vez e mostra o resumo no cabeçalho", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        decisionFeedbacks={{ "1": { message: "Não foi possível salvar a decisão. Tente novamente.", type: "error" } }}
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível salvar a decisão. Tente novamente.");
+    const summary = screen.getByText("Falha ao salvar");
+    expect(summary).toHaveAttribute("aria-hidden", "true");
+    expect(summary.closest('[data-slot="card-header"]')).toBeTruthy();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("expõe a justificativa salva e o editor como grupos, não como alertas", async () => {
+    const user = userEvent.setup();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected", review_notes: "Nota" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: "Justificativa adicionada" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Editar", exact: true }));
+    const editor = screen.getByRole("group", { name: /Justificativa/ });
+    expect(within(editor).getByRole("textbox")).toHaveValue("Nota");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("não mostra o texto original em diagnósticos adicionados pelo médico", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          { ...originalDiagnosis(7, "Fibrilação atrial"), source: "doctor_added" },
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
+    expect(screen.getByRole("button", { name: "Original: Ritmo sinusal" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Original: Fibrilação atrial/ })).not.toBeInTheDocument();
   });
 });

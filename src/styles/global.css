@@ -35,7 +35,7 @@
   --info-foreground: oklch(0.985 0.006 220);
   --info-subtle-foreground: oklch(0.4 0.09 235);
   --border: oklch(0.88 0.025 220);
-  --input: oklch(0.88 0.025 220);
+  --input: oklch(0.8 0.025 220);
   --ring: oklch(0.57 0.105 222);
   --radius: 0.625rem;
 }

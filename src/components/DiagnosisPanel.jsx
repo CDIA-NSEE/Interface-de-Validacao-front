@@ -68,7 +68,79 @@ const AI_AGREEMENT_DESCRIPTION =
 
 // Altura, borda e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha do diagnóstico do dia.
 const DAILY_DECISION_CONTROL_CLASS =
-  "h-10 border-muted-foreground/60 bg-card transition-colors duration-150 motion-reduce:transition-none dark:border-muted-foreground/60 dark:bg-card";
+  "h-10 border-input bg-card transition-colors duration-150 motion-reduce:transition-none dark:bg-card";
+
+const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
+
+// Estilos que variam por layout de DiagnosisDetails. "plain" é a revalidação geral,
+// "additional" o acordeão de diagnósticos adicionais e "daily" o cartão do diagnóstico do dia.
+const REFINED_DETAILS_STYLES = {
+  areaCollapsible: "",
+  areaPanel: "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none",
+  areaRow: "border-input bg-background p-1.5 duration-150 motion-reduce:transition-none",
+  areaRowHovered: "border-info/50 bg-info/5",
+  areaRowSelected: "border-info/70 bg-info/10 ring-1 ring-inset ring-info/30",
+  areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
+  areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
+  areaActions: "border-l border-border pl-1.5",
+  decisionItem: "bg-background/60",
+  markAreaButton: "w-fit border-x-0 px-0",
+  markAreaButtonActive: "w-fit border-x-0 px-0",
+  markAreaSize: "sm",
+  markAreaVariant: "ghost",
+  originalTrigger: "",
+  originalLabel: "",
+  originalPreview: "text-foreground/75",
+  savedJustificationVariant: "info",
+  editorVariant: "info",
+  editorClass: cn(ENTER_ANIMATION_CLASS, "border-info/50"),
+  editorTextarea: "bg-background text-foreground dark:bg-background",
+  optionalLabel: "Opcional",
+  enterAnimation: ENTER_ANIMATION_CLASS,
+};
+
+const DETAILS_STYLES = {
+  plain: {
+    areaCollapsible: "",
+    areaPanel: "",
+    areaRow: "",
+    areaRowHovered: "bg-accent/60",
+    areaRowSelected: "bg-accent ring-2 ring-ring/30",
+    areaSelectButton: "",
+    areaReferenceBadge: "",
+    areaActions: "",
+    decisionItem: "",
+    markAreaButton: "w-fit border-x-0 px-0",
+    markAreaButtonActive: "w-fit border-x-0 px-0",
+    markAreaSize: "sm",
+    markAreaVariant: "ghost",
+    originalTrigger: "",
+    originalLabel: "",
+    originalPreview: "",
+    savedJustificationVariant: "default",
+    editorVariant: "destructive",
+    editorClass: "",
+    editorTextarea: "",
+    optionalLabel: "(opcional)",
+    enterAnimation: "",
+  },
+  additional: REFINED_DETAILS_STYLES,
+  daily: {
+    ...REFINED_DETAILS_STYLES,
+    areaCollapsible: "border-t pt-1.5",
+    decisionItem: cn("gap-1.5", DAILY_DECISION_CONTROL_CLASS),
+    markAreaButton: cn("shrink-0 active:translate-y-0", DAILY_DECISION_CONTROL_CLASS),
+    markAreaButtonActive: "h-10 shrink-0 active:translate-y-0",
+    markAreaSize: "lg",
+    markAreaVariant: "outline",
+    originalTrigger: "active:translate-y-0 motion-reduce:transition-none",
+    originalLabel: "font-medium",
+    originalPreview: "",
+    savedJustificationVariant: "default",
+    editorVariant: "default",
+    editorClass: ENTER_ANIMATION_CLASS,
+  },
+};
 
 function AiAgreementBadge() {
   const descriptionId = useId();
@@ -119,7 +191,7 @@ function DiagnosisStatusBadge({ diagnosis, status, useRefinedLayout = false }) {
     <Badge className={cn(
       "shrink-0",
       useRefinedLayout && status === "pending" && "border-transparent bg-transparent font-normal text-muted-foreground",
-      useRefinedLayout && status !== "pending" && "font-semibold text-foreground",
+      useRefinedLayout && status !== "pending" && "font-semibold",
       useRefinedLayout && status === "confirmed" && "border-success/50 bg-success/10",
       useRefinedLayout && status === "rejected" && "border-destructive/50",
     )} variant={reviewBadgeVariant(status)}>
@@ -176,7 +248,9 @@ function DiagnosisDetails({
   onReviewDraftChange,
   onStartRegion,
 }) {
-  const useRefinedLayout = isPrimaryDaily || isAdditional;
+  const layout = isPrimaryDaily ? "daily" : isAdditional ? "additional" : "plain";
+  const styles = DETAILS_STYLES[layout];
+  const isPlain = layout === "plain";
   const disagreementLabelId = useId();
   const status = getDiagnosisReviewStatus(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
@@ -226,15 +300,15 @@ function DiagnosisDetails({
     if (nextDecision === "rejected") submitDisagreement(savedReviewNote);
   }
 
-  const savedJustificationContent = useRefinedLayout && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
-    <Alert aria-label="Justificativa adicionada" className="animate-in grid-cols-[minmax(0,1fr)_auto] items-center gap-2 fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none" role="group" variant={isPrimaryDaily ? "default" : "info"}>
+  const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
+    <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
       <AlertTitle className="min-w-0 truncate">Justificativa adicionada</AlertTitle>
       <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar</Button>
     </Alert>
   ) : null;
 
   const regionListContent = regions.length ? (
-    <Collapsible className={cn(isPrimaryDaily && "border-t pt-1.5")} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
+    <Collapsible className={styles.areaCollapsible} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
       <div className="flex items-center">
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
@@ -251,11 +325,7 @@ function DiagnosisDetails({
         </Button>
         </div>
       </div>
-      <CollapsibleContent
-        className={cn(
-          useRefinedLayout && "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none",
-        )}
-      >
+      <CollapsibleContent className={styles.areaPanel}>
       {/* O espaçamento fica dentro do painel para entrar na altura animada e sumir junto com ela. */}
       <div className="flex flex-col gap-2 pt-2">
       {regions.map((region, index) => {
@@ -269,9 +339,9 @@ function DiagnosisDetails({
           <div
             className={cn(
               "flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
-              useRefinedLayout && "border-muted-foreground/30 bg-background p-1.5 duration-150 motion-reduce:transition-none",
-              isHovered && !isSelected && (useRefinedLayout ? "border-info/50 bg-info/5" : "bg-accent/60"),
-              isSelected && (useRefinedLayout ? "border-info/70 bg-info/10 ring-1 ring-inset ring-info/30" : "bg-accent ring-2 ring-ring/30"),
+              styles.areaRow,
+              isHovered && !isSelected && styles.areaRowHovered,
+              isSelected && styles.areaRowSelected,
             )}
             key={regionKey}
             onBlur={() => onRegionHover?.(null)}
@@ -281,14 +351,14 @@ function DiagnosisDetails({
           >
             <button
               aria-pressed={isSelected}
-              className={cn("flex min-w-0 flex-1 items-center gap-2 text-left text-xs outline-none", useRefinedLayout && "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50")}
+              className={cn("flex min-w-0 flex-1 items-center gap-2 text-left text-xs outline-none", styles.areaSelectButton)}
               onClick={() => onRegionSelect?.(regionKey)}
               type="button"
             >
-              {regionReference ? <Badge className={cn("rounded-md", useRefinedLayout && "border-info/30 bg-info/10 text-info-subtle-foreground")} variant="outline">{regionReference}</Badge> : null}
+              {regionReference ? <Badge className={cn("rounded-md", styles.areaReferenceBadge)} variant="outline">{regionReference}</Badge> : null}
               <span>{areaLabel}</span>
             </button>
-            <div className={cn("flex shrink-0 items-center gap-1", useRefinedLayout && "border-l border-muted-foreground/20 pl-1.5")}>
+            <div className={cn("flex shrink-0 items-center gap-1", styles.areaActions)}>
               <Button aria-label={`Editar ${accessibleAreaLabel}`} disabled={isBusy} onClick={() => onEditRegion(diagnosis, region)} size="icon-sm" title={`Editar ${accessibleAreaLabel}`} type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>
               <Button className="text-muted-foreground hover:text-destructive focus-visible:text-destructive" aria-label={`Remover ${accessibleAreaLabel}`} disabled={isBusy || !region.id} onClick={() => onRemoveRegion(diagnosis.id, region.id)} size="icon-sm" title={region.id ? `Remover ${accessibleAreaLabel}` : "Área legada sem id"} type="button" variant="ghost"><Trash2 aria-hidden="true" /></Button>
             </div>
@@ -302,16 +372,8 @@ function DiagnosisDetails({
 
   const decisionToggle = diagnosis.source !== "doctor_added" ? (
     <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={isPrimaryDaily ? "lg" : undefined} spacing={isPrimaryDaily ? 2 : 1} value={decisionValue}>
-      <ToggleGroupItem className={cn(
-        "w-full min-w-0 px-1.5",
-        useRefinedLayout && !isPrimaryDaily && "bg-background/60",
-        isPrimaryDaily && ["gap-1.5", DAILY_DECISION_CONTROL_CLASS],
-      )} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-      <ToggleGroupItem className={cn(
-        "w-full min-w-0 px-1.5",
-        useRefinedLayout && !isPrimaryDaily && "bg-background/60",
-        isPrimaryDaily && ["gap-1.5", DAILY_DECISION_CONTROL_CLASS],
-      )} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
     </ToggleGroup>
   ) : null;
 
@@ -319,16 +381,12 @@ function DiagnosisDetails({
   const plainMarkAreaButton = showPlainMarkAreaButton ? (
     <Button
       aria-pressed={isRegionTarget}
-      className={cn(
-        isPrimaryDaily
-          ? ["shrink-0 active:translate-y-0", isRegionTarget ? "h-10" : DAILY_DECISION_CONTROL_CLASS]
-          : "w-fit border-x-0 px-0",
-      )}
+      className={isRegionTarget ? styles.markAreaButtonActive : styles.markAreaButton}
       disabled={isBusy}
       onClick={() => onStartRegion(diagnosis)}
-      size={isPrimaryDaily ? "lg" : "sm"}
+      size={styles.markAreaSize}
       type="button"
-      variant={isRegionTarget ? "secondary" : isPrimaryDaily ? "outline" : "ghost"}
+      variant={isRegionTarget ? "secondary" : styles.markAreaVariant}
     >
       <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
     </Button>
@@ -343,7 +401,7 @@ function DiagnosisDetails({
           <TooltipTrigger
             render={
               <Button
-                className={cn("h-auto w-fit max-w-full justify-start truncate px-0 py-0", isPrimaryDaily && "active:translate-y-0 motion-reduce:transition-none")}
+                className={cn("h-auto w-fit max-w-full cursor-help justify-start truncate px-0 py-0 hover:bg-transparent hover:text-foreground", styles.originalTrigger)}
                 size="sm"
                 type="button"
                 variant="ghost"
@@ -351,15 +409,15 @@ function DiagnosisDetails({
             }
           >
             <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-              <span className={cn(isPrimaryDaily && "font-medium")}>Original:</span>{" "}
-              <span className={cn(useRefinedLayout && !isPrimaryDaily && "text-foreground/75")}>{originalPreview}</span>
+              <span className={styles.originalLabel}>Original:</span>{" "}
+              <span className={styles.originalPreview}>{originalPreview}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent>{originalText}</TooltipContent>
         </Tooltip>
       ) : null}
 
-      {!useRefinedLayout && status === "rejected" && diagnosis.review_notes ? (
+      {isPlain && status === "rejected" && diagnosis.review_notes ? (
         <Alert>
           <AlertTitle>Justificativa registrada</AlertTitle>
           <AlertDescription className="break-words">{diagnosis.review_notes}</AlertDescription>
@@ -367,7 +425,7 @@ function DiagnosisDetails({
         </Alert>
       ) : null}
 
-      {!useRefinedLayout ? regionListContent : null}
+      {isPlain ? regionListContent : null}
 
       {decisionToggle && inlineMarkAreaButton ? (
         <div className="flex items-center gap-2">
@@ -376,13 +434,13 @@ function DiagnosisDetails({
         </div>
       ) : decisionToggle}
 
-      {decisionFeedback && (!useRefinedLayout || decisionFeedback.type === "error") ? (
+      {decisionFeedback && (isPlain || decisionFeedback.type === "error") ? (
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
           {decisionFeedback.message}
         </p>
       ) : null}
 
-      {useRefinedLayout ? regionListContent : null}
+      {!isPlain ? regionListContent : null}
 
       {!regions.length && diagnosis.region_required_missing ? (
         <Alert variant="warning">
@@ -420,26 +478,26 @@ function DiagnosisDetails({
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
-      {useRefinedLayout ? savedJustificationContent : null}
+      {savedJustificationContent}
 
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
-        <Button className={cn("w-fit", useRefinedLayout && "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none")} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">
-          {useRefinedLayout ? <><Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa</> : "Justificativa (opcional)"}
+        <Button className={cn("w-fit", styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">
+          {isPlain ? "Justificativa (opcional)" : <><Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa</>}
         </Button>
       ) : null}
 
       {isDisagreementOpen ? (
-        <Alert aria-labelledby={disagreementLabelId} className={cn(useRefinedLayout && "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none", useRefinedLayout && !isPrimaryDaily && "border-info/50")} role="group" variant={isPrimaryDaily ? "default" : useRefinedLayout ? "info" : "destructive"}>
+        <Alert aria-labelledby={disagreementLabelId} className={styles.editorClass} role="group" variant={styles.editorVariant}>
           <AlertDescription className="flex flex-col gap-2">
             <Field>
               <div className="flex items-center justify-between gap-2">
-                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <span className="font-normal text-muted-foreground">{useRefinedLayout ? "Opcional" : "(opcional)"}</span></FieldLabel>
-                {!useRefinedLayout ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
+                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <span className="font-normal text-muted-foreground">{styles.optionalLabel}</span></FieldLabel>
+                {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
               </div>
-              <Textarea className={cn(useRefinedLayout && "border-muted-foreground/60 bg-background text-foreground dark:bg-background")} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
+              <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
             <div className="flex flex-col gap-2 sm:flex-row">
-              {useRefinedLayout ? (
+              {!isPlain ? (
                 <>
                   <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
                   <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
@@ -460,17 +518,21 @@ function DiagnosisDetails({
 
 function DiagnosisStatusSummary({ diagnosis, status, feedback }) {
   return (
-    <span className="flex shrink-0 flex-col items-end gap-0.5">
-      <DiagnosisStatusBadge diagnosis={diagnosis} status={status} useRefinedLayout />
-      <span className="h-3 max-w-32 truncate text-xs leading-3 font-normal text-muted-foreground">
-        {feedback?.type === "error" ? (
-          // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
-          <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
-        ) : feedback ? (
-          <span aria-label={feedback.message} title={feedback.message} role="status">
-            {feedback.type === "success" ? "✓ Salvo" : feedback.message}
-          </span>
-        ) : null}
+    <span className="flex shrink-0 flex-col items-end pb-3.5">
+      {/* A key remonta o badge a cada troca de status para repetir a entrada usada no resto do cartão. */}
+      <span className="relative animate-in fade-in-0 duration-200 motion-reduce:animate-none" key={status}>
+        <DiagnosisStatusBadge diagnosis={diagnosis} status={status} useRefinedLayout />
+        {/* Posicionado sob o badge e centralizado na largura dele; a folga lateral evita truncar "Falha ao salvar". */}
+        <span className="absolute top-full -inset-x-6 mt-0.5 h-3 truncate text-center text-xs leading-3 font-normal text-muted-foreground">
+          {feedback?.type === "error" ? (
+            // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
+            <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
+          ) : feedback ? (
+            <span aria-label={feedback.message} title={feedback.message} role="status">
+              {feedback.type === "success" ? "✓ Salvo" : feedback.message}
+            </span>
+          ) : null}
+        </span>
       </span>
     </span>
   );
