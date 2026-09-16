@@ -15,9 +15,9 @@ const toggleVariants = cva(
         destructive:
           "border border-destructive/30 bg-transparent text-destructive hover:bg-destructive/10 data-pressed:border-destructive data-pressed:bg-destructive data-pressed:text-destructive-foreground",
         decisionSuccess:
-          "border border-input bg-transparent text-foreground data-pressed:border-success data-pressed:bg-success/12 data-pressed:font-semibold data-pressed:text-success-subtle-foreground",
+          "border border-input bg-transparent text-foreground hover:border-success/50 hover:bg-success/8 hover:text-success-subtle-foreground data-pressed:border-success data-pressed:bg-success/12 data-pressed:font-semibold data-pressed:text-success-subtle-foreground",
         decisionDestructive:
-          "border border-input bg-transparent text-foreground data-pressed:border-destructive data-pressed:bg-destructive/10 data-pressed:font-semibold data-pressed:text-destructive-subtle-foreground",
+          "border border-input bg-transparent text-foreground hover:border-destructive/50 hover:bg-destructive/8 hover:text-destructive-subtle-foreground data-pressed:border-destructive data-pressed:bg-destructive/10 data-pressed:font-semibold data-pressed:text-destructive-subtle-foreground",
         info:
           "border border-info/30 bg-transparent text-info-subtle-foreground hover:bg-info/12 data-pressed:border-info data-pressed:bg-info data-pressed:text-info-foreground",
         warning:

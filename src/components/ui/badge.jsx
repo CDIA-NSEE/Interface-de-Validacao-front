@@ -23,7 +23,7 @@ const badgeVariants = cva(
         info:
           "border-info/25 bg-info/14 text-info-subtle-foreground focus-visible:ring-info/25 [a]:hover:bg-info/22",
         ai:
-          "border-info/15 bg-info/8 font-normal text-info-subtle-foreground focus-visible:ring-info/20 [a]:hover:bg-info/14",
+          "border-border bg-transparent font-normal text-muted-foreground focus-visible:ring-info/20 [&>svg]:text-info [a]:hover:bg-info/8",
         outline:
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:

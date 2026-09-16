@@ -197,12 +197,9 @@ describe("DiagnosisPanel", () => {
     expect(onReview).not.toHaveBeenCalled();
     expect(screen.queryByText("Recomendação da IA")).not.toBeInTheDocument();
 
-    fireEvent.focus(aiBadge);
-    await waitFor(() => {
-      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
-        "Sugestão informativa; a decisão permanece médica.",
-      );
-    });
+    // O badge é apenas informativo: não entra na ordem de Tab nem abre tooltip sobre o título.
+    expect(aiBadge).not.toHaveAttribute("tabindex");
+    expect(document.querySelector('[data-slot="tooltip-content"]')).not.toBeInTheDocument();
   });
 
   it("oculta concordâncias quando o modo está desligado ou o campo não é verdadeiro", () => {
@@ -465,11 +462,28 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    const original = screen.getByRole("button", {
-      name: "Original: RITMO SINUSAL DO TRAÇADO ORIGINAL",
-    });
-    expect(within(original).getByText("Original:")).toBeVisible();
-    expect(within(original).getByText("RITMO SINUSAL DO TRAÇADO ORIGINAL")).toBeVisible();
+    // Texto curto cabe inteiro: vira texto simples, sem botão/tooltip (nenhuma parada de Tab antes da decisão).
+    const original = screen.getByText("RITMO SINUSAL DO TRAÇADO ORIGINAL");
+    expect(screen.getByText("Original:")).toBeVisible();
+    expect(original).toBeVisible();
+    expect(original.closest("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Original:/ })).not.toBeInTheDocument();
+  });
+
+  it("mantém o tooltip do texto original apenas quando ele é truncado", () => {
+    const longText = "RITMO SINUSAL COM ALTERAÇÕES INESPECÍFICAS DA REPOLARIZAÇÃO VENTRICULAR";
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { original_text: longText })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const original = screen.getByRole("button", { name: /^Original: RITMO SINUSAL/ });
+    expect(original).toHaveTextContent("…");
+    expect(original).not.toHaveTextContent(longText);
   });
 
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
@@ -801,7 +815,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    const original = screen.getByRole("button", { name: "Original: Ritmo sinusal" });
+    const original = screen.getByText("Original:").parentElement;
     const decisions = screen.getByRole("group", { name: "Revisão de Ritmo sinusal" });
     const areaSummary = screen.getByRole("button", { name: "2 áreas marcadas" });
     const savedJustification = screen.getByText("Justificativa adicionada");
@@ -1007,7 +1021,9 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
-    expect(screen.getByRole("button", { name: "Original: Ritmo sinusal" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: /Original: Fibrilação atrial/ })).not.toBeInTheDocument();
+    const originalLabels = screen.getAllByText("Original:");
+    expect(originalLabels).toHaveLength(1);
+    expect(originalLabels[0].parentElement).toHaveTextContent("Original: Ritmo sinusal");
+    expect(screen.queryByText(/Original: Fibrilação atrial/)).not.toBeInTheDocument();
   });
 });

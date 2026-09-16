@@ -51,6 +51,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { getDiagnosisReviewStatus, getDiagnosisVisualStatus } from "../utils/diagnosisRegionVisuals.js";
 import {
+  ORIGINAL_TEXT_PREVIEW_LIMIT,
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
   getOriginalTextPreview,
@@ -66,9 +67,10 @@ const REVIEW_LABELS = {
 const AI_AGREEMENT_DESCRIPTION =
   "Sugestão informativa; a decisão permanece médica.";
 
-// Altura, borda e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha do diagnóstico do dia.
+// Altura e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha do diagnóstico do dia.
+// `disabled:opacity-100` evita o "apagão" da linha durante o salvamento; o pointer-events-none continua bloqueando duplo envio.
 const DAILY_DECISION_CONTROL_CLASS =
-  "h-10 border-input bg-card transition-colors duration-150 motion-reduce:transition-none dark:bg-card";
+  "h-10 bg-card transition-colors duration-150 disabled:opacity-100 motion-reduce:transition-none dark:bg-card";
 
 const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
 
@@ -128,41 +130,31 @@ const DETAILS_STYLES = {
   daily: {
     ...REFINED_DETAILS_STYLES,
     areaCollapsible: "border-t pt-1.5",
-    decisionItem: cn("gap-1.5", DAILY_DECISION_CONTROL_CLASS),
-    markAreaButton: cn("shrink-0 active:translate-y-0", DAILY_DECISION_CONTROL_CLASS),
-    markAreaButtonActive: "h-10 shrink-0 active:translate-y-0",
+    decisionItem: cn("gap-1.5 border-input", DAILY_DECISION_CONTROL_CLASS),
+    // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
+    markAreaButton: cn("shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", DAILY_DECISION_CONTROL_CLASS),
+    // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
+    markAreaButtonActive: "h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
     markAreaSize: "lg",
     markAreaVariant: "outline",
     originalTrigger: "active:translate-y-0 motion-reduce:transition-none",
-    originalLabel: "font-medium",
-    originalPreview: "",
     savedJustificationVariant: "default",
     editorVariant: "default",
     editorClass: ENTER_ANIMATION_CLASS,
   },
 };
 
+// Sem tooltip nem foco: o badge é autoexplicativo e o tooltip cobria o título (o cartão encosta no topo do viewport).
+// A descrição segue disponível para leitores de tela.
 function AiAgreementBadge() {
   const descriptionId = useId();
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Badge
-              aria-describedby={descriptionId}
-              aria-label="IA concordou"
-              tabIndex={0}
-              variant="ai"
-            />
-          }
-        >
-          <Sparkles aria-hidden="true" data-icon="inline-start" />
-          IA concordou
-        </TooltipTrigger>
-        <TooltipContent>{AI_AGREEMENT_DESCRIPTION}</TooltipContent>
-      </Tooltip>
+      <Badge aria-describedby={descriptionId} aria-label="IA concordou" variant="ai">
+        <Sparkles aria-hidden="true" data-icon="inline-start" />
+        IA concordou
+      </Badge>
       <span className="sr-only" id={descriptionId}>{AI_AGREEMENT_DESCRIPTION}</span>
     </>
   );
@@ -259,12 +251,16 @@ function DiagnosisDetails({
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const originalPreview = getOriginalTextPreview(originalText);
   const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText);
+  // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
+  const isOriginalTruncated = Array.from(originalText.replace(/\s+/g, " ").trim()).length > ORIGINAL_TEXT_PREVIEW_LIMIT;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const savedReviewNote = diagnosis.review_notes || "";
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
   const isReviewDraftDirty = isDisagreementOpen && reviewNoteDraft !== savedReviewNote;
   const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
-  const decisionValue = visualStatus === "pending" ? [] : [visualStatus];
+  // Decisão otimista: o toggle fica pressionado no clique e volta ao status do servidor se o salvamento falhar.
+  const [pendingDecision, setPendingDecision] = useState(null);
+  const decisionValue = pendingDecision ? [pendingDecision] : visualStatus === "pending" ? [] : [visualStatus];
 
   function setDisagreementPanelOpen(isOpen) {
     onReviewDraftChange?.(
@@ -296,9 +292,37 @@ function DiagnosisDetails({
       return;
     }
     const nextDecision = nextValue.at(-1);
-    if (nextDecision === "confirmed") submitAgreement();
-    if (nextDecision === "rejected") submitDisagreement(savedReviewNote);
+    if (nextDecision !== "confirmed" && nextDecision !== "rejected") return;
+    setPendingDecision(nextDecision);
+    const submit = nextDecision === "confirmed" ? submitAgreement() : submitDisagreement(savedReviewNote);
+    submit.finally(() => setPendingDecision(null));
   }
+
+  const originalContent = shouldShowOriginal ? (
+    <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
+      <span className={styles.originalLabel}>Original:</span>{" "}
+      <span className={styles.originalPreview}>{originalPreview}</span>
+    </span>
+  ) : null;
+  const originalLine = !originalContent ? null : !isOriginalTruncated ? (
+    <span className="flex min-w-0 max-w-full">{originalContent}</span>
+  ) : (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            className={cn("h-auto w-fit max-w-full cursor-help justify-start truncate px-0 py-0 hover:bg-transparent hover:text-foreground", styles.originalTrigger)}
+            size="sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        {originalContent}
+      </TooltipTrigger>
+      <TooltipContent>{originalText}</TooltipContent>
+    </Tooltip>
+  );
 
   const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
     <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
@@ -386,9 +410,12 @@ function DiagnosisDetails({
       onClick={() => onStartRegion(diagnosis)}
       size={styles.markAreaSize}
       type="button"
-      variant={isRegionTarget ? "secondary" : styles.markAreaVariant}
+      variant={isRegionTarget && !isPrimaryDaily ? "secondary" : styles.markAreaVariant}
     >
-      <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
+      {/* No cartão do dia o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X na mesma linha. */}
+      {isPrimaryDaily
+        ? <><MapPinned aria-hidden="true" data-icon="inline-start" />Marcar área</>
+        : <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>}
     </Button>
   ) : null;
   // No diagnóstico do dia, o botão de área divide a linha com a decisão; nos demais fica abaixo.
@@ -396,26 +423,7 @@ function DiagnosisDetails({
 
   return (
     <div className="flex flex-col gap-2">
-      {shouldShowOriginal ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                className={cn("h-auto w-fit max-w-full cursor-help justify-start truncate px-0 py-0 hover:bg-transparent hover:text-foreground", styles.originalTrigger)}
-                size="sm"
-                type="button"
-                variant="ghost"
-              />
-            }
-          >
-            <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-              <span className={styles.originalLabel}>Original:</span>{" "}
-              <span className={styles.originalPreview}>{originalPreview}</span>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{originalText}</TooltipContent>
-        </Tooltip>
-      ) : null}
+      {originalLine}
 
       {isPlain && status === "rejected" && diagnosis.review_notes ? (
         <Alert>
@@ -517,8 +525,9 @@ function DiagnosisDetails({
 }
 
 function DiagnosisStatusSummary({ diagnosis, status, feedback }) {
+  // pb-2 reserva só o necessário para o micro-feedback absoluto abaixo do badge sem tocar a linha do título.
   return (
-    <span className="flex shrink-0 flex-col items-end pb-3.5">
+    <span className="flex shrink-0 flex-col items-end pb-2">
       {/* A key remonta o badge a cada troca de status para repetir a entrada usada no resto do cartão. */}
       <span className="relative animate-in fade-in-0 duration-200 motion-reduce:animate-none" key={status}>
         <DiagnosisStatusBadge diagnosis={diagnosis} status={status} useRefinedLayout />
@@ -572,7 +581,7 @@ function DiagnosisCard({
   const isRegionConnected = [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`));
 
   return (
-    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", isPrimaryDaily && "border-t-2 border-t-primary/70", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
