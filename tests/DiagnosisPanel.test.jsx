@@ -542,9 +542,11 @@ describe("DiagnosisPanel", () => {
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
 
     expect(headerToggle).toHaveAttribute("aria-expanded", "false");
+    // O cabeçalho só recolhe/expande; a ação de adicionar fica no rodapé fixo do cartão, fora do cabeçalho.
     const header = headerToggle.closest('[data-slot="card-header"]');
-    expect(within(header).getAllByRole("button")).toHaveLength(2);
+    expect(within(header).getAllByRole("button")).toHaveLength(1);
     expect(headerToggle.querySelector("button")).not.toBeInTheDocument();
+    expect(addDiagnosisButton.closest('[data-slot="card-header"]')).toBeNull();
     expect(addDiagnosisButton.parentElement.closest("button")).toBeNull();
 
     await user.click(headerToggle);
@@ -554,10 +556,11 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
 
-    addDiagnosisButton.focus();
-    await user.keyboard("{Enter}");
+    // O seletor ocupa o lugar do botão; cancelar devolve o botão e o foco a ele.
+    await user.click(screen.getByRole("button", { name: "Cancelar adição" }));
     expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toHaveFocus());
 
     await user.click(headerToggle.querySelector("svg"));
     expect(headerToggle).toHaveAttribute("aria-expanded", "false");
@@ -569,7 +572,7 @@ describe("DiagnosisPanel", () => {
     await user.keyboard(" ");
     expect(headerToggle).toHaveAttribute("aria-expanded", "false");
 
-    await user.click(addDiagnosisButton);
+    await user.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
   });

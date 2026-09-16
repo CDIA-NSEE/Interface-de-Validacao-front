@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -56,6 +55,7 @@ import {
   getDiagnosisReference,
   getOriginalTextPreview,
   getRegionReference,
+  normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
 
 const REVIEW_LABELS = {
@@ -85,17 +85,19 @@ const REFINED_DETAILS_STYLES = {
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
-  decisionItem: "bg-background/60",
-  markAreaButton: "w-fit border-x-0 px-0",
-  markAreaButtonActive: "w-fit border-x-0 px-0",
+  // `disabled:opacity-100` evita o "apagão" durante "Salvando…" (como no diário); bg-card mantém o toggle no mesmo plano do cartão no escuro.
+  decisionItem: "bg-card disabled:opacity-100 dark:bg-card",
+  markAreaButton: "w-fit border-x-0 px-0 disabled:opacity-100",
+  // Marcando área: mesma tinta "info" do diário; -ml-2 mantém o ícone alinhado à margem como no estado inativo.
+  markAreaButtonActive: "-ml-2 w-fit bg-info/10 px-2 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground",
   markAreaSize: "sm",
   markAreaVariant: "ghost",
   originalTrigger: "",
   originalLabel: "",
   originalPreview: "text-foreground/75",
-  savedJustificationVariant: "info",
-  editorVariant: "info",
-  editorClass: cn(ENTER_ANIMATION_CLASS, "border-info/50"),
+  savedJustificationVariant: "default",
+  editorVariant: "default",
+  editorClass: ENTER_ANIMATION_CLASS,
   editorTextarea: "bg-background text-foreground dark:bg-background",
   optionalLabel: "Opcional",
   enterAnimation: ENTER_ANIMATION_CLASS,
@@ -170,7 +172,8 @@ function reviewBadgeVariant(status) {
   return "pending";
 }
 
-function DiagnosisStatusBadge({ diagnosis, status, useRefinedLayout = false }) {
+// `compact` encurta o pendente para "Pendente" nas linhas da lista (libera ~75px para o título); o nome acessível segue completo.
+function DiagnosisStatusBadge({ compact = false, diagnosis, status, useRefinedLayout = false }) {
   if (diagnosis?.source === "doctor_added") {
     return (
       <Badge className="shrink-0" variant={diagnosis.region_required_missing ? "warning" : "secondary"}>
@@ -187,7 +190,9 @@ function DiagnosisStatusBadge({ diagnosis, status, useRefinedLayout = false }) {
       useRefinedLayout && status === "confirmed" && "border-success/50 bg-success/10",
       useRefinedLayout && status === "rejected" && "border-destructive/50",
     )} variant={reviewBadgeVariant(status)}>
-      {REVIEW_LABELS[status]}
+      {compact && status === "pending"
+        ? <><span aria-hidden="true">Pendente</span><span className="sr-only">{REVIEW_LABELS.pending}</span></>
+        : REVIEW_LABELS[status]}
     </Badge>
   );
 }
@@ -250,7 +255,9 @@ function DiagnosisDetails({
   const regions = diagnosis.regions || [];
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const originalPreview = getOriginalTextPreview(originalText);
-  const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText);
+  // No adicional, "Original:" igual ao título (ignorando caixa/acentos) não ajuda a decisão e só ocupa uma linha.
+  const isOriginalRedundant = isAdditional && normalizeDiagnosisText(originalText) === normalizeDiagnosisText(standardText);
+  const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText) && !isOriginalRedundant;
   // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
   const isOriginalTruncated = Array.from(originalText.replace(/\s+/g, " ").trim()).length > ORIGINAL_TEXT_PREVIEW_LIMIT;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
@@ -410,7 +417,7 @@ function DiagnosisDetails({
       onClick={() => onStartRegion(diagnosis)}
       size={styles.markAreaSize}
       type="button"
-      variant={isRegionTarget && !isPrimaryDaily ? "secondary" : styles.markAreaVariant}
+      variant={isRegionTarget && isPlain ? "secondary" : styles.markAreaVariant}
     >
       {/* No cartão do dia o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X na mesma linha. */}
       {isPrimaryDaily
@@ -451,16 +458,28 @@ function DiagnosisDetails({
       {!isPlain ? regionListContent : null}
 
       {!regions.length && diagnosis.region_required_missing ? (
-        <Alert variant="warning">
-          <MapPinned aria-hidden="true" />
-          <AlertTitle>Área no ECG</AlertTitle>
-          <AlertDescription className="flex flex-col items-start gap-2">
-            <span>Obrigatória para este diagnóstico.</span>
+        isAdditional ? (
+          // Uma linha: o badge "Área necessária" já explica; aqui só o aviso curto e a ação.
+          // O ícone vai num span para não acionar o grid de duas linhas do Alert (has-[>svg]).
+          <Alert className="grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2" variant="warning">
+            <span aria-hidden="true" className="flex size-4 items-center justify-center [&_svg]:size-4"><MapPinned /></span>
+            <AlertTitle className="min-w-0 truncate">Área obrigatória no ECG</AlertTitle>
             <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
               <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
             </Button>
-          </AlertDescription>
-        </Alert>
+          </Alert>
+        ) : (
+          <Alert variant="warning">
+            <MapPinned aria-hidden="true" />
+            <AlertTitle>Área no ECG</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              <span>Obrigatória para este diagnóstico.</span>
+              <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
+                <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )
       ) : !inlineMarkAreaButton ? plainMarkAreaButton : null}
 
       {diagnosis.source === "doctor_added" ? (
@@ -524,13 +543,14 @@ function DiagnosisDetails({
   );
 }
 
-function DiagnosisStatusSummary({ diagnosis, status, feedback }) {
+function DiagnosisStatusSummary({ className, compact = false, diagnosis, status, feedback }) {
   // pb-2 reserva só o necessário para o micro-feedback absoluto abaixo do badge sem tocar a linha do título.
   return (
-    <span className="flex shrink-0 flex-col items-end pb-2">
+    <span className={cn("flex shrink-0 flex-col items-end pb-2", className)}>
       {/* A key remonta o badge a cada troca de status para repetir a entrada usada no resto do cartão. */}
-      <span className="relative animate-in fade-in-0 duration-200 motion-reduce:animate-none" key={status}>
-        <DiagnosisStatusBadge diagnosis={diagnosis} status={status} useRefinedLayout />
+      {/* `flex` tira o badge da baseline do texto (evitava um desvio de ~1px em relação ao título). */}
+      <span className="relative flex animate-in fade-in-0 duration-200 motion-reduce:animate-none" key={status}>
+        <DiagnosisStatusBadge compact={compact} diagnosis={diagnosis} status={status} useRefinedLayout />
         {/* Posicionado sob o badge e centralizado na largura dele; a folga lateral evita truncar "Falha ao salvar". */}
         <span className="absolute top-full -inset-x-6 mt-0.5 h-3 truncate text-center text-xs leading-3 font-normal text-muted-foreground">
           {feedback?.type === "error" ? (
@@ -837,14 +857,12 @@ export default function DiagnosisPanel({
       {secondaryDiagnoses.length || options.length ? (
         <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden py-0" size="sm">
-              <CardHeader className="items-center gap-0 p-0 has-data-[slot=card-action]:gap-x-2">
+              <CardHeader className="items-center gap-0 p-0">
+                {/* O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo. */}
                 <CollapsibleTrigger
                   render={
                     <Button
-                      className={cn(
-                        "h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none",
-                        options.length > 0 && "rounded-r-lg aria-expanded:rounded-br-lg",
-                      )}
+                      className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
                       type="button"
                       variant="collapsible"
                     />
@@ -855,24 +873,6 @@ export default function DiagnosisPanel({
                     <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
                   </span>
                 </CollapsibleTrigger>
-                {options.length ? (
-                  <CardAction className="row-span-1 flex items-center self-center border-l px-2">
-                    <Button
-                      aria-controls={addDiagnosisContentId}
-                      aria-expanded={isAddDiagnosisOpen}
-                      aria-label="Adicionar diagnóstico"
-                      className="cursor-pointer transition-colors duration-150 hover:bg-muted/50 aria-expanded:bg-transparent aria-expanded:hover:bg-muted/50 active:translate-y-0 motion-reduce:transition-none"
-                      onClick={() => handleAddDiagnosisToggle(!isAddDiagnosisOpen)}
-                      size="sm"
-                      type="button"
-                      variant="ghost"
-                      ref={addDiagnosisTriggerRef}
-                    >
-                      <Plus aria-hidden="true" data-icon="inline-start" />
-                      Adicionar
-                    </Button>
-                  </CardAction>
-                ) : null}
               </CardHeader>
               <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
                 <CardContent className="border-t px-0 py-0">
@@ -889,19 +889,20 @@ export default function DiagnosisPanel({
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         return (
-                          <AccordionItem className="px-3 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          // Item aberto: fundo muted/40 no item e opaco equivalente no h3 sticky; o separador título/conteúdo vai no h3 para ter largura total e acompanhar o sticky.
+                          <AccordionItem className="px-3 data-open:bg-muted/40 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3]:data-open:border-b [&>h3]:data-open:bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             <AccordionTrigger className={cn(
-                              "cursor-pointer items-start gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                              "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                               selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                             )}>
-                              <span className="grid min-h-10 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                              <span className="grid min-h-8 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
                                 {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
-                                <span className="line-clamp-2 min-w-0 break-words text-left font-semibold group-aria-expanded/accordion-trigger:line-clamp-none" title={standardText}>{standardText}</span>
-                                <DiagnosisStatusSummary diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
+                                <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none group-aria-expanded/accordion-trigger:font-semibold" title={standardText}>{standardText}</span>
+                                <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                               </span>
                             </AccordionTrigger>
-                            <AccordionContent className="flex flex-col gap-3 border-t pt-2">
+                            <AccordionContent className="flex flex-col gap-3 pt-2">
                               <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
@@ -912,25 +913,38 @@ export default function DiagnosisPanel({
                     </ScrollArea>
                   </div>
                 ) : null}
-
-                {options.length ? (
-                  <Collapsible onOpenChange={handleAddDiagnosisToggle} open={isAddDiagnosisOpen}>
-                    <CollapsibleContent id={addDiagnosisContentId}>
-                      <div className="flex items-start gap-2 border-t p-2">
-                        <Field>
-                          <FieldLabel className="sr-only" htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
-                          <Select disabled={isBusy} items={selectItems} onValueChange={handleSelectDiagnosis} value={name || null}>
-                            <SelectTrigger className="w-full" id="new-diagnosis-select" ref={addDiagnosisSelectRef}><SelectValue placeholder="Selecione um diagnóstico padronizado" /></SelectTrigger>
-                            <SelectContent align="start"><SelectGroup>{selectItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
-                          </Select>
-                        </Field>
-                        <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ) : null}
                 </CardContent>
               </CollapsibleContent>
+              {/* Rodapé fixo (fora do conteúdo recolhível): a ação fica sempre visível e o seletor abre no mesmo lugar do botão. */}
+              {options.length ? (
+                isAddDiagnosisOpen ? (
+                  <div className="flex items-start gap-2 border-t p-2" id={addDiagnosisContentId}>
+                    <Field>
+                      <FieldLabel className="sr-only" htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
+                      <Select disabled={isBusy} items={selectItems} onValueChange={handleSelectDiagnosis} value={name || null}>
+                        <SelectTrigger className="w-full" id="new-diagnosis-select" ref={addDiagnosisSelectRef}><SelectValue placeholder="Selecione um diagnóstico padronizado" /></SelectTrigger>
+                        <SelectContent align="start"><SelectGroup>{selectItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
+                      </Select>
+                    </Field>
+                    <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
+                  </div>
+                ) : (
+                  <Button
+                    aria-controls={addDiagnosisContentId}
+                    aria-expanded={false}
+                    aria-label="Adicionar diagnóstico"
+                    className="h-10 w-full cursor-pointer justify-start gap-2 rounded-none border-0 border-t border-border px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground active:translate-y-0 motion-reduce:transition-none"
+                    onClick={() => handleAddDiagnosisToggle(true)}
+                    ref={addDiagnosisTriggerRef}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    Adicionar diagnóstico
+                  </Button>
+                )
+              ) : null}
             </Card>
         </Collapsible>
       ) : null}
