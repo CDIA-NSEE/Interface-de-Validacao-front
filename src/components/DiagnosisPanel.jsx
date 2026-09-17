@@ -100,6 +100,8 @@ const REFINED_DETAILS_STYLES = {
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
+  // "Adicionar área" marcando: a mesma tinta info do "Marcar área" ativo — um só visual para "marcando área", com ou sem área.
+  addAreaButtonActive: "border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground",
   ...INLINE_DECISION_ROW_STYLES,
   originalTrigger: "",
   originalLabel: "",
@@ -122,6 +124,7 @@ const DETAILS_STYLES = {
     areaSelectButton: "",
     areaReferenceBadge: "",
     areaActions: "",
+    addAreaButtonActive: "",
     decisionItem: "",
     markAreaButton: "w-fit border-x-0 px-0",
     markAreaButtonActive: "w-fit border-x-0 px-0",
@@ -274,6 +277,8 @@ function DiagnosisDetails({
   const decisionValue = pendingDecision ? [pendingDecision] : visualStatus === "pending" ? [] : [visualStatus];
   // Controlado para fechar na confirmação: o item só desmonta quando o DELETE resolve e, em falha, o erro da página ficaria escondido atrás do overlay.
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const areaListTriggerRef = useRef(null);
+  const markAreaButtonRef = useRef(null);
 
   function setDisagreementPanelOpen(isOpen) {
     onReviewDraftChange?.(
@@ -297,6 +302,16 @@ function DiagnosisDetails({
   async function submitAgreement() {
     const wasReviewed = await onReview(diagnosis.id, "confirmed");
     if (wasReviewed) setDisagreementPanelOpen(false);
+  }
+
+  async function handleRemoveRegionClick(region) {
+    await onRemoveRegion(diagnosis.id, region.id);
+    // A linha desmonta com a área: foco no gatilho da lista ou, se era a última, no "Marcar área" que a substitui.
+    // Em falha a linha permanece e o foco segue no botão, então nada muda.
+    window.setTimeout(() => {
+      if (document.activeElement !== document.body) return;
+      (areaListTriggerRef.current ?? markAreaButtonRef.current)?.focus();
+    }, 0);
   }
 
   function handleDecisionChange(nextValue) {
@@ -352,6 +367,7 @@ function DiagnosisDetails({
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
         className="flex h-7 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none dark:hover:bg-muted/50"
+        ref={areaListTriggerRef}
       >
         <span>{markedRegionCountLabel(regions.length)}</span>
         <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
@@ -359,7 +375,8 @@ function DiagnosisDetails({
         </span>
       </CollapsibleTrigger>
         <Separator className="data-vertical:h-4 data-vertical:self-center" orientation="vertical" />
-        <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
+        {/* Na revalidação geral (plain) o ativo segue "secondary", convenção daquele layout. */}
+        <Button aria-pressed={isRegionTarget} className={isRegionTarget ? styles.addAreaButtonActive : undefined} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? (isPlain ? "secondary" : "outline") : "ghost"}>
           <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
         </Button>
       </div>
@@ -398,7 +415,7 @@ function DiagnosisDetails({
             </button>
             <div className={cn("flex shrink-0 items-center gap-1", styles.areaActions)}>
               <Button aria-label={`Editar ${accessibleAreaLabel}`} disabled={isBusy} onClick={() => onEditRegion(diagnosis, region)} size="icon-sm" title={`Editar ${accessibleAreaLabel}`} type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>
-              <Button className="text-muted-foreground hover:text-destructive focus-visible:text-destructive" aria-label={`Remover ${accessibleAreaLabel}`} disabled={isBusy || !region.id} onClick={() => onRemoveRegion(diagnosis.id, region.id)} size="icon-sm" title={region.id ? `Remover ${accessibleAreaLabel}` : "Área legada sem id"} type="button" variant="ghost"><Trash2 aria-hidden="true" /></Button>
+              <Button className="text-muted-foreground hover:text-destructive focus-visible:text-destructive" aria-label={`Remover ${accessibleAreaLabel}`} disabled={isBusy || !region.id} onClick={() => handleRemoveRegionClick(region)} size="icon-sm" title={region.id ? `Remover ${accessibleAreaLabel}` : "Área legada sem id"} type="button" variant="ghost"><Trash2 aria-hidden="true" /></Button>
             </div>
           </div>
         );
@@ -422,6 +439,7 @@ function DiagnosisDetails({
       className={isRegionTarget ? styles.markAreaButtonActive : styles.markAreaButton}
       disabled={isBusy}
       onClick={() => onStartRegion(diagnosis)}
+      ref={markAreaButtonRef}
       size={styles.markAreaSize}
       type="button"
       variant={isRegionTarget && isPlain ? "secondary" : styles.markAreaVariant}
@@ -933,6 +951,8 @@ export default function DiagnosisPanel({
                               "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                               hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                               selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
+                              // Marcando área: o h3 é sticky, então o sinal fica visível mesmo com o botão ativo rolado para fora da lista.
+                              activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
                             )}>
                               <span className="grid min-h-8 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
                                 {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
