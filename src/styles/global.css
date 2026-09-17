@@ -136,6 +136,50 @@
   }
 }
 
+/* Morph do rodapé "Adicionar diagnóstico" (View Transitions, src/utils/viewTransition.js):
+   a linha faz crossfade e o ícone troca no lugar (+ → lupa). O grupo também recebe 150ms
+   (o padrão da API é 250ms e ele é quem define a duração total da transição). */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 150ms;
+}
+
+::view-transition-old(add-diagnosis-icon),
+::view-transition-new(add-diagnosis-icon) {
+  animation: 150ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+::view-transition-old(add-diagnosis-icon) {
+  animation-name: add-diagnosis-icon-out;
+}
+
+::view-transition-new(add-diagnosis-icon) {
+  animation-name: add-diagnosis-icon-in;
+}
+
+@keyframes add-diagnosis-icon-out {
+  to {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes add-diagnosis-icon-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 .ecg-canvas {
   display: flex;
   min-height: 0;

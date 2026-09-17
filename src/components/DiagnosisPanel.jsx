@@ -43,6 +43,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +59,7 @@ import {
   getRegionReference,
   normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
+import { runViewTransition } from "../utils/viewTransition.js";
 
 const REVIEW_LABELS = {
   pending: "Aguardando decisão",
@@ -786,10 +788,13 @@ export default function DiagnosisPanel({
     onReviewDraftChange?.(diagnosisId, draft);
   }
 
+  // A troca botão ↔ campo é um morph (View Transition): o rótulo vira o placeholder e o "+" vira a lupa no lugar.
   function handleAddDiagnosisToggle(open) {
     if (open && isInteractionBlocked()) return;
-    setIsAddDiagnosisOpen(open);
-    if (open && !isSecondaryOpen) onSecondaryToggle?.(true);
+    runViewTransition(() => {
+      setIsAddDiagnosisOpen(open);
+      if (open && !isSecondaryOpen) onSecondaryToggle?.(true);
+    });
     if (!open) window.setTimeout(() => addDiagnosisTriggerRef.current?.focus(), 0);
   }
 
@@ -806,9 +811,11 @@ export default function DiagnosisPanel({
       region_height: null,
     });
     if (addedDiagnosis) {
-      setName("");
-      setIsAddDiagnosisOpen(false);
-      setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
+      runViewTransition(() => {
+        setName("");
+        setIsAddDiagnosisOpen(false);
+        setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
+      });
     }
   }
 
@@ -928,12 +935,33 @@ export default function DiagnosisPanel({
               </CollapsibleContent>
               {/* Rodapé fixo (fora do conteúdo recolhível): a ação fica sempre visível e o seletor abre no mesmo lugar do botão. */}
               {availableOptions.length ? (
-                isAddDiagnosisOpen ? (
-                  // Mesma altura (h-10) do botão fechado: o card não muda de tamanho ao abrir. pr-3 alinha o X à coluna dos chevrons.
-                  <div className={cn("flex h-10 items-center gap-2 border-t px-3", ENTER_ANIMATION_CLASS)} id={addDiagnosisContentId}>
-                    {/* aria-label em vez de <label>: com a lista aberta o Base UI marca o resto da página como aria-hidden e um label externo deixaria o campo sem nome. */}
+                // Rodapé persistente: border-t e altura ficam no contêiner, que não é remontado ao alternar botão ↔ campo.
+                // Sem animação de entrada no contêiner: um fade a partir de 0 deixava a linha invisível por um frame ("piscada")
+                // e movia o anchor do popup; a troca é um morph via View Transition (handleAddDiagnosisToggle).
+                // rounded-[inherit] rounded-t-none: cantos inferiores do card (o rodapé é o último filho), topo reto na border-t —
+                // hover, anel de foco e tinta seguem o formato da região. Aberto: tinta do item aberto do acordeão (bg-muted/40),
+                // continuando o hover do botão no momento do clique.
+                <div className={cn("flex h-10 items-center rounded-[inherit] rounded-t-none border-t", isAddDiagnosisOpen && "bg-muted/40")} id={addDiagnosisContentId}>
+                  {isAddDiagnosisOpen ? (
+                    // aria-label em vez de <label>: com a lista aberta o Base UI marca o resto da página como aria-hidden e um label externo deixaria o campo sem nome.
                     <Combobox autoHighlight defaultOpen disabled={isBusy} items={availableOptions} locale="pt-BR" onValueChange={handleSelectDiagnosis} value={name || null}>
-                      <ComboboxInput anchorRef={addDiagnosisAnchorRef} aria-label="Adicionar diagnóstico" className="min-w-0 flex-1" icon={<Search aria-hidden="true" />} id="new-diagnosis-search" placeholder="Buscar diagnóstico…" ref={addDiagnosisSelectRef} />
+                      {/* Campo full-bleed: assume a linha do botão com as mesmas colunas (lupa no lugar do "+", texto na coluna do rótulo,
+                          X na coluna dos chevrons). Anel de foco interno como os gatilhos do card; o grupo tem a largura do card, então
+                          o anel contorna a linha inteira e o popup (largura do anchor) alinha às bordas do card. */}
+                      <ComboboxInput
+                        anchorRef={addDiagnosisAnchorRef}
+                        aria-label="Adicionar diagnóstico"
+                        className="h-10 rounded-[inherit] border-0 has-[[data-slot=combobox-input]:focus-visible]:ring-inset dark:bg-transparent"
+                        id="new-diagnosis-search"
+                        placeholder="Buscar diagnóstico…"
+                        ref={addDiagnosisSelectRef}
+                      >
+                        {/* Mesmo view-transition-name do "+": a View Transition troca os ícones no lugar (fade + escala, global.css). */}
+                        <InputGroupAddon align="inline-start" className="pl-3"><Search aria-hidden="true" className="[view-transition-name:add-diagnosis-icon]" /></InputGroupAddon>
+                        <InputGroupAddon align="inline-end" className="pr-3 has-[>button]:mr-0">
+                          <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" title="Cancelar" type="button" variant="ghost"><X aria-hidden="true" /></Button>
+                        </InputGroupAddon>
+                      </ComboboxInput>
                       <ComboboxContent anchor={addDiagnosisAnchorRef}>
                         <ComboboxEmpty>Nenhum diagnóstico encontrado.</ComboboxEmpty>
                         <ComboboxList className="max-h-[min(40svh,18rem)]">
@@ -941,24 +969,24 @@ export default function DiagnosisPanel({
                         </ComboboxList>
                       </ComboboxContent>
                     </Combobox>
-                    <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" title="Cancelar" type="button" variant="ghost"><X aria-hidden="true" /></Button>
-                  </div>
-                ) : (
-                  <Button
-                    aria-controls={addDiagnosisContentId}
-                    aria-expanded={false}
-                    aria-label="Adicionar diagnóstico"
-                    className="h-10 w-full cursor-pointer justify-start gap-2 rounded-none border-0 border-t border-border px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground has-data-[icon=inline-start]:pl-3 active:translate-y-0 motion-reduce:transition-none"
-                    onClick={() => handleAddDiagnosisToggle(true)}
-                    ref={addDiagnosisTriggerRef}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Plus aria-hidden="true" data-icon="inline-start" />
-                    Adicionar diagnóstico
-                  </Button>
-                )
+                  ) : (
+                    // size default (text-sm, svg size-4, gap-1.5): mesmas métricas do campo, para o rótulo e o "+" ficarem nas colunas
+                    // do placeholder e da lupa. ring-inset: o anel externo era cortado pelo overflow-hidden do card.
+                    <Button
+                      aria-controls={addDiagnosisContentId}
+                      aria-expanded={false}
+                      aria-label="Adicionar diagnóstico"
+                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:translate-y-0 motion-reduce:transition-none"
+                      onClick={() => handleAddDiagnosisToggle(true)}
+                      ref={addDiagnosisTriggerRef}
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Plus aria-hidden="true" className="[view-transition-name:add-diagnosis-icon]" data-icon="inline-start" />
+                      Adicionar diagnóstico
+                    </Button>
+                  )}
+                </div>
               ) : null}
             </Card>
         </Collapsible>

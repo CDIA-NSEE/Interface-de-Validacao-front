@@ -12,6 +12,8 @@ const Combobox = ComboboxPrimitive.Root
 
 // `ref` vai para o <input> visível (o `inputRef` do Root aponta para o input oculto de formulário).
 // `anchorRef` expõe o grupo inteiro (ícone + input) para o popover alinhar com a borda do campo.
+// O `data-slot="combobox-input"` do primitivo sobrescreve o `input-group-control` do render, então o
+// anel de foco do InputGroup é replicado aqui para o slot que chega ao DOM.
 function ComboboxInput({
   anchorRef,
   className,
@@ -21,7 +23,12 @@ function ComboboxInput({
   ...props
 }) {
   return (
-    <InputGroup className={className} ref={anchorRef}>
+    <InputGroup
+      className={cn(
+        "has-[[data-slot=combobox-input]:focus-visible]:border-ring has-[[data-slot=combobox-input]:focus-visible]:ring-3 has-[[data-slot=combobox-input]:focus-visible]:ring-ring/50",
+        className
+      )}
+      ref={anchorRef}>
       {icon ? <InputGroupAddon align="inline-start">{icon}</InputGroupAddon> : null}
       <ComboboxPrimitive.Input
         data-slot="combobox-input"

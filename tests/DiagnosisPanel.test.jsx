@@ -552,8 +552,12 @@ describe("DiagnosisPanel", () => {
     await user.click(headerToggle);
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
 
+    const addDiagnosisFooter = addDiagnosisButton.parentElement;
     await user.click(addDiagnosisButton);
-    expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
+    const addDiagnosisSearch = screen.getByRole("combobox", { name: "Adicionar diagnóstico" });
+    expect(addDiagnosisSearch).toBeVisible();
+    // O rodapé é o mesmo nó nos dois estados: a troca botão ↔ campo não remonta a linha (sem "piscada" da borda).
+    expect(addDiagnosisFooter).toContainElement(addDiagnosisSearch);
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
 
     // O seletor ocupa o lugar do botão; Escape fecha só a lista (o resto do cartão fica aria-hidden enquanto ela está aberta)
