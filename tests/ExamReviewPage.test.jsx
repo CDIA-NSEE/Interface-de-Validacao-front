@@ -614,7 +614,10 @@ describe("ExamReviewPage", () => {
     fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
     fireEvent.pointerUp(stage, { button: 0, clientX: 40, clientY: 30, pointerId: 1 });
 
-    expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
+    // O Sheet fechado pelo "Marcar área" ainda pode estar desmontando quando a reabertura chega: esperar o estado
+    // aberto (data-open) em vez de pegar o primeiro dialog encontrado, que pode ser o que está fechando.
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Diagnósticos e ações" })).toHaveAttribute("data-open"));
+    expect(screen.getByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(await screen.findByText("Falha ao salvar área.")).toBeVisible();
   });
 
@@ -684,6 +687,63 @@ describe("ExamReviewPage", () => {
     const decisionFeedback = await screen.findByLabelText("✓ Decisão salva");
     expect(decisionFeedback).toHaveTextContent("✓ Salvo");
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "confirmed", "");
+  });
+
+  it("não desabilita os demais controles numa decisão rápida e só os desabilita se ela demorar", async () => {
+    let resolveReview;
+    reviewDailyDiagnosis.mockClear();
+    reviewDailyDiagnosis.mockReturnValueOnce(new Promise((resolve) => {
+      resolveReview = resolve;
+    }));
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agree = await screen.findByRole("button", { name: "Concordo" });
+    const back = screen.getByRole("button", { name: "Voltar" });
+    const home = screen.getByRole("button", { name: "Início" });
+
+    vi.useFakeTimers();
+    fireEvent.click(agree);
+    expect(reviewDailyDiagnosis).toHaveBeenCalledTimes(1);
+    // Requisição em andamento, mas dentro do limiar: nada fica desabilitado (sem a "piscada" da página).
+    expect(back).toBeEnabled();
+    expect(home).toBeEnabled();
+    act(() => vi.advanceTimersByTime(299));
+    expect(back).toBeEnabled();
+    expect(home).toBeEnabled();
+    // Passou do limiar: a página passa a indicar que está ocupada.
+    act(() => vi.advanceTimersByTime(1));
+    expect(back).toBeDisabled();
+    expect(home).toBeDisabled();
+
+    await act(async () => {
+      resolveReview({ ...exam, diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }] });
+    });
+    expect(back).toBeEnabled();
+    expect(home).toBeEnabled();
+    expect(screen.getByLabelText("✓ Decisão salva")).toBeInTheDocument();
+  });
+
+  it("ignora um segundo comando enquanto uma ação está em andamento", async () => {
+    let resolveReview;
+    reviewDailyDiagnosis.mockReturnValueOnce(new Promise((resolve) => {
+      resolveReview = resolve;
+    }));
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Concordo" }));
+    // Ainda habilitado (limiar não atingido), mas a trava impede sair no meio do salvamento.
+    const back = screen.getByRole("button", { name: "Voltar" });
+    expect(back).toBeEnabled();
+    fireEvent.click(back);
+    expect(navigate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveReview({ ...exam, diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }] });
+    });
+    fireEvent.click(back);
+    expect(navigate).toHaveBeenCalledWith("/");
   });
 
   it("salva a justificativa opcional com feedback próprio", async () => {

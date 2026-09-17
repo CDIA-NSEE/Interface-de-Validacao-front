@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -139,6 +139,56 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByRole("button", { name: "1 área marcada" })).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(screen.getByRole("button", { name: "Adicionar área" }));
     expect(onStartRegion).toHaveBeenCalledWith(diagnosis, undefined);
+  });
+
+  it("mantém a lista de áreas e o item recolhidos quando o exame é atualizado com a mesma área selecionada", async () => {
+    const additional = originalDiagnosis(2, "Bloqueio de ramo direito", { regions: [{ id: 9 }, { id: 10 }] });
+    const props = createProps({
+      options: [], dailyStandardDiagnosis: "Ritmo sinusal", isGeneralReviewDay: false,
+      diagnoses: [originalDiagnosis(1, "Ritmo sinusal"), additional], selectedRegionKey: "2:9",
+    });
+    const { rerender } = render(<DiagnosisPanelHarness {...props} />);
+    const diagnosisTrigger = () => screen.getAllByRole("button", { name: /Bloqueio de ramo direito/ })
+      .find((button) => button.getAttribute("data-slot") === "accordion-trigger");
+    // A seleção inicial abre o item e a lista de áreas (comportamento existente).
+    const areas = await screen.findByRole("button", { name: "2 áreas marcadas" });
+    expect(areas).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(areas);
+    expect(areas).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(diagnosisTrigger());
+    expect(diagnosisTrigger()).toHaveAttribute("aria-expanded", "false");
+    // Decisão no diagnóstico do dia: o exame volta do servidor como um array novo, com a mesma área ainda selecionada.
+    rerender(<DiagnosisPanelHarness {...props} diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "confirmed" }), additional]} />);
+    await new Promise((resolve) => window.setTimeout(resolve, 10));
+    expect(diagnosisTrigger()).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(diagnosisTrigger());
+    expect(await screen.findByRole("button", { name: "2 áreas marcadas" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("ignora um segundo clique na decisão enquanto a anterior não resolve", async () => {
+    let resolveReview;
+    const onReview = vi.fn().mockReturnValueOnce(new Promise((resolve) => {
+      resolveReview = resolve;
+    }));
+    render(<DiagnosisPanelHarness {...createProps({ onReview, options: [] })}
+      dailyStandardDiagnosis="Ritmo sinusal" diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]} isGeneralReviewDay={false} />);
+    const agree = screen.getByRole("button", { name: "Concordo" });
+    const disagree = screen.getByRole("button", { name: "Discordo" });
+
+    // Os toggles seguem habilitados numa requisição rápida (o `disabled` da página só chega se ela demorar).
+    fireEvent.click(agree);
+    fireEvent.click(disagree);
+    expect(onReview).toHaveBeenCalledTimes(1);
+    expect(onReview).toHaveBeenCalledWith(1, "confirmed");
+    expect(agree).toHaveAttribute("aria-pressed", "true");
+    expect(disagree).toHaveAttribute("aria-pressed", "false");
+
+    await act(async () => {
+      resolveReview(true);
+    });
+    fireEvent.click(disagree);
+    expect(onReview).toHaveBeenCalledTimes(2);
+    expect(onReview).toHaveBeenLastCalledWith(1, "rejected", "", "decision");
   });
 
   it("rola apenas a lista quando o cabeçalho está cortado e preserva a posição ao trocar áreas", async () => {

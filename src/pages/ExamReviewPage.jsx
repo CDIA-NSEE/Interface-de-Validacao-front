@@ -104,6 +104,26 @@ function savedRegionKey(diagnosisId, region, index) {
   return `${diagnosisId}:${region.id ?? `legacy-${index}`}`;
 }
 
+// Só indica "ocupado" se a requisição passar do limiar: pedidos rápidos (dezenas de ms) não chegam a desabilitar
+// os controles — o que fazia a página inteira piscar a cada Concordo/Discordo. A trava lógica (isBusyRef) vale desde o início.
+const BUSY_INDICATION_DELAY_MS = 300;
+
+function useDelayedFlag(value, delayMs) {
+  const [hasSettled, setHasSettled] = useState(false);
+
+  useEffect(() => {
+    if (!value) {
+      setHasSettled(false);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setHasSettled(true), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [delayMs, value]);
+
+  // `value &&` derruba a indicação no mesmo render em que a requisição termina, sem esperar o efeito.
+  return value && hasSettled;
+}
+
 function useCompactReviewLayout() {
   const compactMediaQuery = `(max-width: ${REVIEW_MOBILE_BREAKPOINT - 1}px)`;
   const [isCompact, setIsCompact] = useState(
@@ -146,6 +166,8 @@ export default function ExamReviewPage() {
   const [isReviewSheetOpen, setIsReviewSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
+  const isBusyRef = useRef(false);
+  const isBusyIndicated = useDelayedFlag(isBusy, BUSY_INDICATION_DELAY_MS);
   const [error, setError] = useState("");
   const [notesSaveState, setNotesSaveState] = useState({ status: "idle", message: "" });
   const [decisionFeedbacks, setDecisionFeedbacks] = useState({});
@@ -301,8 +323,22 @@ export default function ExamReviewPage() {
     });
   }, []);
 
-  async function runAction(action) {
+  // Uma ação por vez. Os controles só ficam `disabled` depois de BUSY_INDICATION_DELAY_MS (isBusyIndicated),
+  // então nessa janela silenciosa é a ref que ignora um segundo comando.
+  function acquireBusy() {
+    if (isBusyRef.current) return false;
+    isBusyRef.current = true;
     setIsBusy(true);
+    return true;
+  }
+
+  function releaseBusy() {
+    isBusyRef.current = false;
+    setIsBusy(false);
+  }
+
+  async function runAction(action) {
+    if (!acquireBusy()) return false;
     setError("");
     try {
       const updatedExam = await action();
@@ -314,7 +350,7 @@ export default function ExamReviewPage() {
       setError(requestError?.response?.data?.detail || "Não foi possível concluir a ação.");
       return false;
     } finally {
-      setIsBusy(false);
+      releaseBusy();
     }
   }
 
@@ -421,7 +457,7 @@ export default function ExamReviewPage() {
 
   async function handleRemoveRegion(diagnosisId, regionId) {
     if (!regionId) return;
-    setIsBusy(true);
+    if (!acquireBusy()) return;
     setRegionErrors((current) => ({ ...current, [String(diagnosisId)]: "" }));
     try {
       const updatedDiagnosis = await removeDiagnosisRegion(diagnosisId, regionId);
@@ -435,7 +471,7 @@ export default function ExamReviewPage() {
           : requestError?.response?.data?.detail || "Não foi possível remover a área.",
       }));
     } finally {
-      setIsBusy(false);
+      releaseBusy();
     }
   }
 
@@ -447,13 +483,13 @@ export default function ExamReviewPage() {
       return false;
     }
 
+    if (!acquireBusy()) return false;
     const key = String(diagnosisId);
     for (const timerKey of [`saving:${key}`, `clear:${key}`]) {
       const timer = decisionFeedbackTimersRef.current.get(timerKey);
       if (timer) window.clearTimeout(timer);
       decisionFeedbackTimersRef.current.delete(timerKey);
     }
-    setIsBusy(true);
     setError("");
     setDecisionFeedbacks((current) => ({ ...current, [key]: null }));
     const savingTimer = window.setTimeout(() => {
@@ -491,7 +527,7 @@ export default function ExamReviewPage() {
       }));
       return false;
     } finally {
-      setIsBusy(false);
+      releaseBusy();
     }
   }
 
@@ -512,8 +548,8 @@ export default function ExamReviewPage() {
       return false;
     }
 
+    if (!acquireBusy()) return false;
     clearNotesSaveTimer();
-    setIsBusy(true);
     setError("");
     setNotesSaveState({ status: "saving", message: "Salvando…" });
     const submittedNotes = notes;
@@ -534,7 +570,7 @@ export default function ExamReviewPage() {
       setNotesSaveState({ status: "error", message: "Não foi possível salvar as observações. Tente novamente." });
       return false;
     } finally {
-      setIsBusy(false);
+      releaseBusy();
     }
   }
 
@@ -543,6 +579,8 @@ export default function ExamReviewPage() {
   }
 
   function handleReturnHome() {
+    // Voltar/Início ficam travados durante uma ação; na janela silenciosa o botão ainda não está `disabled`.
+    if (isBusyRef.current) return;
     if (hasUnsavedChanges) {
       setIsExitConfirmOpen(true);
       return;
@@ -792,7 +830,7 @@ export default function ExamReviewPage() {
       onReviewInteractionBlocked={handleReviewInteractionBlocked}
       onReviewDraftChange={handleDiagnosisReviewDraftChange}
       onStartRegion={handleStartRegion}
-      isBusy={isBusy}
+      isBusy={isBusyIndicated}
       isGeneralReviewDay={validationContext?.is_general_review_day}
       isSecondaryOpen={isSecondaryPanelOpen}
       onSecondaryToggle={setIsSecondaryPanelOpen}
@@ -905,7 +943,7 @@ export default function ExamReviewPage() {
         onSave={usesDailyFlow ? handleSave : undefined}
         onValidate={handlePrimaryAction}
         canValidate={requiredDecisionComplete}
-        isBusy={isBusy}
+        isBusy={isBusyIndicated}
         isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
         primaryDisabledReason={primaryDisabledReason}
         primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
@@ -920,7 +958,7 @@ export default function ExamReviewPage() {
       <div className="grid h-svh min-h-0 grid-cols-[4rem_minmax(0,1fr)] overflow-hidden bg-secondary/40">
         <ValidationSidebar
           expanded={isSidebarExpanded}
-          isBusy={isBusy}
+          isBusy={isBusyIndicated}
           onHome={handleReturnHome}
           onOpenChange={handleSidebarOpenChange}
           onSupport={openSupport}

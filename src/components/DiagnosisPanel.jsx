@@ -1,5 +1,5 @@
 import { Check, ChevronDown, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 
 import ValidationPanelIconLabel from "./ValidationPanelIconLabel.jsx";
 import {
@@ -319,6 +319,9 @@ function DiagnosisDetails({
       onReviewInteractionBlocked?.(diagnosis.id);
       return;
     }
+    // Decisão desta linha ainda em voo (os toggles só ficam `disabled` se a requisição demorar): evita segundo envio
+    // e o toggle "saltando" entre valores.
+    if (pendingDecision) return;
     const nextDecision = nextValue.at(-1);
     if (nextDecision !== "confirmed" && nextDecision !== "rejected") return;
     setPendingDecision(nextDecision);
@@ -792,13 +795,19 @@ export default function DiagnosisPanel({
     setPendingExpandedDiagnosisId(null);
   }, [pendingExpandedDiagnosisId, revealSecondaryDiagnosis, scrollDiagnosisIntoView, secondaryDiagnosisIds]);
 
-  useEffect(() => {
-    if (!selectedRegionKey) return;
-    const diagnosisId = selectedRegionKey.split(":")[0];
+  // Reage só à troca de área selecionada. As callbacks ficam fora das dependências: `revealSecondaryDiagnosis`
+  // muda de identidade a cada atualização do exame (ex.: decisão no diagnóstico do dia) e o efeito não pode
+  // reabrir uma lista de áreas / item do acordeão que o médico recolheu.
+  const revealSelectedRegion = useEffectEvent((diagnosisId) => {
     setOpenAreaDiagnosisIds((current) => new Set(current).add(diagnosisId));
     revealSecondaryDiagnosis(diagnosisId);
     return scrollDiagnosisIntoView(diagnosisId);
-  }, [revealSecondaryDiagnosis, scrollDiagnosisIntoView, selectedRegionKey]);
+  });
+
+  useEffect(() => {
+    if (!selectedRegionKey) return;
+    return revealSelectedRegion(selectedRegionKey.split(":")[0]);
+  }, [selectedRegionKey]);
 
   useEffect(() => {
     if (!isAddDiagnosisOpen) return undefined;
