@@ -1,4 +1,4 @@
-import { Check, ChevronDown, MapPinned, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import ValidationPanelIconLabel from "./ValidationPanelIconLabel.jsx";
@@ -34,16 +34,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -341,21 +342,22 @@ function DiagnosisDetails({
 
   const regionListContent = regions.length ? (
     <Collapsible className={styles.areaCollapsible} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
-      <div className="flex items-center">
+      {/* Gatilho e botão compartilham o mesmo state layer (hover da variante ghost) e a mesma altura (size sm);
+          a divisória é curta e centralizada, com respiro simétrico, para nenhum hover encostar nela. */}
+      <div className="flex items-center gap-1.5">
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
-        className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
+        className="flex h-7 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none dark:hover:bg-muted/50"
       >
         <span>{markedRegionCountLabel(regions.length)}</span>
         <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
           <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
         </span>
       </CollapsibleTrigger>
-        <div className="flex shrink-0 items-center border-l px-2">
+        <Separator className="data-vertical:h-4 data-vertical:self-center" orientation="vertical" />
         <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "ghost"}>
           <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
         </Button>
-        </div>
       </div>
       <CollapsibleContent className={styles.areaPanel}>
       {/* O espaçamento fica dentro do painel para entrar na altura animada e sumir junto com ela. */}
@@ -683,6 +685,7 @@ export default function DiagnosisPanel({
   const [openAreaDiagnosisIds, setOpenAreaDiagnosisIds] = useState(() => new Set());
   const addDiagnosisTriggerRef = useRef(null);
   const addDiagnosisSelectRef = useRef(null);
+  const addDiagnosisAnchorRef = useRef(null);
   const secondaryScrollRef = useRef(null);
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
@@ -710,7 +713,13 @@ export default function DiagnosisPanel({
     ? activeRegionTarget.diagnosisId
     : null;
   const forcedExpandedDiagnosisId = activeSecondaryDiagnosisId ?? dirtySecondaryReviewDraftDiagnosisId;
-  const selectItems = useMemo(() => options.map((option) => ({ label: option, value: option })), [options]);
+  // Só o que ainda pode ser adicionado (sem repetir o que já está no exame), em ordem alfabética.
+  const availableOptions = useMemo(() => {
+    const present = new Set(diagnoses.map((diagnosis) => normalizeDiagnosisText(diagnosis.standard_text || diagnosis.name)));
+    return options
+      .filter((option) => !present.has(normalizeDiagnosisText(option)))
+      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+  }, [diagnoses, options]);
 
   const revealSecondaryDiagnosis = useCallback((diagnosisId) => {
     const normalizedDiagnosisId = String(diagnosisId);
@@ -856,7 +865,7 @@ export default function DiagnosisPanel({
         )) : <p className="text-sm text-muted-foreground">Nenhum diagnóstico do dia configurado para este ECG.</p>}
       </section>
 
-      {secondaryDiagnoses.length || options.length ? (
+      {secondaryDiagnoses.length || availableOptions.length ? (
         <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
           <Card className="gap-0 overflow-hidden py-0" size="sm">
               <CardHeader className="items-center gap-0 p-0">
@@ -918,24 +927,28 @@ export default function DiagnosisPanel({
                 </CardContent>
               </CollapsibleContent>
               {/* Rodapé fixo (fora do conteúdo recolhível): a ação fica sempre visível e o seletor abre no mesmo lugar do botão. */}
-              {options.length ? (
+              {availableOptions.length ? (
                 isAddDiagnosisOpen ? (
-                  <div className="flex items-start gap-2 border-t p-2" id={addDiagnosisContentId}>
-                    <Field>
-                      <FieldLabel className="sr-only" htmlFor="new-diagnosis-select">Adicionar diagnóstico</FieldLabel>
-                      <Select disabled={isBusy} items={selectItems} onValueChange={handleSelectDiagnosis} value={name || null}>
-                        <SelectTrigger className="w-full" id="new-diagnosis-select" ref={addDiagnosisSelectRef}><SelectValue placeholder="Selecione um diagnóstico padronizado" /></SelectTrigger>
-                        <SelectContent align="start"><SelectGroup>{selectItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
-                      </Select>
-                    </Field>
-                    <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
+                  // Mesma altura (h-10) do botão fechado: o card não muda de tamanho ao abrir. pr-3 alinha o X à coluna dos chevrons.
+                  <div className={cn("flex h-10 items-center gap-2 border-t px-3", ENTER_ANIMATION_CLASS)} id={addDiagnosisContentId}>
+                    {/* aria-label em vez de <label>: com a lista aberta o Base UI marca o resto da página como aria-hidden e um label externo deixaria o campo sem nome. */}
+                    <Combobox autoHighlight defaultOpen disabled={isBusy} items={availableOptions} locale="pt-BR" onValueChange={handleSelectDiagnosis} value={name || null}>
+                      <ComboboxInput anchorRef={addDiagnosisAnchorRef} aria-label="Adicionar diagnóstico" className="min-w-0 flex-1" icon={<Search aria-hidden="true" />} id="new-diagnosis-search" placeholder="Buscar diagnóstico…" ref={addDiagnosisSelectRef} />
+                      <ComboboxContent anchor={addDiagnosisAnchorRef}>
+                        <ComboboxEmpty>Nenhum diagnóstico encontrado.</ComboboxEmpty>
+                        <ComboboxList className="max-h-[min(40svh,18rem)]">
+                          {(option) => <ComboboxItem className="whitespace-normal break-words" key={option} value={option}>{option}</ComboboxItem>}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                    <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" title="Cancelar" type="button" variant="ghost"><X aria-hidden="true" /></Button>
                   </div>
                 ) : (
                   <Button
                     aria-controls={addDiagnosisContentId}
                     aria-expanded={false}
                     aria-label="Adicionar diagnóstico"
-                    className="h-10 w-full cursor-pointer justify-start gap-2 rounded-none border-0 border-t border-border px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground active:translate-y-0 motion-reduce:transition-none"
+                    className="h-10 w-full cursor-pointer justify-start gap-2 rounded-none border-0 border-t border-border px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground has-data-[icon=inline-start]:pl-3 active:translate-y-0 motion-reduce:transition-none"
                     onClick={() => handleAddDiagnosisToggle(true)}
                     ref={addDiagnosisTriggerRef}
                     size="sm"

@@ -556,7 +556,10 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
 
-    // O seletor ocupa o lugar do botão; cancelar devolve o botão e o foco a ele.
+    // O seletor ocupa o lugar do botão; Escape fecha só a lista (o resto do cartão fica aria-hidden enquanto ela está aberta)
+    // e cancelar devolve o botão e o foco a ele.
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Cancelar adição" }));
     expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
     expect(headerToggle).toHaveAttribute("aria-expanded", "true");
@@ -694,6 +697,62 @@ describe("DiagnosisPanel", () => {
     expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
 
+  it("filtra os diagnósticos ao digitar, ignorando acentos e caixa", async () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: ["Bloqueio de ramo direito", "Fibrilação atrial"] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
+    const search = screen.getByRole("combobox", { name: "Adicionar diagnóstico" });
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+
+    fireEvent.change(search, { target: { value: "FIBRI" } });
+    await waitFor(() => expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Fibrilação atrial"]));
+
+    fireEvent.change(search, { target: { value: "zzz" } });
+    await waitFor(() => expect(screen.queryByRole("option")).not.toBeInTheDocument());
+    expect(screen.getByText("Nenhum diagnóstico encontrado.")).toBeInTheDocument();
+  });
+
+  it("oculta diagnósticos já presentes no exame e ordena as opções alfabeticamente", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: ["Fibrilação atrial", "Bloqueio de ramo direito", "RITMO SINUSAL", "Extrassistolia ventricular"] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          { ...originalDiagnosis(7, "EXTRASSÍSTOLIA VENTRICULAR"), standard_text: null, source: "doctor_added" },
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Bloqueio de ramo direito",
+      "Fibrilação atrial",
+    ]);
+  });
+
+  it("esconde a ação de adicionar quando todos os diagnósticos já estão no exame", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: ["Ritmo sinusal"] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Diagnósticos adicionais" })).not.toBeInTheDocument();
+  });
+
   it("adiciona o diagnóstico sem região associada", async () => {
     const onAdd = vi.fn().mockResolvedValue(true);
     render(
@@ -706,9 +765,12 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
-    const select = screen.getByRole("combobox", { name: "Adicionar diagnóstico" });
-    fireEvent.click(select);
-    fireEvent.click(await screen.findByRole("option", { name: "Fibrilação atrial" }));
+    // A lista abre sozinha junto com o seletor (defaultOpen): nenhum clique extra no combobox.
+    expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
+    const option = await screen.findByRole("option", { name: "Fibrilação atrial" });
+    // Base UI só aceita clique de mouse iniciado no item (pointerdown antes do click).
+    fireEvent.pointerDown(option);
+    fireEvent.click(option);
 
     await waitFor(() => {
       expect(onAdd).toHaveBeenCalledWith({
@@ -782,8 +844,10 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
-    fireEvent.click(screen.getByRole("combobox", { name: "Adicionar diagnóstico" }));
-    fireEvent.click(await screen.findByRole("option", { name: "Fibrilação atrial" }));
+    const option = await screen.findByRole("option", { name: "Fibrilação atrial" });
+    // Base UI só aceita clique de mouse iniciado no item (pointerdown antes do click).
+    fireEvent.pointerDown(option);
+    fireEvent.click(option);
     await waitFor(() => expect(screen.queryByRole("combobox", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument());
     expect(onStartRegion).not.toHaveBeenCalled();
 
