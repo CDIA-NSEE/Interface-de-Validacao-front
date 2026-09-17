@@ -424,8 +424,8 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
     expect(screen.queryByRole("group", { name: "Revisão de Fibrilação atrial" })).not.toBeInTheDocument();
     expect(screen.getByText("Adicionado", { selector: '[data-slot="badge"]' })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
-    expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("Fibrilação atrial e 0 áreas associadas serão removidos juntos.");
+    fireEvent.click(screen.getByRole("button", { name: "Remover diagnóstico" }));
+    expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("O diagnóstico Fibrilação atrial será removido deste exame.");
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remover" }));
     expect(onRemove).toHaveBeenCalledWith(3);
   });

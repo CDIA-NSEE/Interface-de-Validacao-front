@@ -272,6 +272,8 @@ function DiagnosisDetails({
   // Decisão otimista: o toggle fica pressionado no clique e volta ao status do servidor se o salvamento falhar.
   const [pendingDecision, setPendingDecision] = useState(null);
   const decisionValue = pendingDecision ? [pendingDecision] : visualStatus === "pending" ? [] : [visualStatus];
+  // Controlado para fechar na confirmação: o item só desmonta quando o DELETE resolve e, em falha, o erro da página ficaria escondido atrás do overlay.
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
 
   function setDisagreementPanelOpen(isOpen) {
     onReviewDraftChange?.(
@@ -433,6 +435,33 @@ function DiagnosisDetails({
   // No diário e nos adicionais, o botão de área divide a linha com a decisão; na revalidação geral fica abaixo.
   const inlineMarkAreaButton = usesInlineDecisionRow ? plainMarkAreaButton : null;
 
+  // Adicionado pelo médico: remover é sempre a ação do canto inferior direito do bloco. `ml-auto` encosta o botão
+  // à direita tanto na linha de ações (flex-row) quanto sozinho abaixo da lista de áreas/aviso (flex-col).
+  const removeDiagnosisAction = diagnosis.source === "doctor_added" ? (
+    <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
+      <AlertDialogTrigger render={<Button className="ml-auto w-fit text-muted-foreground hover:text-destructive focus-visible:text-destructive" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
+        <Trash2 aria-hidden="true" data-icon="inline-start" />
+        Remover diagnóstico
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remover diagnóstico?</AlertDialogTitle>
+          <AlertDialogDescription>
+            O diagnóstico <span className="font-medium text-foreground">{standardText}</span>
+            {regions.length ? <> e {markedRegionCountLabel(regions.length)} serão removidos</> : " será removido"} deste exame.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          {/* Fecha antes de disparar: o item some quando o DELETE resolve; em falha, o Alert da página fica visível. */}
+          <AlertDialogAction disabled={isBusy} onClick={() => { setIsRemoveDialogOpen(false); onRemove(diagnosis.id); }} variant="destructive">Remover</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  ) : null;
+  // Sem área marcada, "Marcar área" e "Remover diagnóstico" dividem a linha de ações (mesma altura e lugar da decisão dos originais).
+  const showsRemoveInActionRow = Boolean(removeDiagnosisAction && inlineMarkAreaButton);
+
   return (
     <div className="flex flex-col gap-2">
       {originalLine}
@@ -447,11 +476,12 @@ function DiagnosisDetails({
 
       {isPlain ? regionListContent : null}
 
-      {/* A linha existe mesmo sem decisão (diagnóstico adicionado pelo médico): fica só o "Marcar área". */}
+      {/* A linha existe mesmo sem decisão (diagnóstico adicionado pelo médico): "Marcar área" à esquerda e "Remover diagnóstico" à direita. */}
       {decisionToggle || inlineMarkAreaButton ? (
         <div className="flex items-center gap-2">
           {decisionToggle}
           {inlineMarkAreaButton}
+          {showsRemoveInActionRow ? removeDiagnosisAction : null}
         </div>
       ) : null}
 
@@ -488,26 +518,8 @@ function DiagnosisDetails({
         )
       ) : !inlineMarkAreaButton ? plainMarkAreaButton : null}
 
-      {diagnosis.source === "doctor_added" ? (
-        <AlertDialog>
-          <AlertDialogTrigger render={<Button className="w-fit text-muted-foreground hover:text-destructive focus-visible:text-destructive" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
-            <Trash2 aria-hidden="true" data-icon="inline-start" />
-            Remover
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remover diagnóstico?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {standardText} e {regions.length === 1 ? "1 área associada" : `${regions.length} áreas associadas`} serão removidos juntos.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => onRemove(diagnosis.id)} variant="destructive">Remover</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
+      {/* Com áreas marcadas ou área obrigatória, a linha acima é a lista/aviso e o remover fica abaixo, à direita. */}
+      {!showsRemoveInActionRow ? removeDiagnosisAction : null}
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
@@ -788,6 +800,14 @@ export default function DiagnosisPanel({
     onReviewDraftChange?.(diagnosisId, draft);
   }
 
+  // O gatilho "Remover diagnóstico" desmonta junto com o item; o foco segue para "Adicionar diagnóstico"
+  // (o diagnóstico removido volta às opções, então o botão existe) em vez de cair no body.
+  async function handlePanelRemove(diagnosisId) {
+    const wasRemoved = await onRemove(diagnosisId);
+    if (wasRemoved) window.setTimeout(() => addDiagnosisTriggerRef.current?.focus(), 0);
+    return wasRemoved;
+  }
+
   // A troca botão ↔ campo é um morph (View Transition): o rótulo vira o placeholder e o "+" vira a lupa no lugar.
   function handleAddDiagnosisToggle(open) {
     if (open && isInteractionBlocked()) return;
@@ -846,7 +866,7 @@ export default function DiagnosisPanel({
     aiModeEnabled,
     isBusy,
     onEditRegion,
-    onRemove,
+    onRemove: handlePanelRemove,
     onRemoveRegion,
     onRegionHover,
     onRegionSelect,

@@ -353,6 +353,11 @@ export default function ExamReviewPage() {
     if (wasRemoved) {
       if (selectedRegionKey?.startsWith(`${diagnosisId}:`)) setSelectedRegionKey(null);
       if (hoveredRegionKey?.startsWith(`${diagnosisId}:`)) setHoveredRegionKey(null);
+      // Remover durante a marcação: sai do modo de área em vez de deixar o alvo apontando para um diagnóstico inexistente.
+      if (activeRegionTarget?.diagnosisId === diagnosisId) {
+        setActiveRegionTarget(null);
+        setSelectedRegion(null);
+      }
     }
     return wasRemoved;
   }
