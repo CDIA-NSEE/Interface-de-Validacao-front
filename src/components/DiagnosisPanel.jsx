@@ -232,7 +232,6 @@ function DiagnosisDetails({
   diagnosisReference,
   isBusy,
   onEditRegion,
-  onRemove,
   onRemoveRegion,
   onRegionHover,
   onRegionSelect,
@@ -275,8 +274,6 @@ function DiagnosisDetails({
   // Decisão otimista: o toggle fica pressionado no clique e volta ao status do servidor se o salvamento falhar.
   const [pendingDecision, setPendingDecision] = useState(null);
   const decisionValue = pendingDecision ? [pendingDecision] : visualStatus === "pending" ? [] : [visualStatus];
-  // Controlado para fechar na confirmação: o item só desmonta quando o DELETE resolve e, em falha, o erro da página ficaria escondido atrás do overlay.
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const areaListTriggerRef = useRef(null);
   const markAreaButtonRef = useRef(null);
 
@@ -456,33 +453,6 @@ function DiagnosisDetails({
   // No diário e nos adicionais, o botão de área divide a linha com a decisão; na revalidação geral fica abaixo.
   const inlineMarkAreaButton = usesInlineDecisionRow ? plainMarkAreaButton : null;
 
-  // Adicionado pelo médico: remover é sempre a ação do canto inferior direito do bloco. `ml-auto` encosta o botão
-  // à direita tanto na linha de ações (flex-row) quanto sozinho abaixo da lista de áreas/aviso (flex-col).
-  const removeDiagnosisAction = diagnosis.source === "doctor_added" ? (
-    <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
-      <AlertDialogTrigger render={<Button className="ml-auto w-fit text-muted-foreground hover:text-destructive focus-visible:text-destructive" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
-        <Trash2 aria-hidden="true" data-icon="inline-start" />
-        Remover diagnóstico
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Remover diagnóstico?</AlertDialogTitle>
-          <AlertDialogDescription>
-            O diagnóstico <span className="font-medium text-foreground">{standardText}</span>
-            {regions.length ? <> e {markedRegionCountLabel(regions.length)} serão removidos</> : " será removido"} deste exame.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          {/* Fecha antes de disparar: o item some quando o DELETE resolve; em falha, o Alert da página fica visível. */}
-          <AlertDialogAction disabled={isBusy} onClick={() => { setIsRemoveDialogOpen(false); onRemove(diagnosis.id); }} variant="destructive">Remover</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  ) : null;
-  // Sem área marcada, "Marcar área" e "Remover diagnóstico" dividem a linha de ações (mesma altura e lugar da decisão dos originais).
-  const showsRemoveInActionRow = Boolean(removeDiagnosisAction && inlineMarkAreaButton);
-
   return (
     <div className="flex flex-col gap-2">
       {originalLine}
@@ -497,12 +467,12 @@ function DiagnosisDetails({
 
       {isPlain ? regionListContent : null}
 
-      {/* A linha existe mesmo sem decisão (diagnóstico adicionado pelo médico): "Marcar área" à esquerda e "Remover diagnóstico" à direita. */}
+      {/* A linha existe mesmo sem decisão (diagnóstico adicionado pelo médico): só "Marcar área", na mesma altura e lugar
+          da decisão dos originais. "Remover diagnóstico" não entra aqui: fica no rodapé fixo do item (DiagnosisPanel). */}
       {decisionToggle || inlineMarkAreaButton ? (
         <div className="flex items-center gap-2">
           {decisionToggle}
           {inlineMarkAreaButton}
-          {showsRemoveInActionRow ? removeDiagnosisAction : null}
         </div>
       ) : null}
 
@@ -538,9 +508,6 @@ function DiagnosisDetails({
           </Alert>
         )
       ) : !inlineMarkAreaButton ? plainMarkAreaButton : null}
-
-      {/* Com áreas marcadas ou área obrigatória, a linha acima é a lista/aviso e o remover fica abaixo, à direita. */}
-      {!showsRemoveInActionRow ? removeDiagnosisAction : null}
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
@@ -582,6 +549,38 @@ function DiagnosisDetails({
   );
 }
 
+// Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ghost como as lixeiras das áreas,
+// mas com rótulo e tinta destrutiva no hover: é a ação do diagnóstico inteiro, não de uma área.
+function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
+  const standardText = diagnosis.standard_text || diagnosis.name;
+  const regionCount = diagnosis.regions?.length ?? 0;
+  // Controlado para fechar na confirmação: o item só desmonta quando o DELETE resolve e, em falha, o erro da página ficaria escondido atrás do overlay.
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+
+  return (
+    <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
+      <AlertDialogTrigger render={<Button className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
+        <Trash2 aria-hidden="true" data-icon="inline-start" />
+        Remover diagnóstico
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remover diagnóstico?</AlertDialogTitle>
+          <AlertDialogDescription>
+            O diagnóstico <span className="font-medium text-foreground">{standardText}</span>
+            {regionCount ? <> e {markedRegionCountLabel(regionCount)} serão removidos</> : " será removido"} deste exame.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          {/* Fecha antes de disparar: o item some quando o DELETE resolve; em falha, o Alert da página fica visível. */}
+          <AlertDialogAction disabled={isBusy} onClick={() => { setIsRemoveDialogOpen(false); onRemove(diagnosis.id); }} variant="destructive">Remover</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function DiagnosisStatusSummary({ className, compact = false, diagnosis, status, feedback }) {
   // pb-2 reserva só o necessário para o micro-feedback absoluto abaixo do badge sem tocar a linha do título.
   return (
@@ -615,7 +614,6 @@ function DiagnosisCard({
   isPrimaryDaily,
   isRequired,
   onEditRegion,
-  onRemove,
   onRemoveRegion,
   onRegionHover,
   onRegionSelect,
@@ -664,7 +662,6 @@ function DiagnosisCard({
           isBusy={isBusy}
           isPrimaryDaily={isPrimaryDaily}
           onEditRegion={onEditRegion}
-          onRemove={onRemove}
           onRemoveRegion={onRemoveRegion}
           onRegionHover={onRegionHover}
           onRegionSelect={onRegionSelect}
@@ -748,6 +745,11 @@ export default function DiagnosisPanel({
     ? activeRegionTarget.diagnosisId
     : null;
   const forcedExpandedDiagnosisId = activeSecondaryDiagnosisId ?? dirtySecondaryReviewDraftDiagnosisId;
+  // Item aberto do acordeão (valor controlado): o forçado vence o escolhido pelo médico.
+  const openSecondaryDiagnosisId = forcedExpandedDiagnosisId ?? expandedDiagnosisId;
+  const openSecondaryDiagnosisKey = openSecondaryDiagnosisId === null || openSecondaryDiagnosisId === undefined
+    ? null
+    : String(openSecondaryDiagnosisId);
   // Só o que ainda pode ser adicionado (sem repetir o que já está no exame), em ordem alfabética.
   const availableOptions = useMemo(() => {
     const present = new Set(diagnoses.map((diagnosis) => normalizeDiagnosisText(diagnosis.standard_text || diagnosis.name)));
@@ -893,7 +895,6 @@ export default function DiagnosisPanel({
     aiModeEnabled,
     isBusy,
     onEditRegion,
-    onRemove: handlePanelRemove,
     onRemoveRegion,
     onRegionHover,
     onRegionSelect,
@@ -946,13 +947,14 @@ export default function DiagnosisPanel({
                     <ScrollArea className="min-h-0 min-w-0 [&_[data-slot=scroll-area-viewport]]:overscroll-contain" data-testid="optional-diagnoses-scroll" ref={secondaryScrollRef}>
                       <Accordion
                         onValueChange={handleExpandedDiagnosisChange}
-                        value={(forcedExpandedDiagnosisId ?? expandedDiagnosisId) ? [String(forcedExpandedDiagnosisId ?? expandedDiagnosisId)] : []}
+                        value={openSecondaryDiagnosisKey ? [openSecondaryDiagnosisKey] : []}
                       >
                       {secondaryDiagnoses.map((diagnosis) => {
                         const diagnosisId = String(diagnosis.id);
                         const diagnosisReference = getDiagnosisReference(diagnosisReferences, diagnosis.id);
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
+                        const isOpen = openSecondaryDiagnosisKey === diagnosisId;
                         return (
                           // Item aberto: fundo muted/40 no item e opaco equivalente no h3 sticky; o separador título/conteúdo vai no h3 para ter largura total e acompanhar o sticky.
                           <AccordionItem className="px-3 data-open:bg-muted/40 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3]:data-open:border-b [&>h3]:data-open:bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
@@ -973,6 +975,15 @@ export default function DiagnosisPanel({
                               <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
+                            {/* Rodapé fixo do item adicionado aberto: espelha o h3 sticky, então "Remover diagnóstico" fica no mesmo lugar e
+                                visível com qualquer quantidade de áreas. Irmão do painel (o overflow-hidden dele anularia o sticky) e só no
+                                item aberto (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do h3 aberto, para as linhas
+                                de área rolarem por baixo sem vazar; -mx-3 dá largura total à borda como no h3. */}
+                            {diagnosis.source === "doctor_added" && isOpen ? (
+                              <div className={cn("sticky bottom-0 z-10 -mx-3 flex h-10 items-center justify-end border-t bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))] px-3", ENTER_ANIMATION_CLASS)} data-slot="diagnosis-item-footer">
+                                <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} />
+                              </div>
+                            ) : null}
                           </AccordionItem>
                         );
                       })}

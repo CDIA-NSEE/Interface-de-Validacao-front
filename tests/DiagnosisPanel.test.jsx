@@ -471,11 +471,60 @@ describe("DiagnosisPanel", () => {
     expect(onEditRegion).toHaveBeenCalledWith(optional, optional.regions[0]);
     expect(onRemoveRegion).toHaveBeenCalledWith(2, 9);
 
+    // Fechado, o adicionado não expõe o gatilho de remoção; só o item aberto tem rodapé.
+    expect(screen.queryByRole("button", { name: "Remover diagnóstico" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
     expect(screen.queryByRole("group", { name: "Revisão de Fibrilação atrial" })).not.toBeInTheDocument();
     expect(screen.getByText("Adicionado", { selector: '[data-slot="badge"]' })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Remover diagnóstico" }));
+    const removeButton = screen.getByRole("button", { name: "Remover diagnóstico" });
+    // Rodapé do item, fora do painel animado (é o que permite o sticky) e separado da linha de "Marcar área".
+    const doctorAddedItem = removeButton.closest('[data-diagnosis-id="3"]');
+    expect(doctorAddedItem).not.toBeNull();
+    expect(removeButton.closest('[data-slot="accordion-content"]')).toBeNull();
+    expect(removeButton.closest('[data-slot="diagnosis-item-footer"]')).not.toBeNull();
+    expect(within(doctorAddedItem).getByRole("button", { name: "Marcar área" }).parentElement).not.toBe(removeButton.parentElement);
+    fireEvent.click(removeButton);
     expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("O diagnóstico Fibrilação atrial será removido deste exame.");
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remover" }));
+    expect(onRemove).toHaveBeenCalledWith(3);
+  });
+
+  it("mantém Remover diagnóstico no rodapé do item adicionado, depois das áreas", () => {
+    const onRemove = vi.fn();
+    const doctorAdded = {
+      ...originalDiagnosis(3, "Fibrilação atrial", {
+        regions: [
+          { id: 9, x: 10, y: 20, width: 30, height: 15 },
+          { id: 10, x: 50, y: 35, width: 20, height: 10 },
+          { id: 11, x: 70, y: 55, width: 15, height: 10 },
+        ],
+      }),
+      source: "doctor_added",
+    };
+
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onRemove, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal"), doctorAdded]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
+    fireEvent.click(screen.getByLabelText("3 áreas marcadas"));
+    const removeButton = screen.getByRole("button", { name: "Remover diagnóstico" });
+    const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
+    const lastAreaRemoveButton = screen.getByRole("button", { name: "Remover Área 3" });
+
+    // Ordem de leitura: gestão das áreas (adicionar/remover área) antes da remoção do diagnóstico inteiro.
+    expect(addAreaButton.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(lastAreaRemoveButton.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(removeButton.closest('[data-slot="accordion-content"]')).toBeNull();
+    expect(removeButton.closest('[data-diagnosis-id="3"]')).not.toBeNull();
+
+    fireEvent.click(removeButton);
+    expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("O diagnóstico Fibrilação atrial e 3 áreas marcadas serão removidos deste exame.");
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remover" }));
     expect(onRemove).toHaveBeenCalledWith(3);
   });
