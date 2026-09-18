@@ -75,8 +75,9 @@ const AI_AGREEMENT_DESCRIPTION =
 const INLINE_DECISION_CONTROL_CLASS =
   "h-10 bg-card transition-colors duration-150 disabled:opacity-100 motion-reduce:transition-none dark:bg-card";
 
-// Linha única "Concordo | Discordo | Marcar área": o mesmo bloco no diagnóstico do dia e nos adicionais,
-// para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo nos dois cartões.
+// Linha única "Concordo | Discordo | Marcar área" (DiagnosisActionRow): o mesmo bloco no diagnóstico do dia e nos
+// adicionais, para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo nos dois cartões. Nos adicionais
+// a linha fica na barra fixa do item e, no adicionado pelo médico, "Remover diagnóstico" ocupa o lugar da decisão.
 const INLINE_DECISION_ROW_STYLES = {
   decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
@@ -171,6 +172,12 @@ function markedRegionCountLabel(count) {
   return count === 1 ? "1 área marcada" : `${count} áreas marcadas`;
 }
 
+// Rascunho de justificativa aberto e diferente do salvo: bloqueia novas decisões e a troca de item até salvar/cancelar.
+function hasDirtyReviewDraft(diagnosis, reviewDraft) {
+  if (!reviewDraft?.isOpen) return false;
+  return (reviewDraft.note ?? diagnosis.review_notes ?? "") !== (diagnosis.review_notes || "");
+}
+
 function reviewBadgeVariant(status) {
   if (status === "confirmed") return "success";
   if (status === "rejected") return "destructive";
@@ -226,6 +233,105 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
   );
 }
 
+// "Marcar área" (sem área marcada e sem área obrigatória pendente). Na linha única (diário/adicionais) segue a altura dos
+// toggles; na revalidação geral (plain) é ghost, abaixo da decisão. `data-diagnosis-action` permite devolver o foco a ele
+// quando a última área é removida — nos adicionais ele vive na barra fixa do item, fora de DiagnosisDetails.
+function MarkAreaButton({ diagnosis, isBusy, isRegionTarget, layout, onStartRegion }) {
+  const styles = DETAILS_STYLES[layout];
+  const isPlain = layout === "plain";
+
+  return (
+    <Button
+      aria-pressed={isRegionTarget}
+      className={isRegionTarget ? styles.markAreaButtonActive : styles.markAreaButton}
+      data-diagnosis-action="mark-area"
+      disabled={isBusy}
+      onClick={() => onStartRegion(diagnosis)}
+      size={styles.markAreaSize}
+      type="button"
+      variant={isRegionTarget && isPlain ? "secondary" : styles.markAreaVariant}
+    >
+      {/* Na linha única o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X. */}
+      {isPlain
+        ? <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
+        : <><MapPinned aria-hidden="true" data-icon="inline-start" />Marcar área</>}
+    </Button>
+  );
+}
+
+// Linha de ações do diagnóstico inteiro, logo abaixo do título, com a mesma gramática em todos os layouts: o veredito
+// à esquerda (Concordo | Discordo nos originais; o adicionado pelo médico não tem decisão), "Marcar área" em seguida e,
+// por último, `trailing` — o "Remover diagnóstico" dos adicionados, encostado à direita (destrutivo e raro: fica longe
+// da posição primária). No diário/plain a linha é renderizada por DiagnosisDetails; nos adicionais, pela barra fixa do
+// item (DiagnosisPanel), fora do painel rolável.
+function DiagnosisActionRow({
+  className,
+  diagnosis,
+  isBusy,
+  isRegionTarget,
+  layout,
+  onReview,
+  onReviewDraftChange,
+  onReviewInteractionBlocked,
+  onStartRegion,
+  reviewDraft,
+  showMarkArea = false,
+  trailing = null,
+}) {
+  const styles = DETAILS_STYLES[layout];
+  // Diário e adicionais compartilham a linha única "Concordo | Discordo | Marcar área" (mesma forma e mesmo lugar).
+  const usesInlineDecisionRow = layout !== "plain";
+  const standardText = diagnosis.standard_text || diagnosis.name;
+  const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
+  const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
+  // Decisão otimista: o toggle fica pressionado no clique e volta ao status do servidor se o salvamento falhar.
+  const [pendingDecision, setPendingDecision] = useState(null);
+  const decisionValue = pendingDecision ? [pendingDecision] : visualStatus === "pending" ? [] : [visualStatus];
+
+  async function submitDecision(decision) {
+    const wasReviewed = decision === "confirmed"
+      ? await onReview(diagnosis.id, "confirmed")
+      : await onReview(diagnosis.id, "rejected", diagnosis.review_notes || "", "decision");
+    // Decisão salva: o rascunho de justificativa (se aberto) fecha.
+    if (wasReviewed) onReviewDraftChange?.(diagnosis.id, null);
+  }
+
+  function handleDecisionChange(nextValue) {
+    if (hasDirtyReviewDraft(diagnosis, reviewDraft)) {
+      onReviewInteractionBlocked?.(diagnosis.id);
+      return;
+    }
+    // Decisão desta linha ainda em voo (os toggles só ficam `disabled` se a requisição demorar): evita segundo envio
+    // e o toggle "saltando" entre valores.
+    if (pendingDecision) return;
+    const nextDecision = nextValue.at(-1);
+    if (nextDecision !== "confirmed" && nextDecision !== "rejected") return;
+    setPendingDecision(nextDecision);
+    submitDecision(nextDecision).finally(() => setPendingDecision(null));
+  }
+
+  const decisionToggle = diagnosis.source !== "doctor_added" ? (
+    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={usesInlineDecisionRow ? "lg" : undefined} spacing={usesInlineDecisionRow ? 2 : 1} value={decisionValue}>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+    </ToggleGroup>
+  ) : null;
+  // Na revalidação geral (plain) o "Marcar área" fica abaixo da decisão (DiagnosisDetails), não na linha.
+  const markAreaButton = usesInlineDecisionRow && showMarkArea ? (
+    <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
+  ) : null;
+
+  if (!decisionToggle && !markAreaButton && !trailing) return null;
+
+  return (
+    <div className={cn("flex items-center gap-2", className)} data-slot="diagnosis-action-row">
+      {decisionToggle}
+      {markAreaButton}
+      {trailing}
+    </div>
+  );
+}
+
 function DiagnosisDetails({
   activeRegionTarget,
   diagnosis,
@@ -252,8 +358,6 @@ function DiagnosisDetails({
   const layout = isPrimaryDaily ? "daily" : isAdditional ? "additional" : "plain";
   const styles = DETAILS_STYLES[layout];
   const isPlain = layout === "plain";
-  // Diário e adicionais compartilham a linha única "Concordo | Discordo | Marcar área" (mesma forma e mesmo lugar).
-  const usesInlineDecisionRow = !isPlain;
   const disagreementLabelId = useId();
   const status = getDiagnosisReviewStatus(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
@@ -267,15 +371,10 @@ function DiagnosisDetails({
   // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
   const isOriginalTruncated = Array.from(originalText.replace(/\s+/g, " ").trim()).length > ORIGINAL_TEXT_PREVIEW_LIMIT;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
-  const savedReviewNote = diagnosis.review_notes || "";
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
-  const isReviewDraftDirty = isDisagreementOpen && reviewNoteDraft !== savedReviewNote;
-  const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
-  // Decisão otimista: o toggle fica pressionado no clique e volta ao status do servidor se o salvamento falhar.
-  const [pendingDecision, setPendingDecision] = useState(null);
-  const decisionValue = pendingDecision ? [pendingDecision] : visualStatus === "pending" ? [] : [visualStatus];
+  const isReviewDraftDirty = hasDirtyReviewDraft(diagnosis, reviewDraft);
+  const rootRef = useRef(null);
   const areaListTriggerRef = useRef(null);
-  const markAreaButtonRef = useRef(null);
 
   function setDisagreementPanelOpen(isOpen) {
     onReviewDraftChange?.(
@@ -296,34 +395,16 @@ function DiagnosisDetails({
     if (wasReviewed) setDisagreementPanelOpen(false);
   }
 
-  async function submitAgreement() {
-    const wasReviewed = await onReview(diagnosis.id, "confirmed");
-    if (wasReviewed) setDisagreementPanelOpen(false);
-  }
-
   async function handleRemoveRegionClick(region) {
     await onRemoveRegion(diagnosis.id, region.id);
     // A linha desmonta com a área: foco no gatilho da lista ou, se era a última, no "Marcar área" que a substitui.
+    // O botão é procurado no DOM do diagnóstico porque, nos adicionais, ele fica na barra fixa do item (fora daqui).
     // Em falha a linha permanece e o foco segue no botão, então nada muda.
     window.setTimeout(() => {
       if (document.activeElement !== document.body) return;
-      (areaListTriggerRef.current ?? markAreaButtonRef.current)?.focus();
+      const markAreaButton = rootRef.current?.closest("[data-diagnosis-id]")?.querySelector('[data-diagnosis-action="mark-area"]');
+      (areaListTriggerRef.current ?? markAreaButton)?.focus();
     }, 0);
-  }
-
-  function handleDecisionChange(nextValue) {
-    if (isReviewDraftDirty) {
-      onReviewInteractionBlocked?.(diagnosis.id);
-      return;
-    }
-    // Decisão desta linha ainda em voo (os toggles só ficam `disabled` se a requisição demorar): evita segundo envio
-    // e o toggle "saltando" entre valores.
-    if (pendingDecision) return;
-    const nextDecision = nextValue.at(-1);
-    if (nextDecision !== "confirmed" && nextDecision !== "rejected") return;
-    setPendingDecision(nextDecision);
-    const submit = nextDecision === "confirmed" ? submitAgreement() : submitDisagreement(savedReviewNote);
-    submit.finally(() => setPendingDecision(null));
   }
 
   const originalContent = shouldShowOriginal ? (
@@ -425,36 +506,14 @@ function DiagnosisDetails({
     </Collapsible>
   ) : null;
 
-  const decisionToggle = diagnosis.source !== "doctor_added" ? (
-    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={usesInlineDecisionRow ? "lg" : undefined} spacing={usesInlineDecisionRow ? 2 : 1} value={decisionValue}>
-      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
-    </ToggleGroup>
+  const showMarkArea = !regions.length && !diagnosis.region_required_missing;
+  // Nos adicionais a linha de ações fica na barra fixa do item (DiagnosisPanel), fora do painel rolável.
+  const actionRow = !isAdditional ? (
+    <DiagnosisActionRow diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onReview={onReview} onReviewDraftChange={onReviewDraftChange} onReviewInteractionBlocked={onReviewInteractionBlocked} onStartRegion={onStartRegion} reviewDraft={reviewDraft} showMarkArea={showMarkArea} />
   ) : null;
-
-  const showPlainMarkAreaButton = !regions.length && !diagnosis.region_required_missing;
-  const plainMarkAreaButton = showPlainMarkAreaButton ? (
-    <Button
-      aria-pressed={isRegionTarget}
-      className={isRegionTarget ? styles.markAreaButtonActive : styles.markAreaButton}
-      disabled={isBusy}
-      onClick={() => onStartRegion(diagnosis)}
-      ref={markAreaButtonRef}
-      size={styles.markAreaSize}
-      type="button"
-      variant={isRegionTarget && isPlain ? "secondary" : styles.markAreaVariant}
-    >
-      {/* Na linha única o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X. */}
-      {usesInlineDecisionRow
-        ? <><MapPinned aria-hidden="true" data-icon="inline-start" />Marcar área</>
-        : <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>}
-    </Button>
-  ) : null;
-  // No diário e nos adicionais, o botão de área divide a linha com a decisão; na revalidação geral fica abaixo.
-  const inlineMarkAreaButton = usesInlineDecisionRow ? plainMarkAreaButton : null;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" ref={rootRef}>
       {originalLine}
 
       {isPlain && status === "rejected" && diagnosis.review_notes ? (
@@ -467,14 +526,7 @@ function DiagnosisDetails({
 
       {isPlain ? regionListContent : null}
 
-      {/* A linha existe mesmo sem decisão (diagnóstico adicionado pelo médico): só "Marcar área", na mesma altura e lugar
-          da decisão dos originais. "Remover diagnóstico" não entra aqui: fica no rodapé fixo do item (DiagnosisPanel). */}
-      {decisionToggle || inlineMarkAreaButton ? (
-        <div className="flex items-center gap-2">
-          {decisionToggle}
-          {inlineMarkAreaButton}
-        </div>
-      ) : null}
+      {actionRow}
 
       {decisionFeedback && (isPlain || decisionFeedback.type === "error") ? (
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
@@ -507,7 +559,10 @@ function DiagnosisDetails({
             </AlertDescription>
           </Alert>
         )
-      ) : !inlineMarkAreaButton ? plainMarkAreaButton : null}
+      ) : isPlain && showMarkArea ? (
+        // Na revalidação geral o botão de área fica abaixo da decisão; no diário e nos adicionais divide a linha com ela.
+        <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
+      ) : null}
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
@@ -549,8 +604,9 @@ function DiagnosisDetails({
   );
 }
 
-// Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ghost como as lixeiras das áreas,
-// mas com rótulo e tinta destrutiva no hover: é a ação do diagnóstico inteiro, não de uma área.
+// Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ocupa o fim da linha de ações
+// (`ml-auto`), no lugar em que os originais têm a decisão. Ghost como as lixeiras das áreas, mas com rótulo e tinta
+// destrutiva só no hover/foco: é a ação do diagnóstico inteiro, rara e destrutiva — não deve pesar como Concordo/Discordo.
 function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
   const standardText = diagnosis.standard_text || diagnosis.name;
   const regionCount = diagnosis.regions?.length ?? 0;
@@ -559,7 +615,7 @@ function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
 
   return (
     <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
-      <AlertDialogTrigger render={<Button className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
+      <AlertDialogTrigger render={<Button className="ml-auto shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
         <Trash2 aria-hidden="true" data-icon="inline-start" />
         Remover diagnóstico
       </AlertDialogTrigger>
@@ -733,10 +789,7 @@ export default function DiagnosisPanel({
     [secondaryDiagnoses],
   );
   const dirtyReviewDraftDiagnosisId = diagnoses.find(
-    (diagnosis) => {
-      const draft = reviewDrafts[String(diagnosis.id)];
-      return draft?.isOpen && (draft.note || "") !== (diagnosis.review_notes || "");
-    },
+    (diagnosis) => hasDirtyReviewDraft(diagnosis, reviewDrafts[String(diagnosis.id)]),
   )?.id;
   const dirtySecondaryReviewDraftDiagnosisId = secondaryDiagnosisIds.has(String(dirtyReviewDraftDiagnosisId ?? ""))
     ? dirtyReviewDraftDiagnosisId
@@ -768,7 +821,8 @@ export default function DiagnosisPanel({
   const scrollDiagnosisIntoView = useCallback((diagnosisId) => {
     const scrollTimer = window.setTimeout(() => {
       const viewport = secondaryScrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
-      const header = viewport?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="accordion-trigger"]`);
+      // A barra (título + linha de ações): revelar só o gatilho podia deixar a linha cortada abaixo do viewport.
+      const header = viewport?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="diagnosis-item-bar"]`);
       if (!header || !viewport) return;
       const bounds = viewport.getBoundingClientRect();
       const target = header.getBoundingClientRect();
@@ -955,35 +1009,60 @@ export default function DiagnosisPanel({
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         const isOpen = openSecondaryDiagnosisKey === diagnosisId;
+                        const hasRegions = Boolean(diagnosis.regions?.length);
                         return (
-                          // Item aberto: fundo muted/40 no item e opaco equivalente no h3 sticky; o separador título/conteúdo vai no h3 para ter largura total e acompanhar o sticky.
-                          <AccordionItem className="px-3 data-open:bg-muted/40 [&>h3]:sticky [&>h3]:top-0 [&>h3]:z-10 [&>h3]:-mx-3 [&>h3]:bg-card [&>h3]:data-open:border-b [&>h3]:data-open:bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))]" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
-                            <AccordionTrigger className={cn(
-                              "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
-                              hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
-                              selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
-                              // Marcando área: o h3 é sticky, então o sinal fica visível mesmo com o botão ativo rolado para fora da lista.
-                              activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
-                            )}>
-                              <span className="grid min-h-8 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-                                {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
-                                <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none group-aria-expanded/accordion-trigger:font-semibold" title={standardText}>{standardText}</span>
-                                <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
-                              </span>
-                            </AccordionTrigger>
-                            <AccordionContent className="flex flex-col gap-3 pt-2">
+                          // Item aberto: fundo muted/40 no item e opaco equivalente na barra fixa (abaixo).
+                          <AccordionItem className="px-3 data-open:bg-muted/40" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                            {/* Barra fixa do item: título + linha de ações do diagnóstico inteiro (Concordo | Discordo nos originais,
+                                "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o mesmo lugar para os
+                                dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3 linhas). Irmã do
+                                painel (o overflow-hidden dele anularia o sticky); a linha só existe no item aberto (nada de gatilho oculto
+                                nos fechados). Fundo opaco = mesma mistura do item aberto, para as linhas de área rolarem por baixo sem
+                                vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador título+ações / conteúdo). */}
+                            <div
+                              className={cn(
+                                "sticky top-0 z-10 -mx-3 bg-card",
+                                // O separador barra/conteúdo só existe quando o painel tem conteúdo (único filho vazio = só o DiagnosisDetails
+                                // sem nada a mostrar); do contrário encostaria na borda do item seguinte e viraria uma linha dupla.
+                                isOpen && "border-b bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))] [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
+                              )}
+                              data-slot="diagnosis-item-bar"
+                            >
+                              <AccordionTrigger className={cn(
+                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
+                                selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
+                                // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
+                                activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
+                              )}>
+                                <span className="grid min-h-8 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                                  {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
+                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none group-aria-expanded/accordion-trigger:font-semibold" title={standardText}>{standardText}</span>
+                                  <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
+                                </span>
+                              </AccordionTrigger>
+                              {isOpen ? (
+                                <DiagnosisActionRow
+                                  className={cn("px-3 pb-2", ENTER_ANIMATION_CLASS)}
+                                  diagnosis={diagnosis}
+                                  isBusy={isBusy}
+                                  isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
+                                  layout="additional"
+                                  onReview={onReview}
+                                  onReviewDraftChange={handlePanelReviewDraftChange}
+                                  onReviewInteractionBlocked={onReviewInteractionBlocked}
+                                  onStartRegion={handlePanelStartRegion}
+                                  reviewDraft={reviewDrafts[diagnosisId]}
+                                  showMarkArea={!hasRegions && !diagnosis.region_required_missing}
+                                  trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
+                                />
+                              ) : null}
+                            </div>
+                            {/* Sem badges nem detalhes (ex.: adicionado recém-criado — tudo está na barra), o painel não deixa uma faixa vazia. */}
+                            <AccordionContent className="flex flex-col gap-3 pt-2 [&:has(>:empty:only-child)]:py-0">
                               <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
-                            {/* Rodapé fixo do item adicionado aberto: espelha o h3 sticky, então "Remover diagnóstico" fica no mesmo lugar e
-                                visível com qualquer quantidade de áreas. Irmão do painel (o overflow-hidden dele anularia o sticky) e só no
-                                item aberto (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do h3 aberto, para as linhas
-                                de área rolarem por baixo sem vazar; -mx-3 dá largura total à borda como no h3. */}
-                            {diagnosis.source === "doctor_added" && isOpen ? (
-                              <div className={cn("sticky bottom-0 z-10 -mx-3 flex h-10 items-center justify-end border-t bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))] px-3", ENTER_ANIMATION_CLASS)} data-slot="diagnosis-item-footer">
-                                <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} />
-                              </div>
-                            ) : null}
                           </AccordionItem>
                         );
                       })}

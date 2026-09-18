@@ -282,7 +282,7 @@
       <li>Diagnóstico de infarto/IAM sem área: nasce como <code>pending</code> e mostra “Área necessária”. A primeira região o converte para <code>confirmed</code>.</li>
     </ul>
     <h3>Remover</h3>
-    <p>Somente diagnósticos <code>doctor_added</code> oferecem “Remover”. A ação fica no rodapé fixo do item aberto no accordion (mesmo lugar em todos os estados e sempre visível, mesmo com várias áreas marcadas). A confirmação informa nome e quantidade de áreas. O backend apaga diagnóstico e regiões na mesma transação. Diagnósticos originais são protegidos e retornam erro 400 se alguém tentar removê-los diretamente pela API.</p>
+    <p>Somente diagnósticos <code>doctor_added</code> oferecem “Remover”. A ação fica na barra fixa do item aberto no accordion (título + linha de ações), na mesma linha em que os originais têm Concordo/Discordo — mesmo lugar em todos os estados e sempre visível, mesmo com várias áreas marcadas. A confirmação informa nome e quantidade de áreas. O backend apaga diagnóstico e regiões na mesma transação. Diagnósticos originais são protegidos e retornam erro 400 se alguém tentar removê-los diretamente pela API.</p>
   </section>
 
   <section>

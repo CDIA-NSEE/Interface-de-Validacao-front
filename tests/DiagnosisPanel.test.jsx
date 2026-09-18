@@ -201,8 +201,10 @@ describe("DiagnosisPanel", () => {
     const { rerender } = render(<DiagnosisPanelHarness {...props} />);
     const viewport = screen.getByTestId("optional-diagnoses-scroll").querySelector('[data-slot="scroll-area-viewport"]');
     const header = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    // O que é revelado é a barra fixa do item (título + linha de ações), não só o gatilho.
+    const itemBar = header.closest('[data-slot="diagnosis-item-bar"]');
     const bounds = vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue({ top: 100, bottom: 400 });
-    const target = vi.spyOn(header, "getBoundingClientRect").mockReturnValue({ top: 420, bottom: 480 });
+    const target = vi.spyOn(itemBar, "getBoundingClientRect").mockReturnValue({ top: 420, bottom: 480 });
     fireEvent.click(header);
     await waitFor(() => expect(viewport.scrollTop).toBe(80));
     target.mockReturnValue({ top: 100, bottom: 160 });
@@ -463,7 +465,13 @@ describe("DiagnosisPanel", () => {
       "size-5",
       "shrink-0",
     );
-    fireEvent.click(screen.getAllByRole("button", { name: "Concordo" })[1]);
+    const optionalAgreeButton = screen.getAllByRole("button", { name: "Concordo" })[1];
+    // A decisão do original fica na barra fixa do item (título + ações), fora do painel rolável — o mesmo lugar em que
+    // o adicionado tem "Remover diagnóstico"; a lista de áreas rola por baixo dela.
+    expect(optionalAgreeButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
+    expect(optionalAgreeButton.closest('[data-slot="accordion-content"]')).toBeNull();
+    expect(optionalAgreeButton.compareDocumentPosition(addAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    fireEvent.click(optionalAgreeButton);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
 
@@ -477,19 +485,20 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("group", { name: "Revisão de Fibrilação atrial" })).not.toBeInTheDocument();
     expect(screen.getByText("Adicionado", { selector: '[data-slot="badge"]' })).toBeVisible();
     const removeButton = screen.getByRole("button", { name: "Remover diagnóstico" });
-    // Rodapé do item, fora do painel animado (é o que permite o sticky) e separado da linha de "Marcar área".
+    // Barra fixa do item (título + ações), fora do painel animado (é o que permite o sticky): "Marcar área" e
+    // "Remover diagnóstico" dividem a mesma linha, no lugar em que os originais têm Concordo/Discordo.
     const doctorAddedItem = removeButton.closest('[data-diagnosis-id="3"]');
     expect(doctorAddedItem).not.toBeNull();
     expect(removeButton.closest('[data-slot="accordion-content"]')).toBeNull();
-    expect(removeButton.closest('[data-slot="diagnosis-item-footer"]')).not.toBeNull();
-    expect(within(doctorAddedItem).getByRole("button", { name: "Marcar área" }).parentElement).not.toBe(removeButton.parentElement);
+    expect(removeButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
+    expect(within(doctorAddedItem).getByRole("button", { name: "Marcar área" }).parentElement).toBe(removeButton.parentElement);
     fireEvent.click(removeButton);
     expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("O diagnóstico Fibrilação atrial será removido deste exame.");
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remover" }));
     expect(onRemove).toHaveBeenCalledWith(3);
   });
 
-  it("mantém Remover diagnóstico no rodapé do item adicionado, depois das áreas", () => {
+  it("mantém Remover diagnóstico na barra fixa do item adicionado, antes das áreas", () => {
     const onRemove = vi.fn();
     const doctorAdded = {
       ...originalDiagnosis(3, "Fibrilação atrial", {
@@ -517,11 +526,15 @@ describe("DiagnosisPanel", () => {
     const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
     const lastAreaRemoveButton = screen.getByRole("button", { name: "Remover Área 3" });
 
-    // Ordem de leitura: gestão das áreas (adicionar/remover área) antes da remoção do diagnóstico inteiro.
-    expect(addAreaButton.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(lastAreaRemoveButton.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // Ordem de leitura: a ação do diagnóstico inteiro vem na barra fixa (logo após o título, onde os originais têm a
+    // decisão) e só depois a gestão das áreas (adicionar/remover área), que rola por baixo da barra.
+    expect(removeButton.compareDocumentPosition(addAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(removeButton.compareDocumentPosition(lastAreaRemoveButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(removeButton.closest('[data-slot="accordion-content"]')).toBeNull();
+    expect(removeButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
     expect(removeButton.closest('[data-diagnosis-id="3"]')).not.toBeNull();
+    // Com áreas marcadas não há "Marcar área" no item: o Remover é o único controle da linha.
+    expect(within(removeButton.closest('[data-diagnosis-id="3"]')).queryByRole("button", { name: "Marcar área" })).not.toBeInTheDocument();
 
     fireEvent.click(removeButton);
     expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("O diagnóstico Fibrilação atrial e 3 áreas marcadas serão removidos deste exame.");
