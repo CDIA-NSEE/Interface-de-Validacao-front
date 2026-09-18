@@ -1190,7 +1190,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("não mostra o texto original em diagnósticos adicionados pelo médico", () => {
+  it("mostra o texto original também no adicionado pelo médico, sob o título e antes de Remover diagnóstico", () => {
     render(
       <DiagnosisPanelHarness
         {...createProps({ options: [] })}
@@ -1203,11 +1203,23 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
+    // Fechado: só o cartão do dia tem a linha.
+    expect(screen.getAllByText("Original:")).toHaveLength(1);
+
+    const trigger = screen.getByRole("button", { name: /Fibrilação atrial/ });
+    fireEvent.click(trigger);
+
     const originalLabels = screen.getAllByText("Original:");
-    expect(originalLabels).toHaveLength(1);
-    expect(originalLabels[0].parentElement).toHaveTextContent("Original: Ritmo sinusal");
-    expect(screen.queryByText(/Original: Fibrilação atrial/)).not.toBeInTheDocument();
+    expect(originalLabels).toHaveLength(2);
+    const original = originalLabels[1].parentElement;
+    expect(original).toHaveTextContent("Original: Fibrilação atrial");
+    expect(original.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
+    expect(original.closest('[data-slot="accordion-trigger"]')).toBeNull();
+    expect(trigger).not.toHaveAccessibleName(/Original/);
+    // Ordem: título → Original → Remover diagnóstico (a única ação do adicionado, na mesma barra).
+    const removeButton = screen.getByRole("button", { name: "Remover diagnóstico" });
+    expect(trigger.compareDocumentPosition(original)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(original.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("mostra o texto original do adicional aberto sob o título, antes das decisões, mesmo quando igual a ele", () => {

@@ -234,13 +234,14 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
 }
 
 // "Original: …" — o texto do laudo antes da padronização, logo sob o título em todos os layouts (mesmo quando igual
-// a ele: o médico vê o que o laudo dizia sem precisar comparar). Só nos originais; o adicionado pelo médico não tem
-// texto de origem. No diário/plain é o primeiro filho de DiagnosisDetails; nos adicionais fica na barra fixa do item.
+// a ele: o médico vê o que o laudo dizia sem precisar comparar). Em todo item com texto: no adicionado pelo médico é o
+// nome escolhido (já padronizado), igual ao título — a linha existe pela paridade com os originais da lista.
+// No diário/plain é o primeiro filho de DiagnosisDetails; nos adicionais fica na barra fixa do item.
 function DiagnosisOriginalText({ className, diagnosis, layout }) {
   const styles = DETAILS_STYLES[layout];
   const originalText = diagnosis.original_text || diagnosis.name;
 
-  if (diagnosis.source !== "original" || !originalText) return null;
+  if (!originalText) return null;
 
   const originalPreview = getOriginalTextPreview(originalText);
   // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
@@ -1025,7 +1026,7 @@ export default function DiagnosisPanel({
                         return (
                           // Item aberto: fundo muted/40 no item e opaco equivalente na barra fixa (abaixo).
                           <AccordionItem className="px-3 data-open:bg-muted/40" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
-                            {/* Barra fixa do item: título + "Original:" (nos originais) + linha de ações do diagnóstico inteiro (Concordo |
+                            {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o
                                 mesmo lugar para os dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3
                                 linhas). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha só existem no item aberto
@@ -1042,10 +1043,10 @@ export default function DiagnosisPanel({
                             >
                               <AccordionTrigger className={cn(
                                 "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
-                                // Com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: a folga do título centralizado
+                                // Aberto, com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: a folga do título centralizado
                                 // (min-h-8) completa os 10px do cartão do dia sem a linha invadir a caixa do gatilho — hover, anel de área e
                                 // "marcando área" terminam exatamente onde a linha começa. O título não se move (padding superior segue 8px).
-                                isOpen && diagnosis.source === "original" && "pb-1",
+                                isOpen && "pb-1",
                                 hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                                 selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                                 // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
