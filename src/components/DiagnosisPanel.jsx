@@ -233,6 +233,48 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
   );
 }
 
+// "Original: …" — o texto do laudo antes da padronização, logo sob o título em todos os layouts (mesmo quando igual
+// a ele: o médico vê o que o laudo dizia sem precisar comparar). Só nos originais; o adicionado pelo médico não tem
+// texto de origem. No diário/plain é o primeiro filho de DiagnosisDetails; nos adicionais fica na barra fixa do item.
+function DiagnosisOriginalText({ className, diagnosis, layout }) {
+  const styles = DETAILS_STYLES[layout];
+  const originalText = diagnosis.original_text || diagnosis.name;
+
+  if (diagnosis.source !== "original" || !originalText) return null;
+
+  const originalPreview = getOriginalTextPreview(originalText);
+  // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
+  const isOriginalTruncated = Array.from(originalText.replace(/\s+/g, " ").trim()).length > ORIGINAL_TEXT_PREVIEW_LIMIT;
+  const originalContent = (
+    <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
+      <span className={styles.originalLabel}>Original:</span>{" "}
+      <span className={styles.originalPreview}>{originalPreview}</span>
+    </span>
+  );
+
+  return (
+    <div className={cn("flex min-w-0 max-w-full", className)} data-slot="diagnosis-original-text">
+      {!isOriginalTruncated ? originalContent : (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                className={cn("h-auto w-fit max-w-full cursor-help justify-start truncate px-0 py-0 hover:bg-transparent hover:text-foreground", styles.originalTrigger)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              />
+            }
+          >
+            {originalContent}
+          </TooltipTrigger>
+          <TooltipContent>{originalText}</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
 // "Marcar área" (sem área marcada e sem área obrigatória pendente). Na linha única (diário/adicionais) segue a altura dos
 // toggles; na revalidação geral (plain) é ghost, abaixo da decisão. `data-diagnosis-action` permite devolver o foco a ele
 // quando a última área é removida — nos adicionais ele vive na barra fixa do item, fora de DiagnosisDetails.
@@ -360,16 +402,8 @@ function DiagnosisDetails({
   const isPlain = layout === "plain";
   const disagreementLabelId = useId();
   const status = getDiagnosisReviewStatus(diagnosis);
-  const standardText = diagnosis.standard_text || diagnosis.name;
-  const originalText = diagnosis.original_text || diagnosis.name;
   const regions = diagnosis.regions || [];
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
-  const originalPreview = getOriginalTextPreview(originalText);
-  // No adicional, "Original:" igual ao título (ignorando caixa/acentos) não ajuda a decisão e só ocupa uma linha.
-  const isOriginalRedundant = isAdditional && normalizeDiagnosisText(originalText) === normalizeDiagnosisText(standardText);
-  const shouldShowOriginal = diagnosis.source === "original" && Boolean(originalText) && !isOriginalRedundant;
-  // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
-  const isOriginalTruncated = Array.from(originalText.replace(/\s+/g, " ").trim()).length > ORIGINAL_TEXT_PREVIEW_LIMIT;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
   const isReviewDraftDirty = hasDirtyReviewDraft(diagnosis, reviewDraft);
@@ -407,31 +441,8 @@ function DiagnosisDetails({
     }, 0);
   }
 
-  const originalContent = shouldShowOriginal ? (
-    <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-      <span className={styles.originalLabel}>Original:</span>{" "}
-      <span className={styles.originalPreview}>{originalPreview}</span>
-    </span>
-  ) : null;
-  const originalLine = !originalContent ? null : !isOriginalTruncated ? (
-    <span className="flex min-w-0 max-w-full">{originalContent}</span>
-  ) : (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            className={cn("h-auto w-fit max-w-full cursor-help justify-start truncate px-0 py-0 hover:bg-transparent hover:text-foreground", styles.originalTrigger)}
-            size="sm"
-            type="button"
-            variant="ghost"
-          />
-        }
-      >
-        {originalContent}
-      </TooltipTrigger>
-      <TooltipContent>{originalText}</TooltipContent>
-    </Tooltip>
-  );
+  // Nos adicionais a linha "Original:" fica na barra fixa do item (DiagnosisPanel), sob o título.
+  const originalLine = !isAdditional ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
 
   const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
     <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
@@ -1014,12 +1025,12 @@ export default function DiagnosisPanel({
                         return (
                           // Item aberto: fundo muted/40 no item e opaco equivalente na barra fixa (abaixo).
                           <AccordionItem className="px-3 data-open:bg-muted/40" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
-                            {/* Barra fixa do item: título + linha de ações do diagnóstico inteiro (Concordo | Discordo nos originais,
-                                "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o mesmo lugar para os
-                                dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3 linhas). Irmã do
-                                painel (o overflow-hidden dele anularia o sticky); a linha só existe no item aberto (nada de gatilho oculto
-                                nos fechados). Fundo opaco = mesma mistura do item aberto, para as linhas de área rolarem por baixo sem
-                                vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador título+ações / conteúdo). */}
+                            {/* Barra fixa do item: título + "Original:" (nos originais) + linha de ações do diagnóstico inteiro (Concordo |
+                                Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o
+                                mesmo lugar para os dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3
+                                linhas). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha só existem no item aberto
+                                (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item aberto, para as linhas de área rolarem
+                                por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador título+ações / conteúdo). */}
                             <div
                               className={cn(
                                 "sticky top-0 z-10 -mx-3 bg-card",
@@ -1031,6 +1042,10 @@ export default function DiagnosisPanel({
                             >
                               <AccordionTrigger className={cn(
                                 "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                // Com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: a folga do título centralizado
+                                // (min-h-8) completa os 10px do cartão do dia sem a linha invadir a caixa do gatilho — hover, anel de área e
+                                // "marcando área" terminam exatamente onde a linha começa. O título não se move (padding superior segue 8px).
+                                isOpen && diagnosis.source === "original" && "pb-1",
                                 hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                                 selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                                 // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
@@ -1043,24 +1058,32 @@ export default function DiagnosisPanel({
                                 </span>
                               </AccordionTrigger>
                               {isOpen ? (
-                                // Divisória sob o título (gatilho clicável, com hover) e respiro igual (12px) da linha para as duas divisórias:
-                                // sem isso o título em negrito encostava na caixa dos toggles enquanto sobrava ar abaixo. Todos os controles da
-                                // linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o slot, então a barra tem a mesma altura nos dois tipos.
-                                <div className={cn("border-t px-3 py-3", ENTER_ANIMATION_CLASS)}>
-                                <DiagnosisActionRow
-                                  className="min-h-10"
-                                  diagnosis={diagnosis}
-                                  isBusy={isBusy}
-                                  isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
-                                  layout="additional"
-                                  onReview={onReview}
-                                  onReviewDraftChange={handlePanelReviewDraftChange}
-                                  onReviewInteractionBlocked={onReviewInteractionBlocked}
-                                  onStartRegion={handlePanelStartRegion}
-                                  reviewDraft={reviewDrafts[diagnosisId]}
-                                  showMarkArea={!hasRegions && !diagnosis.region_required_missing}
-                                  trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
-                                />
+                                <div className={ENTER_ANIMATION_CLASS}>
+                                  {/* Sob o título, como no Diagnóstico do dia (título → Original → decisão). Fora do gatilho: não entra no nome
+                                      acessível do item e o botão do tooltip (texto longo) não fica aninhado em outro botão. Sem margem negativa:
+                                      a caixa começa onde a do gatilho termina (o pb-1 dele fecha os 10px acima), senão o hover do gatilho cobria
+                                      o topo do texto; pb-2.5 repete os 10px abaixo, antes da divisória. */}
+                                  <DiagnosisOriginalText className="px-3 pb-2.5" diagnosis={diagnosis} layout="additional" />
+                                  {/* Divisória entre o bloco título (gatilho clicável, com hover) + Original e a linha de ações, com respiro igual
+                                      (12px) da linha para as duas divisórias: sem isso o título em negrito encostava na caixa dos toggles enquanto
+                                      sobrava ar abaixo. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
+                                      slot, então a barra tem a mesma altura nos dois tipos. */}
+                                  <div className="border-t px-3 py-3">
+                                  <DiagnosisActionRow
+                                    className="min-h-10"
+                                    diagnosis={diagnosis}
+                                    isBusy={isBusy}
+                                    isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
+                                    layout="additional"
+                                    onReview={onReview}
+                                    onReviewDraftChange={handlePanelReviewDraftChange}
+                                    onReviewInteractionBlocked={onReviewInteractionBlocked}
+                                    onStartRegion={handlePanelStartRegion}
+                                    reviewDraft={reviewDrafts[diagnosisId]}
+                                    showMarkArea={!hasRegions && !diagnosis.region_required_missing}
+                                    trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
+                                  />
+                                  </div>
                                 </div>
                               ) : null}
                             </div>

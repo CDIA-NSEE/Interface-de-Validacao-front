@@ -1209,4 +1209,76 @@ describe("DiagnosisPanel", () => {
     expect(originalLabels[0].parentElement).toHaveTextContent("Original: Ritmo sinusal");
     expect(screen.queryByText(/Original: Fibrilação atrial/)).not.toBeInTheDocument();
   });
+
+  it("mostra o texto original do adicional aberto sob o título, antes das decisões, mesmo quando igual a ele", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal"), originalDiagnosis(2, "Bloqueio de ramo direito")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    // Fechado: só o cartão do dia tem a linha (nada de texto extra na lista).
+    expect(screen.getAllByText("Original:")).toHaveLength(1);
+
+    const trigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    fireEvent.click(trigger);
+
+    const originalLabels = screen.getAllByText("Original:");
+    expect(originalLabels).toHaveLength(2);
+    const original = originalLabels[1].parentElement;
+    expect(original).toHaveTextContent("Original: Bloqueio de ramo direito");
+    expect(original).toBeVisible();
+    // Na barra fixa (rola junto com o título), mas fora do gatilho: o nome acessível do item não muda.
+    expect(original.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
+    expect(original.closest('[data-slot="accordion-trigger"]')).toBeNull();
+    expect(trigger).not.toHaveAccessibleName(/Original/);
+    // Ordem: título → Original → Concordo | Discordo.
+    const decisions = screen.getByRole("group", { name: "Revisão de Bloqueio de ramo direito" });
+    expect(trigger.compareDocumentPosition(original)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(original.compareDocumentPosition(decisions)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("mostra o texto original do adicional quando ele difere do título só na caixa", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Sobrecarga ventricular esquerda", { original_text: "SOBRECARGA VENTRICULAR ESQUERDA" }),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Sobrecarga ventricular esquerda/ }));
+    const original = screen.getByText("SOBRECARGA VENTRICULAR ESQUERDA");
+    expect(original.parentElement).toHaveTextContent("Original: SOBRECARGA VENTRICULAR ESQUERDA");
+    expect(original.closest("button")).toBeNull();
+  });
+
+  it("mantém o tooltip do texto original truncado no adicional, dentro da barra fixa", () => {
+    const longText = "ALTERAÇÃO DA REPOLARIZAÇÃO VENTRICULAR EM PAREDE ANTERIOR, PRINCIPALMENTE EM V4 E V5, COM ONDA T INVERTIDA";
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Onda T invertida parede inferior", { is_grouped: true, original_text: longText }),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Onda T invertida parede inferior/ }));
+    const original = screen.getByRole("button", { name: /^Original: ALTERAÇÃO DA REPOLARIZAÇÃO/ });
+    expect(original).toHaveTextContent("…");
+    expect(original).not.toHaveTextContent(longText);
+    expect(original.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
+    expect(original.closest('[data-slot="accordion-trigger"]')).toBeNull();
+  });
 });
