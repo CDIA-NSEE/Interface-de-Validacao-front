@@ -605,8 +605,9 @@ function DiagnosisDetails({
 }
 
 // Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ocupa o fim da linha de ações
-// (`ml-auto`), no lugar em que os originais têm a decisão. Ghost como as lixeiras das áreas, mas com rótulo e tinta
-// destrutiva só no hover/foco: é a ação do diagnóstico inteiro, rara e destrutiva — não deve pesar como Concordo/Discordo.
+// (`ml-auto`), no lugar em que os originais têm a decisão, com a mesma altura dos toggles (h-10) para a linha ter o mesmo
+// respiro nos dois tipos. Ghost como as lixeiras das áreas, mas com rótulo e tinta destrutiva só no hover/foco: é a ação
+// do diagnóstico inteiro, rara e destrutiva — ganha alvo, não o peso de Concordo/Discordo.
 function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
   const standardText = diagnosis.standard_text || diagnosis.name;
   const regionCount = diagnosis.regions?.length ?? 0;
@@ -615,7 +616,7 @@ function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
 
   return (
     <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
-      <AlertDialogTrigger render={<Button className="ml-auto shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="sm" type="button" variant="ghost" />}>
+      <AlertDialogTrigger render={<Button className="ml-auto h-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="lg" type="button" variant="ghost" />}>
         <Trash2 aria-hidden="true" data-icon="inline-start" />
         Remover diagnóstico
       </AlertDialogTrigger>
@@ -1042,8 +1043,12 @@ export default function DiagnosisPanel({
                                 </span>
                               </AccordionTrigger>
                               {isOpen ? (
+                                // Divisória sob o título (gatilho clicável, com hover) e respiro igual (12px) da linha para as duas divisórias:
+                                // sem isso o título em negrito encostava na caixa dos toggles enquanto sobrava ar abaixo. Todos os controles da
+                                // linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o slot, então a barra tem a mesma altura nos dois tipos.
+                                <div className={cn("border-t px-3 py-3", ENTER_ANIMATION_CLASS)}>
                                 <DiagnosisActionRow
-                                  className={cn("px-3 pb-2", ENTER_ANIMATION_CLASS)}
+                                  className="min-h-10"
                                   diagnosis={diagnosis}
                                   isBusy={isBusy}
                                   isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
@@ -1056,6 +1061,7 @@ export default function DiagnosisPanel({
                                   showMarkArea={!hasRegions && !diagnosis.region_required_missing}
                                   trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
                                 />
+                                </div>
                               ) : null}
                             </div>
                             {/* Sem badges nem detalhes (ex.: adicionado recém-criado — tudo está na barra), o painel não deixa uma faixa vazia. */}
