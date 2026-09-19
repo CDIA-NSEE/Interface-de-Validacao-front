@@ -690,7 +690,9 @@ function DiagnosisCard({
           isPrimaryDaily ? "grid-cols-[auto_minmax(0,1fr)] items-start group-data-[size=sm]/card:text-base" : "grid-cols-[auto_minmax(0,1fr)_auto] items-center",
         )}>
           {diagnosisReference ? <Badge className={cn("rounded-md", isPrimaryDaily && "mt-0.5")} variant="outline">{diagnosisReference}</Badge> : null}
-          <span className={cn("min-w-0 break-words", isPrimaryDaily ? "font-semibold" : "line-clamp-2")} title={standardText}>{standardText}</span>
+          {/* Sem clamp nem `title`: o rótulo padronizado aparece inteiro (é o que o médico compara com o Original) e um tooltip
+              nativo só repetiria o visível — e não chega a teclado, touch nem leitor de tela. */}
+          <span className={cn("min-w-0 break-words", isPrimaryDaily && "font-semibold")}>{standardText}</span>
           {!isPrimaryDaily ? <DiagnosisStatusBadge diagnosis={diagnosis} status={status} /> : null}
         </CardTitle>
         {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
@@ -1026,7 +1028,9 @@ export default function DiagnosisPanel({
                               )}>
                                 <span className="grid min-h-8 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
-                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none group-aria-expanded/accordion-trigger:font-semibold" title={standardText}>{standardText}</span>
+                                  {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
+                                      Aberto: sem clamp. Sem `title`: repetiria o visível e o tooltip nativo cobria a linha "Original:" logo abaixo. */}
+                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none group-aria-expanded/accordion-trigger:font-semibold">{standardText}</span>
                                   <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                                 </span>
                               </AccordionTrigger>

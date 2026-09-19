@@ -621,9 +621,10 @@ describe("DiagnosisPanel", () => {
     expect(within(dailyPanel).queryByText("Um único diagnóstico obrigatório para esta validação.")).not.toBeInTheDocument();
     expect(within(dailyPanel).getByText("Diagnóstico do dia")).toBeVisible();
     expect(within(dailyPanel).getAllByTestId("diagnosis-card")).toHaveLength(1);
-    expect(
-      within(dailyPanel).getByTitle("Ritmo sinusal"),
-    ).toBeVisible();
+    // Título localizado pelo texto dentro do card-title (a linha "Original:" repete o mesmo texto); sem tooltip nativo redundante.
+    const dailyTitle = within(dailyPanel).getByText("Ritmo sinusal", { selector: '[data-slot="card-title"] span' });
+    expect(dailyTitle).toBeVisible();
+    expect(dailyTitle).not.toHaveAttribute("title");
     expect(within(dailyPanel).queryByRole("combobox")).not.toBeInTheDocument();
     const secondaryTitle = screen.getByText("Diagnósticos adicionais");
 
@@ -766,10 +767,10 @@ describe("DiagnosisPanel", () => {
     expect(within(generalPanel).getByText("Revise todos os diagnósticos originais deste exame.")).toBeVisible();
     expect(within(generalPanel).getAllByTestId("diagnosis-card")).toHaveLength(2);
     expect(
-      within(generalPanel).getByTitle("Ritmo sinusal"),
+      within(generalPanel).getByText("Ritmo sinusal", { selector: '[data-slot="card-title"] span' }),
     ).toBeVisible();
     expect(
-      within(generalPanel).getByTitle("Bloqueio de ramo direito"),
+      within(generalPanel).getByText("Bloqueio de ramo direito", { selector: '[data-slot="card-title"] span' }),
     ).toBeVisible();
   });
 
@@ -1251,6 +1252,8 @@ describe("DiagnosisPanel", () => {
     expect(original.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
     expect(original.closest('[data-slot="accordion-trigger"]')).toBeNull();
     expect(trigger).not.toHaveAccessibleName(/Original/);
+    // Título aberto aparece inteiro: sem tooltip nativo (`title`) repetindo o texto por cima da linha Original.
+    expect(within(trigger).getByText("Bloqueio de ramo direito")).not.toHaveAttribute("title");
     // Ordem: título → Original → Concordo | Discordo.
     const decisions = screen.getByRole("group", { name: "Revisão de Bloqueio de ramo direito" });
     expect(trigger.compareDocumentPosition(original)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
