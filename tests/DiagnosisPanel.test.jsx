@@ -574,7 +574,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    // Texto curto cabe inteiro: vira texto simples, sem botão/tooltip (nenhuma parada de Tab antes da decisão).
+    // Texto curto: texto simples, sem botão/tooltip (nenhuma parada de Tab antes da decisão) — como todo texto original.
     const original = screen.getByText("RITMO SINUSAL DO TRAÇADO ORIGINAL");
     expect(screen.getByText("Original:")).toBeVisible();
     expect(original).toBeVisible();
@@ -582,7 +582,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("button", { name: /Original:/ })).not.toBeInTheDocument();
   });
 
-  it("mantém o tooltip do texto original apenas quando ele é truncado", () => {
+  it("exibe o texto original longo por completo, sem truncar nem tooltip", () => {
     const longText = "RITMO SINUSAL COM ALTERAÇÕES INESPECÍFICAS DA REPOLARIZAÇÃO VENTRICULAR";
     render(
       <DiagnosisPanelHarness
@@ -593,9 +593,13 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    const original = screen.getByRole("button", { name: /^Original: RITMO SINUSAL/ });
-    expect(original).toHaveTextContent("…");
-    expect(original).not.toHaveTextContent(longText);
+    // Nada escondido: o texto que o médico compara com o título aparece inteiro, quebrando linha, e não é botão nem tooltip.
+    const original = screen.getByText(longText);
+    expect(original).toBeVisible();
+    expect(original.parentElement).toHaveTextContent(`Original: ${longText}`);
+    expect(original.parentElement).not.toHaveTextContent("…");
+    expect(original.closest("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Original:/ })).not.toBeInTheDocument();
   });
 
   it("encapsula um único diagnóstico do dia em Card estático, sem seletor de adição", () => {
@@ -1272,7 +1276,7 @@ describe("DiagnosisPanel", () => {
     expect(original.closest("button")).toBeNull();
   });
 
-  it("mantém o tooltip do texto original truncado no adicional, dentro da barra fixa", () => {
+  it("exibe o texto original longo por completo na barra fixa do adicional", () => {
     const longText = "ALTERAÇÃO DA REPOLARIZAÇÃO VENTRICULAR EM PAREDE ANTERIOR, PRINCIPALMENTE EM V4 E V5, COM ONDA T INVERTIDA";
     render(
       <DiagnosisPanelHarness
@@ -1286,11 +1290,16 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Onda T invertida parede inferior/ }));
-    const original = screen.getByRole("button", { name: /^Original: ALTERAÇÃO DA REPOLARIZAÇÃO/ });
-    expect(original).toHaveTextContent("…");
-    expect(original).not.toHaveTextContent(longText);
+    const trigger = screen.getByRole("button", { name: /Onda T invertida parede inferior/ });
+    fireEvent.click(trigger);
+    // O laudo diz "parede ANTERIOR" sob um título "parede inferior": a divergência precisa estar visível, não atrás de um corte.
+    const original = screen.getByText(longText);
+    expect(original).toBeVisible();
+    expect(original.parentElement).toHaveTextContent(`Original: ${longText}`);
+    expect(original.parentElement).not.toHaveTextContent("…");
+    expect(original.closest("button")).toBeNull();
     expect(original.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
     expect(original.closest('[data-slot="accordion-trigger"]')).toBeNull();
+    expect(trigger).not.toHaveAccessibleName(/Original/);
   });
 });

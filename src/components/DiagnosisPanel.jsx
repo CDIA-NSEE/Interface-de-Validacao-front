@@ -48,14 +48,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getDiagnosisReviewStatus, getDiagnosisVisualStatus } from "../utils/diagnosisRegionVisuals.js";
 import {
-  ORIGINAL_TEXT_PREVIEW_LIMIT,
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
-  getOriginalTextPreview,
   getRegionReference,
   normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
@@ -104,7 +101,6 @@ const REFINED_DETAILS_STYLES = {
   // "Adicionar área" marcando: a mesma tinta info do "Marcar área" ativo — um só visual para "marcando área", com ou sem área.
   addAreaButtonActive: "border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground",
   ...INLINE_DECISION_ROW_STYLES,
-  originalTrigger: "",
   originalLabel: "",
   originalPreview: "text-foreground/75",
   savedJustificationVariant: "default",
@@ -131,7 +127,6 @@ const DETAILS_STYLES = {
     markAreaButtonActive: "w-fit border-x-0 px-0",
     markAreaSize: "sm",
     markAreaVariant: "ghost",
-    originalTrigger: "",
     originalLabel: "",
     originalPreview: "",
     savedJustificationVariant: "default",
@@ -145,7 +140,6 @@ const DETAILS_STYLES = {
   daily: {
     ...REFINED_DETAILS_STYLES,
     areaCollapsible: "border-t pt-1.5",
-    originalTrigger: "active:translate-y-0 motion-reduce:transition-none",
     savedJustificationVariant: "default",
     editorVariant: "default",
     editorClass: ENTER_ANIMATION_CLASS,
@@ -233,45 +227,23 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
   );
 }
 
-// "Original: …" — o texto do laudo antes da padronização, logo sob o título em todos os layouts (mesmo quando igual
-// a ele: o médico vê o que o laudo dizia sem precisar comparar). Em todo item com texto: no adicionado pelo médico é o
-// nome escolhido (já padronizado), igual ao título — a linha existe pela paridade com os originais da lista.
-// No diário/plain é o primeiro filho de DiagnosisDetails; nos adicionais fica na barra fixa do item.
+// "Original: …" — o texto do laudo antes da padronização, completo e quebrando linha como o título. Nada fica escondido:
+// é o que o médico compara com o título para decidir (um corte esconderia justamente a palavra divergente, ex.: "parede
+// ANTERIOR" sob um título "parede inferior"), e hover/tooltip não é descobrível nem funciona em touch/leitor de tela.
+// Logo sob o título em todos os layouts (mesmo quando igual a ele: o médico vê o que o laudo dizia sem precisar
+// comparar). Em todo item com texto: no adicionado pelo médico é o nome escolhido (já padronizado), igual ao título — a
+// linha existe pela paridade com os originais da lista. No diário/plain é o primeiro filho de DiagnosisDetails; nos
+// adicionais fica na barra fixa do item (1–2 linhas nos textos reais, máx. 106 caracteres). Texto simples, sem parada de Tab.
 function DiagnosisOriginalText({ className, diagnosis, layout }) {
   const styles = DETAILS_STYLES[layout];
   const originalText = diagnosis.original_text || diagnosis.name;
 
   if (!originalText) return null;
 
-  const originalPreview = getOriginalTextPreview(originalText);
-  // Só vira botão com tooltip quando o preview realmente esconde parte do texto; caso contrário é texto simples (sem parada de Tab).
-  const isOriginalTruncated = Array.from(originalText.replace(/\s+/g, " ").trim()).length > ORIGINAL_TEXT_PREVIEW_LIMIT;
-  const originalContent = (
-    <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-      <span className={styles.originalLabel}>Original:</span>{" "}
-      <span className={styles.originalPreview}>{originalPreview}</span>
-    </span>
-  );
-
   return (
-    <div className={cn("flex min-w-0 max-w-full", className)} data-slot="diagnosis-original-text">
-      {!isOriginalTruncated ? originalContent : (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                className={cn("h-auto w-fit max-w-full cursor-help justify-start truncate px-0 py-0 hover:bg-transparent hover:text-foreground", styles.originalTrigger)}
-                size="sm"
-                type="button"
-                variant="ghost"
-              />
-            }
-          >
-            {originalContent}
-          </TooltipTrigger>
-          <TooltipContent>{originalText}</TooltipContent>
-        </Tooltip>
-      )}
+    <div className={cn("min-w-0 max-w-full break-words text-xs font-normal text-muted-foreground", className)} data-slot="diagnosis-original-text">
+      <span className={styles.originalLabel}>Original:</span>{" "}
+      <span className={styles.originalPreview}>{originalText}</span>
     </div>
   );
 }
@@ -1029,7 +1001,7 @@ export default function DiagnosisPanel({
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o
                                 mesmo lugar para os dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3
-                                linhas). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha só existem no item aberto
+                                linhas) nem da do Original (1–2). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha só existem no item aberto
                                 (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item aberto, para as linhas de área rolarem
                                 por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador título+ações / conteúdo). */}
                             <div
@@ -1061,9 +1033,9 @@ export default function DiagnosisPanel({
                               {isOpen ? (
                                 <div className={ENTER_ANIMATION_CLASS}>
                                   {/* Sob o título, como no Diagnóstico do dia (título → Original → decisão). Fora do gatilho: não entra no nome
-                                      acessível do item e o botão do tooltip (texto longo) não fica aninhado em outro botão. Sem margem negativa:
-                                      a caixa começa onde a do gatilho termina (o pb-1 dele fecha os 10px acima), senão o hover do gatilho cobria
-                                      o topo do texto; pb-2.5 repete os 10px abaixo, antes da divisória. */}
+                                      acessível do item nem na área de hover/clique dele. Sem margem negativa: a caixa começa onde a do gatilho
+                                      termina (o pb-1 dele fecha os 10px acima), senão o hover do gatilho cobria o topo do texto; pb-2.5 repete
+                                      os 10px abaixo, antes da divisória. */}
                                   <DiagnosisOriginalText className="px-3 pb-2.5" diagnosis={diagnosis} layout="additional" />
                                   {/* Divisória entre o bloco título (gatilho clicável, com hover) + Original e a linha de ações, com respiro igual
                                       (12px) da linha para as duas divisórias: sem isso o título em negrito encostava na caixa dos toggles enquanto
