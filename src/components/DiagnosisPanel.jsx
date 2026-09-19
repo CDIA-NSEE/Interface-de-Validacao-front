@@ -1017,16 +1017,19 @@ export default function DiagnosisPanel({
                             >
                               <AccordionTrigger className={cn(
                                 "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
-                                // Aberto, com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: a folga do título centralizado
-                                // (min-h-8) completa os 10px do cartão do dia sem a linha invadir a caixa do gatilho — hover, anel de área e
-                                // "marcando área" terminam exatamente onde a linha começa. O título não se move (padding superior segue 8px).
+                                // Aberto, com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: com o py-1.5 do bloco do
+                                // título (abaixo) fecha os mesmos 10px do cartão do dia sem a linha invadir a caixa do gatilho — hover, anel de
+                                // área e "marcando área" terminam exatamente onde a linha começa. O título não se move (padding superior segue 8px).
                                 isOpen && "pb-1",
                                 hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                                 selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                                 // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
                                 activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
                               )}>
-                                <span className="grid min-h-8 min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                                {/* py-1.5 em vez de min-h-8: o respiro do título é padding fixo (6px), não a folga da centralização — que
+                                    some quando o título quebra em 2–3 linhas e deixava a linha "Original:" a 4px dele. Com 1 linha a caixa
+                                    segue 32px (6+20+6) e a linha fechada, 48px; com mais linhas o item cresce 12px e ganha o mesmo respiro. */}
+                                <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
                                   {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
                                       Aberto: sem clamp. Sem `title`: repetiria o visível e o tooltip nativo cobria a linha "Original:" logo abaixo. */}
