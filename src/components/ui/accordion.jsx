@@ -1,7 +1,7 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 
 import { cn } from "@/lib/utils"
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+import { ChevronDownIcon } from "lucide-react"
 
 function Accordion({
   className,
@@ -46,10 +46,9 @@ function AccordionTrigger({
           aria-hidden="true"
           data-slot="accordion-trigger-indicator"
           className="ml-auto flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
+          {/* Um único chevron que gira (em vez de trocar ▾/▴): a mesma receita dos demais disclosures da aplicação. */}
           <ChevronDownIcon
-            className="pointer-events-none group-aria-expanded/accordion-trigger:hidden" />
-          <ChevronUpIcon
-            className="pointer-events-none hidden group-aria-expanded/accordion-trigger:block" />
+            className="pointer-events-none transition-transform duration-200 ease-out group-aria-expanded/accordion-trigger:rotate-180 motion-reduce:transition-none" />
         </span>
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>

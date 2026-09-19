@@ -87,11 +87,16 @@ const INLINE_DECISION_ROW_STYLES = {
 
 const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
 
+// Painel do Collapsible (Base UI) com altura e opacidade animadas na entrada e na saída — 200ms ease-out, como o painel
+// do acordeão. Usado pela lista de áreas e pelo bloco "Original + ações" da barra fixa do item adicional, para que tudo o
+// que se revela no cartão abra e feche com a mesma transição.
+const COLLAPSIBLE_PANEL_CLASS = "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none";
+
 // Estilos que variam por layout de DiagnosisDetails. "plain" é a revalidação geral,
 // "additional" o acordeão de diagnósticos adicionais e "daily" o cartão do diagnóstico do dia.
 const REFINED_DETAILS_STYLES = {
   areaCollapsible: "",
-  areaPanel: "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none",
+  areaPanel: COLLAPSIBLE_PANEL_CLASS,
   areaRow: "border-input bg-background p-1.5 duration-150 motion-reduce:transition-none",
   areaRowHovered: "border-info/50 bg-info/5",
   areaRowSelected: "border-info/70 bg-info/10 ring-1 ring-inset ring-info/30",
@@ -806,18 +811,33 @@ export default function DiagnosisPanel({
   }, [isSecondaryOpen, onSecondaryToggle, secondaryDiagnosisIds]);
 
   const scrollDiagnosisIntoView = useCallback((diagnosisId) => {
-    const scrollTimer = window.setTimeout(() => {
+    let frame = 0;
+    // Teto de segurança para o acompanhamento (a transição da barra dura 200ms).
+    const deadline = performance.now() + 400;
+    const reveal = () => {
       const viewport = secondaryScrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
       // A barra (título + linha de ações): revelar só o gatilho podia deixar a linha cortada abaixo do viewport.
       const header = viewport?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="diagnosis-item-bar"]`);
       if (!header || !viewport) return;
       const bounds = viewport.getBoundingClientRect();
       const target = header.getBoundingClientRect();
+      // O bloco "Original + ações" da barra abre em transição de altura: mede pela altura final (com overflow-hidden,
+      // scrollHeight já é a do conteúdo enquanto o painel ainda está em 0; sem painel, 0).
+      const barPanel = header.querySelector('[data-slot="collapsible-content"]');
+      const pendingBarHeight = barPanel ? Math.max(0, barPanel.scrollHeight - barPanel.getBoundingClientRect().height) : 0;
+      const targetBottom = target.bottom + pendingBarHeight;
       // Reveal only a clipped header, without scrolling the surrounding panel or page.
       if (target.top < bounds.top) viewport.scrollTop += target.top - bounds.top;
-      else if (target.bottom > bounds.bottom) viewport.scrollTop += Math.min(target.top - bounds.top, target.bottom - bounds.bottom);
-    }, 0);
-    return () => window.clearTimeout(scrollTimer);
+      else if (targetBottom > bounds.bottom) viewport.scrollTop += Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
+      // Enquanto a barra cresce o viewport ainda não tem esse overflow (o scrollTop é limitado ao conteúdo atual), então
+      // o acompanhamento segue frame a frame até a transição terminar — a lista rola junto com a barra, sem salto no fim.
+      if (pendingBarHeight > 0.5 && performance.now() < deadline) frame = window.requestAnimationFrame(reveal);
+    };
+    const scrollTimer = window.setTimeout(reveal, 0);
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   function isInteractionBlocked(nextDiagnosisId = null) {
@@ -998,17 +1018,20 @@ export default function DiagnosisPanel({
                         const isOpen = openSecondaryDiagnosisKey === diagnosisId;
                         const hasRegions = Boolean(diagnosis.regions?.length);
                         return (
-                          // Item aberto: fundo muted/40 no item e opaco equivalente na barra fixa (abaixo).
-                          <AccordionItem className="px-3 data-open:bg-muted/40" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          // Item aberto: fundo muted/40 no item e opaco equivalente na barra fixa (abaixo). A tinta entra e sai em fade
+                          // (150ms) para acompanhar a transição de altura — nada troca de uma vez no clique.
+                          <AccordionItem className="px-3 transition-colors duration-150 data-open:bg-muted/40 motion-reduce:transition-none" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o
                                 mesmo lugar para os dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3
-                                linhas) nem da do Original (1–2). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha só existem no item aberto
-                                (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item aberto, para as linhas de área rolarem
-                                por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador título+ações / conteúdo). */}
+                                linhas) nem da do Original (1–2). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha vivem
+                                num Collapsible controlado pelo item: abrem e fecham com a mesma transição de altura do painel de baixo e
+                                desmontam ao fechar (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item aberto, para as
+                                linhas de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador
+                                título+ações / conteúdo). */}
                             <div
                               className={cn(
-                                "sticky top-0 z-10 -mx-3 bg-card",
+                                "sticky top-0 z-10 -mx-3 bg-card transition-colors duration-150 motion-reduce:transition-none",
                                 // O separador barra/conteúdo só existe quando o painel tem conteúdo (único filho vazio = só o DiagnosisDetails
                                 // sem nada a mostrar); do contrário encostaria na borda do item seguinte e viraria uma linha dupla.
                                 isOpen && "border-b bg-[color-mix(in_oklch,var(--muted)_40%,var(--card))] [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
@@ -1016,7 +1039,9 @@ export default function DiagnosisPanel({
                               data-slot="diagnosis-item-bar"
                             >
                               <AccordionTrigger className={cn(
-                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                // Além das cores, o padding inferior transiciona (ver `pb-1` abaixo): sem isso a barra dava um solavanco de 4px no
+                                // primeiro frame de abrir/fechar, antes de a altura do bloco "Original + ações" começar a animar.
+                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,border-color,padding-bottom] duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                                 // Aberto, com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: com o py-1.5 do bloco do
                                 // título (abaixo) fecha os mesmos 10px do cartão do dia sem a linha invadir a caixa do gatilho — hover, anel de
                                 // área e "marcando área" terminam exatamente onde a linha começa. O título não se move (padding superior segue 8px).
@@ -1032,22 +1057,27 @@ export default function DiagnosisPanel({
                                 <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
                                   {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
-                                      Aberto: sem clamp. Sem `title`: repetiria o visível e o tooltip nativo cobria a linha "Original:" logo abaixo. */}
-                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none group-aria-expanded/accordion-trigger:font-semibold">{standardText}</span>
+                                      Aberto: sem clamp, mesmo peso (o item aberto já se distingue pela tinta, pelo chevron e pelo que revela;
+                                      engrossar o texto refluía o título e "gritava" em CAIXA ALTA). Sem `title`: repetiria o visível e o
+                                      tooltip nativo cobria a linha "Original:" logo abaixo. */}
+                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
                                   <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                                 </span>
                               </AccordionTrigger>
-                              {isOpen ? (
-                                <div className={ENTER_ANIMATION_CLASS}>
+                              {/* Sempre montado (só o painel entra/sai) para a saída também animar: o Collapsible sem gatilho segue o item —
+                                  altura e opacidade em 200ms, sincronizadas com o painel de baixo, e o conteúdo desmonta ao terminar de fechar. */}
+                              <Collapsible open={isOpen}>
+                                <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
                                   {/* Sob o título, como no Diagnóstico do dia (título → Original → decisão). Fora do gatilho: não entra no nome
                                       acessível do item nem na área de hover/clique dele. Sem margem negativa: a caixa começa onde a do gatilho
                                       termina (o pb-1 dele fecha os 10px acima), senão o hover do gatilho cobria o topo do texto; pb-2.5 repete
                                       os 10px abaixo, antes da divisória. */}
                                   <DiagnosisOriginalText className="px-3 pb-2.5" diagnosis={diagnosis} layout="additional" />
                                   {/* Divisória entre o bloco título (gatilho clicável, com hover) + Original e a linha de ações, com respiro igual
-                                      (12px) da linha para as duas divisórias: sem isso o título em negrito encostava na caixa dos toggles enquanto
-                                      sobrava ar abaixo. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
-                                      slot, então a barra tem a mesma altura nos dois tipos. */}
+                                      (12px) da linha para as duas divisórias: sem isso o título encostava na caixa dos toggles enquanto sobrava
+                                      ar abaixo. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o slot,
+                                      então a barra tem a mesma altura nos dois tipos. O px-3 também guarda o anel de foco (3px) dos controles
+                                      do overflow-hidden do painel. */}
                                   <div className="border-t px-3 py-3">
                                   <DiagnosisActionRow
                                     className="min-h-10"
@@ -1064,8 +1094,8 @@ export default function DiagnosisPanel({
                                     trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
                                   />
                                   </div>
-                                </div>
-                              ) : null}
+                                </CollapsibleContent>
+                              </Collapsible>
                             </div>
                             {/* Sem badges nem detalhes (ex.: adicionado recém-criado — tudo está na barra), o painel não deixa uma faixa vazia. */}
                             <AccordionContent className="flex flex-col gap-3 pt-2 [&:has(>:empty:only-child)]:py-0">
