@@ -36,12 +36,14 @@ export default function UnsavedChangesModal({ isOpen, onDiscard, onStay }) {
           <X aria-hidden="true" />
         </AlertDialogCancel>
 
+        {/* Dispensar à esquerda, confirmar à direita — a mesma ordem de "Remover diagnóstico?" (Cancelar | Remover) e do
+            rodapé da página. O foco inicial segue no X (primeiro focável), então Enter nunca descarta por engano. */}
         <AlertDialogFooter>
+          <AlertDialogCancel>Continuar no ECG</AlertDialogCancel>
           <AlertDialogAction onClick={onDiscard} variant="destructive">
             <ArrowLeft data-icon="inline-start" aria-hidden="true" />
             Descartar e voltar
           </AlertDialogAction>
-          <AlertDialogCancel>Continuar no ECG</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -1,7 +1,6 @@
 import { Check, ChevronDown, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 
-import ValidationPanelIconLabel from "./ValidationPanelIconLabel.jsx";
 import {
   Accordion,
   AccordionContent,
@@ -66,24 +65,23 @@ const REVIEW_LABELS = {
 const AI_AGREEMENT_DESCRIPTION =
   "Sugestão informativa; a decisão permanece médica.";
 
-// Altura e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha (diário e adicionais).
+// Altura e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha (todos os layouts).
 // `disabled:opacity-100` evita o "apagão" da linha durante o salvamento; o pointer-events-none continua bloqueando duplo envio.
 const INLINE_DECISION_CONTROL_CLASS =
   "h-10 bg-card transition-colors duration-150 disabled:opacity-100 motion-reduce:transition-none dark:bg-card";
 
-// Linha única "Concordo | Discordo | Marcar área" (DiagnosisActionRow): o mesmo bloco no diagnóstico do dia e nos
-// adicionais, para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo nos dois cartões. Nos adicionais
-// a linha fica na barra fixa do item e, no adicionado pelo médico, "Remover diagnóstico" ocupa o lugar da decisão.
-// "Marcar área" é um slot fixo da linha: o mesmo botão, no mesmo lugar, com 0 ou N áreas e com área obrigatória
-// pendente — a gramática da linha (e a largura dos toggles) não muda depois da primeira área.
+// Linha única "Concordo | Discordo | Marcar área" (DiagnosisActionRow), a mesma no diagnóstico do dia, na revalidação
+// geral e nos adicionais, para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo em todos os cartões.
+// Nos adicionais a linha fica na barra fixa do item e, no adicionado pelo médico, "Remover diagnóstico" ocupa o slot
+// da decisão. Regra de posição da tela inteira: à esquerda a identidade/o veredito, à direita a ação — por isso
+// "Marcar área" fecha a linha (`ml-auto`), no mesmo x em qualquer tipo de diagnóstico, e é um slot fixo: o mesmo
+// botão, no mesmo lugar, com 0 ou N áreas e com área obrigatória pendente.
 const INLINE_DECISION_ROW_STYLES = {
   decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
-  markAreaButton: cn("shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
+  markAreaButton: cn("ml-auto shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
   // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
-  markAreaButtonActive: "h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
-  markAreaSize: "lg",
-  markAreaVariant: "outline",
+  markAreaButtonActive: "ml-auto h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
 };
 
 const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
@@ -104,7 +102,6 @@ const REFINED_DETAILS_STYLES = {
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
-  ...INLINE_DECISION_ROW_STYLES,
   originalLabel: "",
   originalPreview: "text-foreground/75",
   savedJustificationVariant: "default",
@@ -125,11 +122,6 @@ const DETAILS_STYLES = {
     areaSelectButton: "",
     areaReferenceBadge: "",
     areaActions: "",
-    decisionItem: "",
-    markAreaButton: "w-fit border-x-0 px-0",
-    markAreaButtonActive: "w-fit border-x-0 px-0",
-    markAreaSize: "sm",
-    markAreaVariant: "ghost",
     originalLabel: "",
     originalPreview: "",
     savedJustificationVariant: "default",
@@ -252,54 +244,45 @@ function DiagnosisOriginalText({ className, diagnosis, layout }) {
 }
 
 // "Marcar área": inicia a marcação de uma área nova em qualquer estado do diagnóstico (sem área, com N áreas, área
-// obrigatória pendente) — sempre o mesmo botão, no mesmo lugar, para o médico não precisar reencontrá-lo depois da
-// primeira área. Na linha única (diário/adicionais) segue a altura dos toggles; na revalidação geral (plain) é ghost,
-// logo abaixo da decisão. `data-diagnosis-action` permite devolver o foco a ele quando a última área é removida —
-// nos adicionais ele vive na barra fixa do item, fora de DiagnosisDetails.
-function MarkAreaButton({ diagnosis, isBusy, isRegionTarget, layout, onStartRegion }) {
-  const styles = DETAILS_STYLES[layout];
-  const isPlain = layout === "plain";
-
+// obrigatória pendente) — sempre o mesmo botão, no mesmo lugar (fim da linha de ações, em todos os layouts), para o
+// médico não precisar reencontrá-lo. Segue a altura dos toggles. `data-diagnosis-action` permite devolver o foco a
+// ele quando a última área é removida — nos adicionais ele vive na barra fixa do item, fora de DiagnosisDetails.
+function MarkAreaButton({ diagnosis, isBusy, isRegionTarget, onStartRegion }) {
   return (
     <Button
       aria-pressed={isRegionTarget}
-      className={isRegionTarget ? styles.markAreaButtonActive : styles.markAreaButton}
+      className={isRegionTarget ? INLINE_DECISION_ROW_STYLES.markAreaButtonActive : INLINE_DECISION_ROW_STYLES.markAreaButton}
       data-diagnosis-action="mark-area"
       disabled={isBusy}
       onClick={() => onStartRegion(diagnosis)}
-      size={styles.markAreaSize}
+      size="lg"
       type="button"
-      variant={isRegionTarget && isPlain ? "secondary" : styles.markAreaVariant}
+      variant="outline"
     >
-      {/* Na linha única o ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X. */}
-      {isPlain
-        ? <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
-        : <><MapPinned aria-hidden="true" data-icon="inline-start" />Marcar área</>}
+      {/* O ícone segue o tamanho/gap dos toggles (16px) para alinhar com Check/X. */}
+      <MapPinned aria-hidden="true" data-icon="inline-start" />
+      Marcar área
     </Button>
   );
 }
 
-// Linha de ações do diagnóstico inteiro, logo abaixo do título, com a mesma gramática em todos os layouts: o veredito
-// à esquerda (Concordo | Discordo nos originais; o adicionado pelo médico não tem decisão), "Marcar área" em seguida
-// (slot fixo: presente com qualquer quantidade de áreas) e, por último, `trailing` — o "Remover diagnóstico" dos
-// adicionados, encostado à direita (destrutivo e raro: fica longe da posição primária). No diário/plain a linha é
-// renderizada por DiagnosisDetails; nos adicionais, pela barra fixa do item (DiagnosisPanel), fora do painel rolável.
+// Linha de ações do diagnóstico inteiro, logo abaixo do título, com a mesma gramática em todos os layouts: à esquerda
+// o slot do veredito (Concordo | Discordo nos originais; `leading` — o "Remover diagnóstico" — no adicionado pelo
+// médico, que não tem decisão) e, fechando a linha à direita, "Marcar área" (slot fixo: presente com qualquer
+// quantidade de áreas, no mesmo x em todos os tipos). No diário/revalidação a linha é renderizada por
+// DiagnosisDetails; nos adicionais, pela barra fixa do item (DiagnosisPanel), fora do painel rolável.
 function DiagnosisActionRow({
   className,
   diagnosis,
   isBusy,
   isRegionTarget,
-  layout,
+  leading = null,
   onReview,
   onReviewDraftChange,
   onReviewInteractionBlocked,
   onStartRegion,
   reviewDraft,
-  trailing = null,
 }) {
-  const styles = DETAILS_STYLES[layout];
-  // Diário e adicionais compartilham a linha única "Concordo | Discordo | Marcar área" (mesma forma e mesmo lugar).
-  const usesInlineDecisionRow = layout !== "plain";
   const standardText = diagnosis.standard_text || diagnosis.name;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const visualStatus = getDiagnosisVisualStatus(diagnosis, isDisagreementOpen ? "rejected" : null);
@@ -330,23 +313,16 @@ function DiagnosisActionRow({
   }
 
   const decisionToggle = diagnosis.source !== "doctor_added" ? (
-    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size={usesInlineDecisionRow ? "lg" : undefined} spacing={usesInlineDecisionRow ? 2 : 1} value={decisionValue}>
-      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", styles.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+    <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size="lg" spacing={2} value={decisionValue}>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", INLINE_DECISION_ROW_STYLES.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", INLINE_DECISION_ROW_STYLES.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
     </ToggleGroup>
   ) : null;
-  // Na revalidação geral (plain) o "Marcar área" fica abaixo da decisão (DiagnosisDetails), não na linha.
-  const markAreaButton = usesInlineDecisionRow ? (
-    <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
-  ) : null;
-
-  if (!decisionToggle && !markAreaButton && !trailing) return null;
 
   return (
     <div className={cn("flex items-center gap-2", className)} data-slot="diagnosis-action-row">
-      {decisionToggle}
-      {markAreaButton}
-      {trailing}
+      {decisionToggle ?? leading}
+      <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} onStartRegion={onStartRegion} />
     </div>
   );
 }
@@ -489,20 +465,12 @@ function DiagnosisDetails({
 
   // Nos adicionais a linha de ações fica na barra fixa do item (DiagnosisPanel), fora do painel rolável.
   const actionRow = !isAdditional ? (
-    <DiagnosisActionRow diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onReview={onReview} onReviewDraftChange={onReviewDraftChange} onReviewInteractionBlocked={onReviewInteractionBlocked} onStartRegion={onStartRegion} reviewDraft={reviewDraft} />
+    <DiagnosisActionRow diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} onReview={onReview} onReviewDraftChange={onReviewDraftChange} onReviewInteractionBlocked={onReviewInteractionBlocked} onStartRegion={onStartRegion} reviewDraft={reviewDraft} />
   ) : null;
 
   return (
     <div className="flex flex-col gap-2" ref={rootRef}>
       {originalLine}
-
-      {isPlain && status === "rejected" && diagnosis.review_notes ? (
-        <Alert>
-          <AlertTitle>Justificativa registrada</AlertTitle>
-          <AlertDescription className="break-words">{diagnosis.review_notes}</AlertDescription>
-          <Button className="mt-2 w-fit" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar justificativa</Button>
-        </Alert>
-      ) : null}
 
       {actionRow}
 
@@ -510,12 +478,6 @@ function DiagnosisDetails({
         <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
           {decisionFeedback.message}
         </p>
-      ) : null}
-
-      {/* Na revalidação geral o "Marcar área" fica logo abaixo da decisão — sempre, com ou sem área; no diário e nos
-          adicionais ele divide a linha com ela. A lista de áreas vem em seguida, na mesma ordem em todos os layouts. */}
-      {isPlain ? (
-        <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
       ) : null}
 
       {regionListContent}
@@ -531,10 +493,21 @@ function DiagnosisDetails({
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
+      {/* Justificativa salva, na mesma posição em todos os layouts (depois da decisão e das áreas). Na revalidação geral
+          mostra o texto: título e ação na mesma linha, ação à direita (como "Justificativa adicionada … Editar"), texto abaixo. */}
+      {isPlain && status === "rejected" && diagnosis.review_notes ? (
+        <Alert className="grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
+          <AlertTitle className="min-w-0">Justificativa registrada</AlertTitle>
+          <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar justificativa</Button>
+          <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
+        </Alert>
+      ) : null}
+
       {savedJustificationContent}
 
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
-        <Button className={cn("w-fit", styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">
+        // À direita (`self-end`): o mesmo canto em que, depois de salvar, fica o "Editar" — a ação de justificar não muda de lado.
+        <Button className={cn("w-fit self-end", styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">
           {isPlain ? "Justificativa (opcional)" : <><Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa</>}
         </Button>
       ) : null}
@@ -549,16 +522,13 @@ function DiagnosisDetails({
               </div>
               <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
             </Field>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              {!isPlain ? (
+            {/* Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com
+                "Salvar" em cima, como o AlertDialogFooter. Na revalidação geral o par só aparece quando há algo a salvar. */}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {!isPlain || isReviewDraftDirty ? (
                 <>
+                  <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
                   <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
-                  <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
-                </>
-              ) : isReviewDraftDirty ? (
-                <>
-                  <Button disabled={isBusy} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
-                  <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
                 </>
               ) : null}
             </div>
@@ -569,10 +539,11 @@ function DiagnosisDetails({
   );
 }
 
-// Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ocupa o fim da linha de ações
-// (`ml-auto`), no lugar em que os originais têm a decisão, com a mesma altura dos toggles (h-10) para a linha ter o mesmo
-// respiro nos dois tipos. Ghost como as lixeiras das áreas, mas com rótulo e tinta destrutiva só no hover/foco: é a ação
-// do diagnóstico inteiro, rara e destrutiva — ganha alvo, não o peso de Concordo/Discordo.
+// Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ocupa o slot do veredito, à esquerda
+// da linha de ações — onde os originais têm Concordo/Discordo — com a mesma altura dos toggles (h-10) para a linha ter o
+// mesmo respiro nos dois tipos; "Marcar área" fecha a linha à direita, no mesmo x dos originais. Ghost como as lixeiras
+// das áreas, com rótulo e tinta destrutiva só no hover/foco, e confirmação em diálogo: é a ação do diagnóstico inteiro,
+// rara e destrutiva — ganha alvo, não o peso de Concordo/Discordo.
 function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
   const standardText = diagnosis.standard_text || diagnosis.name;
   const regionCount = diagnosis.regions?.length ?? 0;
@@ -581,7 +552,7 @@ function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
 
   return (
     <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
-      <AlertDialogTrigger render={<Button className="ml-auto h-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="lg" type="button" variant="ghost" />}>
+      <AlertDialogTrigger render={<Button className="h-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="lg" type="button" variant="ghost" />}>
         <Trash2 aria-hidden="true" data-icon="inline-start" />
         Remover diagnóstico
       </AlertDialogTrigger>
@@ -1059,13 +1030,12 @@ export default function DiagnosisPanel({
                                     diagnosis={diagnosis}
                                     isBusy={isBusy}
                                     isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
-                                    layout="additional"
+                                    leading={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
                                     onReview={onReview}
                                     onReviewDraftChange={handlePanelReviewDraftChange}
                                     onReviewInteractionBlocked={onReviewInteractionBlocked}
                                     onStartRegion={handlePanelStartRegion}
                                     reviewDraft={reviewDrafts[diagnosisId]}
-                                    trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
                                   />
                                   </div>
                                 </CollapsibleContent>

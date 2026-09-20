@@ -30,6 +30,11 @@ describe("ReviewActions", () => {
       expect(button.querySelector("svg")).toBeInTheDocument();
     });
     expect(actions).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
+    // Com três botões, no grid de duas colunas a primária ocupa a linha inteira (e volta a uma coluna nas três).
+    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toHaveClass(
+      "@min-[18rem]/actions:col-span-2",
+      "@min-[24rem]/actions:col-span-1",
+    );
 
     buttons.forEach((button) => fireEvent.click(button));
 
@@ -78,6 +83,8 @@ describe("ReviewActions", () => {
 
     expect(onBack).toHaveBeenCalledOnce();
     expect(onValidate).toHaveBeenCalledOnce();
+    // Com dois botões eles dividem a linha: a primária não ocupa as duas colunas.
+    expect(screen.getByRole("button", { name: "Validar exame" })).not.toHaveClass("@min-[18rem]/actions:col-span-2");
 
     rerender(
       <ReviewActions

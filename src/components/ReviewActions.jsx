@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 const ACTION_CLASS_NAME =
   "h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none";
 
+// Com três botões no grid de duas colunas (18–24rem, ex.: a gaveta compacta) a primária sobrava sozinha no canto inferior
+// esquerdo com metade da largura; ocupando a linha inteira ela fica onde a ação principal sempre está: por último, larga.
+const PRIMARY_SLOT_CLASS_NAME = "@min-[18rem]/actions:col-span-2 @min-[24rem]/actions:col-span-1";
+
 export default function ReviewActions({
   canValidate = true,
   isBusy,
@@ -19,9 +23,10 @@ export default function ReviewActions({
   saveLabel = "Salvar",
   primaryLabel = "Validar",
 }) {
+  const primarySlotClassName = onSave ? PRIMARY_SLOT_CLASS_NAME : undefined;
   const primaryButton = (
     <Button
-      className={ACTION_CLASS_NAME}
+      className={cn(ACTION_CLASS_NAME, primarySlotClassName)}
       disabled={isBusy || isValid || !canValidate}
       onClick={onValidate}
       type="button"
@@ -71,7 +76,7 @@ export default function ReviewActions({
               render={
                 <span
                   aria-label={`${primaryLabel} indisponível: ${primaryDisabledReason}`}
-                  className="block w-full rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className={cn("block w-full rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50", primarySlotClassName)}
                   tabIndex={0}
                 />
               }

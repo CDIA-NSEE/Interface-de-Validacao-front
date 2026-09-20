@@ -534,10 +534,11 @@ describe("DiagnosisPanel", () => {
     const markAreaButton = within(doctorAddedItem).getByRole("button", { name: "Marcar área" });
     const lastAreaRemoveButton = screen.getByRole("button", { name: "Remover Área 3" });
 
-    // Ordem de leitura: as ações do diagnóstico inteiro vêm na barra fixa (logo após o título, onde os originais têm a
-    // decisão) — "Marcar área" no mesmo slot de quando não havia área e o Remover no fim da linha — e só depois a gestão
-    // das áreas (editar/remover área), que rola por baixo da barra.
-    expect(markAreaButton.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // Ordem de leitura: as ações do diagnóstico inteiro vêm na barra fixa (logo após o título) — o Remover no slot do
+    // veredito, à esquerda, onde os originais têm Concordo/Discordo, e "Marcar área" fechando a linha à direita, no mesmo
+    // lugar dos originais — e só depois a gestão das áreas (editar/remover área), que rola por baixo da barra.
+    expect(removeButton.compareDocumentPosition(markAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(markAreaButton.parentElement.lastElementChild).toBe(markAreaButton);
     expect(removeButton.compareDocumentPosition(lastAreaRemoveButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(removeButton.closest('[data-slot="accordion-content"]')).toBeNull();
     expect(removeButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
@@ -1060,7 +1061,7 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
   });
 
-  it("na revalidação geral mantém Marcar área logo após a decisão e antes da lista de áreas", () => {
+  it("na revalidação geral usa a mesma linha Concordo | Discordo | Marcar área do diário, antes da lista de áreas", () => {
     render(
       <DiagnosisPanelHarness
         {...createProps({ options: [] })}
@@ -1068,21 +1069,33 @@ describe("DiagnosisPanel", () => {
           originalDiagnosis(1, "Ritmo sinusal"),
           originalDiagnosis(2, "Bloqueio de ramo direito", { regions: [{ id: 9, x: 10, y: 10, width: 20, height: 20 }] }),
           originalDiagnosis(3, "Sobrecarga atrial esquerda", { region_required_missing: true }),
+          originalDiagnosis(4, "Extrassístoles ventriculares", { review_status: "rejected", review_notes: "Artefato de movimento." }),
         ]}
         isGeneralReviewDay
       />,
     );
 
     const cards = screen.getAllByTestId("diagnosis-card");
-    ["Ritmo sinusal", "Bloqueio de ramo direito", "Sobrecarga atrial esquerda"].forEach((title, index) => {
+    ["Ritmo sinusal", "Bloqueio de ramo direito", "Sobrecarga atrial esquerda", "Extrassístoles ventriculares"].forEach((title, index) => {
       const decisions = within(cards[index]).getByRole("group", { name: `Revisão de ${title}` });
       const markAreaButton = within(cards[index]).getByRole("button", { name: "Marcar área" });
-      expect(decisions.compareDocumentPosition(markAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      // Mesma linha de ações dos outros layouts: decisão à esquerda, "Marcar área" fechando a linha à direita.
+      const row = markAreaButton.closest('[data-slot="diagnosis-action-row"]');
+      expect(row).not.toBeNull();
+      expect(row).toContainElement(decisions);
+      expect(row.lastElementChild).toBe(markAreaButton);
+      expect(markAreaButton).toHaveClass("h-10", "ml-auto");
     });
     const areas = within(cards[1]).getByRole("button", { name: "1 área marcada" });
     expect(within(cards[1]).getByRole("button", { name: "Marcar área" }).compareDocumentPosition(areas)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(within(cards[2]).getByText("Área obrigatória no ECG")).toBeVisible();
     expect(within(within(cards[2]).getByText("Área obrigatória no ECG").closest('[data-slot="alert"]')).queryByRole("button")).not.toBeInTheDocument();
+    // Justificativa salva: título e "Editar justificativa" na mesma caixa, texto abaixo.
+    const savedAlert = within(cards[3]).getByText("Justificativa registrada").closest('[data-slot="alert"]');
+    expect(within(savedAlert).getByText("Artefato de movimento.")).toBeVisible();
+    const editButton = within(savedAlert).getByRole("button", { name: "Editar justificativa" });
+    expect(within(cards[3]).getByText("Justificativa registrada").compareDocumentPosition(editButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(editButton.compareDocumentPosition(within(savedAlert).getByText("Artefato de movimento."))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("edita a justificativa diária em painel neutro e sem mensagem duplicada", () => {
@@ -1097,15 +1110,22 @@ describe("DiagnosisPanel", () => {
     );
 
     expect(screen.queryByText("Discordância em edição")).not.toBeInTheDocument();
+    // A ação de justificar fica à direita, no canto em que depois aparece o "Editar".
+    expect(screen.getByRole("button", { name: "Adicionar justificativa" })).toHaveClass("self-end");
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
     const editor = screen.getByRole("group", { name: /Justificativa/ });
     const textarea = within(editor).getByLabelText("Justificativa Opcional");
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
+    const cancel = within(editor).getByRole("button", { name: "Cancelar" });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância, se necessário");
     expect(save).toBeDisabled();
-    expect(within(editor).getByRole("button", { name: "Cancelar" })).toBeVisible();
+    expect(cancel).toBeVisible();
+    // Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé.
+    expect(cancel.compareDocumentPosition(save)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(save.parentElement).toHaveClass("sm:justify-end");
+    expect(save.parentElement.lastElementChild).toBe(save);
 
     fireEvent.change(textarea, { target: { value: "Traçado incompatível" } });
     expect(save).toBeEnabled();

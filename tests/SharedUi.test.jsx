@@ -65,7 +65,12 @@ describe("shared overlays", () => {
     );
 
     expect(screen.getByRole("alertdialog", { name: "Sair sem salvar?" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continuar no ECG" }));
+    // Dispensar à esquerda, confirmar (destrutiva) à direita — a mesma ordem de "Remover diagnóstico?".
+    const stayButton = screen.getByRole("button", { name: "Continuar no ECG" });
+    const discardButton = screen.getByRole("button", { name: "Descartar e voltar" });
+    expect(stayButton.compareDocumentPosition(discardButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(stayButton.parentElement).toBe(discardButton.parentElement);
+    await user.click(stayButton);
     expect(onStay).toHaveBeenCalledOnce();
     expect(onDiscard).not.toHaveBeenCalled();
   });
