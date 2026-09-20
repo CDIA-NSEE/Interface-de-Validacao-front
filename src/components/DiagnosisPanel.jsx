@@ -45,7 +45,6 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { InputGroupAddon } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -75,6 +74,8 @@ const INLINE_DECISION_CONTROL_CLASS =
 // Linha única "Concordo | Discordo | Marcar área" (DiagnosisActionRow): o mesmo bloco no diagnóstico do dia e nos
 // adicionais, para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo nos dois cartões. Nos adicionais
 // a linha fica na barra fixa do item e, no adicionado pelo médico, "Remover diagnóstico" ocupa o lugar da decisão.
+// "Marcar área" é um slot fixo da linha: o mesmo botão, no mesmo lugar, com 0 ou N áreas e com área obrigatória
+// pendente — a gramática da linha (e a largura dos toggles) não muda depois da primeira área.
 const INLINE_DECISION_ROW_STYLES = {
   decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
@@ -103,8 +104,6 @@ const REFINED_DETAILS_STYLES = {
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
-  // "Adicionar área" marcando: a mesma tinta info do "Marcar área" ativo — um só visual para "marcando área", com ou sem área.
-  addAreaButtonActive: "border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground",
   ...INLINE_DECISION_ROW_STYLES,
   originalLabel: "",
   originalPreview: "text-foreground/75",
@@ -126,7 +125,6 @@ const DETAILS_STYLES = {
     areaSelectButton: "",
     areaReferenceBadge: "",
     areaActions: "",
-    addAreaButtonActive: "",
     decisionItem: "",
     markAreaButton: "w-fit border-x-0 px-0",
     markAreaButtonActive: "w-fit border-x-0 px-0",
@@ -253,9 +251,11 @@ function DiagnosisOriginalText({ className, diagnosis, layout }) {
   );
 }
 
-// "Marcar área" (sem área marcada e sem área obrigatória pendente). Na linha única (diário/adicionais) segue a altura dos
-// toggles; na revalidação geral (plain) é ghost, abaixo da decisão. `data-diagnosis-action` permite devolver o foco a ele
-// quando a última área é removida — nos adicionais ele vive na barra fixa do item, fora de DiagnosisDetails.
+// "Marcar área": inicia a marcação de uma área nova em qualquer estado do diagnóstico (sem área, com N áreas, área
+// obrigatória pendente) — sempre o mesmo botão, no mesmo lugar, para o médico não precisar reencontrá-lo depois da
+// primeira área. Na linha única (diário/adicionais) segue a altura dos toggles; na revalidação geral (plain) é ghost,
+// logo abaixo da decisão. `data-diagnosis-action` permite devolver o foco a ele quando a última área é removida —
+// nos adicionais ele vive na barra fixa do item, fora de DiagnosisDetails.
 function MarkAreaButton({ diagnosis, isBusy, isRegionTarget, layout, onStartRegion }) {
   const styles = DETAILS_STYLES[layout];
   const isPlain = layout === "plain";
@@ -280,10 +280,10 @@ function MarkAreaButton({ diagnosis, isBusy, isRegionTarget, layout, onStartRegi
 }
 
 // Linha de ações do diagnóstico inteiro, logo abaixo do título, com a mesma gramática em todos os layouts: o veredito
-// à esquerda (Concordo | Discordo nos originais; o adicionado pelo médico não tem decisão), "Marcar área" em seguida e,
-// por último, `trailing` — o "Remover diagnóstico" dos adicionados, encostado à direita (destrutivo e raro: fica longe
-// da posição primária). No diário/plain a linha é renderizada por DiagnosisDetails; nos adicionais, pela barra fixa do
-// item (DiagnosisPanel), fora do painel rolável.
+// à esquerda (Concordo | Discordo nos originais; o adicionado pelo médico não tem decisão), "Marcar área" em seguida
+// (slot fixo: presente com qualquer quantidade de áreas) e, por último, `trailing` — o "Remover diagnóstico" dos
+// adicionados, encostado à direita (destrutivo e raro: fica longe da posição primária). No diário/plain a linha é
+// renderizada por DiagnosisDetails; nos adicionais, pela barra fixa do item (DiagnosisPanel), fora do painel rolável.
 function DiagnosisActionRow({
   className,
   diagnosis,
@@ -295,7 +295,6 @@ function DiagnosisActionRow({
   onReviewInteractionBlocked,
   onStartRegion,
   reviewDraft,
-  showMarkArea = false,
   trailing = null,
 }) {
   const styles = DETAILS_STYLES[layout];
@@ -337,7 +336,7 @@ function DiagnosisActionRow({
     </ToggleGroup>
   ) : null;
   // Na revalidação geral (plain) o "Marcar área" fica abaixo da decisão (DiagnosisDetails), não na linha.
-  const markAreaButton = usesInlineDecisionRow && showMarkArea ? (
+  const markAreaButton = usesInlineDecisionRow ? (
     <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
   ) : null;
 
@@ -409,9 +408,9 @@ function DiagnosisDetails({
 
   async function handleRemoveRegionClick(region) {
     await onRemoveRegion(diagnosis.id, region.id);
-    // A linha desmonta com a área: foco no gatilho da lista ou, se era a última, no "Marcar área" que a substitui.
-    // O botão é procurado no DOM do diagnóstico porque, nos adicionais, ele fica na barra fixa do item (fora daqui).
-    // Em falha a linha permanece e o foco segue no botão, então nada muda.
+    // A linha desmonta com a área: foco no gatilho da lista ou, se era a última (a lista some junto), no "Marcar área",
+    // que segue no seu lugar na linha de ações. O botão é procurado no DOM do diagnóstico porque, nos adicionais, ele
+    // fica na barra fixa do item (fora daqui). Em falha a linha permanece e o foco segue no botão, então nada muda.
     window.setTimeout(() => {
       if (document.activeElement !== document.body) return;
       const markAreaButton = rootRef.current?.closest("[data-diagnosis-id]")?.querySelector('[data-diagnosis-action="mark-area"]');
@@ -431,12 +430,11 @@ function DiagnosisDetails({
 
   const regionListContent = regions.length ? (
     <Collapsible className={styles.areaCollapsible} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
-      {/* Gatilho e botão compartilham o mesmo state layer (hover da variante ghost) e a mesma altura (size sm);
-          a divisória é curta e centralizada, com respiro simétrico, para nenhum hover encostar nela. */}
-      <div className="flex items-center gap-1.5">
+      {/* Só a contagem e o chevron, na largura toda (state layer da variante ghost, altura do size sm): marcar outra
+          área é o mesmo "Marcar área" da linha de ações — um botão só, no mesmo lugar, com ou sem área. */}
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
-        className="flex h-7 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none dark:hover:bg-muted/50"
+        className="flex h-7 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none dark:hover:bg-muted/50"
         ref={areaListTriggerRef}
       >
         <span>{markedRegionCountLabel(regions.length)}</span>
@@ -444,12 +442,6 @@ function DiagnosisDetails({
           <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
         </span>
       </CollapsibleTrigger>
-        <Separator className="data-vertical:h-4 data-vertical:self-center" orientation="vertical" />
-        {/* Na revalidação geral (plain) o ativo segue "secondary", convenção daquele layout. */}
-        <Button aria-pressed={isRegionTarget} className={isRegionTarget ? styles.addAreaButtonActive : undefined} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? (isPlain ? "secondary" : "outline") : "ghost"}>
-          <ValidationPanelIconLabel icon={Plus}>Adicionar área</ValidationPanelIconLabel>
-        </Button>
-      </div>
       <CollapsibleContent className={styles.areaPanel}>
       {/* O espaçamento fica dentro do painel para entrar na altura animada e sumir junto com ela. */}
       <div className="flex flex-col gap-2 pt-2">
@@ -495,10 +487,9 @@ function DiagnosisDetails({
     </Collapsible>
   ) : null;
 
-  const showMarkArea = !regions.length && !diagnosis.region_required_missing;
   // Nos adicionais a linha de ações fica na barra fixa do item (DiagnosisPanel), fora do painel rolável.
   const actionRow = !isAdditional ? (
-    <DiagnosisActionRow diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onReview={onReview} onReviewDraftChange={onReviewDraftChange} onReviewInteractionBlocked={onReviewInteractionBlocked} onStartRegion={onStartRegion} reviewDraft={reviewDraft} showMarkArea={showMarkArea} />
+    <DiagnosisActionRow diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onReview={onReview} onReviewDraftChange={onReviewDraftChange} onReviewInteractionBlocked={onReviewInteractionBlocked} onStartRegion={onStartRegion} reviewDraft={reviewDraft} />
   ) : null;
 
   return (
@@ -513,8 +504,6 @@ function DiagnosisDetails({
         </Alert>
       ) : null}
 
-      {isPlain ? regionListContent : null}
-
       {actionRow}
 
       {decisionFeedback && (isPlain || decisionFeedback.type === "error") ? (
@@ -523,34 +512,21 @@ function DiagnosisDetails({
         </p>
       ) : null}
 
-      {!isPlain ? regionListContent : null}
+      {/* Na revalidação geral o "Marcar área" fica logo abaixo da decisão — sempre, com ou sem área; no diário e nos
+          adicionais ele divide a linha com ela. A lista de áreas vem em seguida, na mesma ordem em todos os layouts. */}
+      {isPlain ? (
+        <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
+      ) : null}
+
+      {regionListContent}
 
       {!regions.length && diagnosis.region_required_missing ? (
-        isAdditional ? (
-          // Uma linha: o badge "Área necessária" já explica; aqui só o aviso curto e a ação.
-          // O ícone vai num span para não acionar o grid de duas linhas do Alert (has-[>svg]).
-          <Alert className="grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2" variant="warning">
-            <span aria-hidden="true" className="flex size-4 items-center justify-center [&_svg]:size-4"><MapPinned /></span>
-            <AlertTitle className="min-w-0 truncate">Área obrigatória no ECG</AlertTitle>
-            <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
-              <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
-            </Button>
-          </Alert>
-        ) : (
-          <Alert variant="warning">
-            <MapPinned aria-hidden="true" />
-            <AlertTitle>Área no ECG</AlertTitle>
-            <AlertDescription className="flex flex-col items-start gap-2">
-              <span>Obrigatória para este diagnóstico.</span>
-              <Button aria-pressed={isRegionTarget} disabled={isBusy} onClick={() => onStartRegion(diagnosis)} size="sm" type="button" variant={isRegionTarget ? "secondary" : "outline"}>
-                <ValidationPanelIconLabel icon={MapPinned}>Marcar área</ValidationPanelIconLabel>
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )
-      ) : isPlain && showMarkArea ? (
-        // Na revalidação geral o botão de área fica abaixo da decisão; no diário e nos adicionais divide a linha com ela.
-        <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} layout={layout} onStartRegion={onStartRegion} />
+        // Só o aviso, numa linha: a ação é o "Marcar área" da linha de ações (o de sempre, no mesmo lugar) e o badge
+        // "Área necessária" já sinaliza no título. O ícone vai num span para não acionar o grid de duas linhas do Alert (has-[>svg]).
+        <Alert className="grid-cols-[auto_minmax(0,1fr)] items-center gap-2" variant="warning">
+          <span aria-hidden="true" className="flex size-4 items-center justify-center [&_svg]:size-4"><MapPinned /></span>
+          <AlertTitle className="min-w-0">Área obrigatória no ECG</AlertTitle>
+        </Alert>
       ) : null}
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
@@ -1016,7 +992,6 @@ export default function DiagnosisPanel({
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         const isOpen = openSecondaryDiagnosisKey === diagnosisId;
-                        const hasRegions = Boolean(diagnosis.regions?.length);
                         return (
                           // Item aberto: fundo muted/40 no item e opaco equivalente na barra fixa (abaixo). A tinta entra e sai em fade
                           // (150ms) para acompanhar a transição de altura — nada troca de uma vez no clique.
@@ -1090,7 +1065,6 @@ export default function DiagnosisPanel({
                                     onReviewInteractionBlocked={onReviewInteractionBlocked}
                                     onStartRegion={handlePanelStartRegion}
                                     reviewDraft={reviewDrafts[diagnosisId]}
-                                    showMarkArea={!hasRegions && !diagnosis.region_required_missing}
                                     trailing={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
                                   />
                                   </div>

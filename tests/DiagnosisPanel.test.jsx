@@ -88,7 +88,7 @@ function originalDiagnosis(id, standardText, extra = {}) {
 }
 
 describe("DiagnosisPanel", () => {
-  it("preserva a expansão das áreas ao recolher o diagnóstico e separa a ação de adicionar", async () => {
+  it("preserva a expansão das áreas ao recolher o diagnóstico e separa a ação de marcar", async () => {
     const user = userEvent.setup();
     const diagnosis = originalDiagnosis(2, "Bloqueio de ramo direito", {
       regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
@@ -109,7 +109,9 @@ describe("DiagnosisPanel", () => {
     areas.focus();
     await user.keyboard("{Enter}");
     expect(areas).toHaveAttribute("aria-expanded", "true");
-    await user.click(screen.getByRole("button", { name: "Adicionar área" }));
+    // "Marcar área" é o mesmo botão de quando não havia área (barra fixa do item), não um controle do cabeçalho da lista:
+    // acioná-lo não mexe na lista. O cartão do dia tem o seu, por isso o escopo no item.
+    await user.click(within(areas.closest('[data-diagnosis-id="2"]')).getByRole("button", { name: "Marcar área" }));
     expect(props.onStartRegion).toHaveBeenCalledWith(diagnosis, undefined);
     expect(areas).toHaveAttribute("aria-expanded", "true");
     await user.click(diagnosisTrigger());
@@ -127,7 +129,7 @@ describe("DiagnosisPanel", () => {
     expect(props.onReview).not.toHaveBeenCalled();
   });
 
-  it.each([true, false])("permite adicionar área com a lista recolhida (diário: %s)", (isDaily) => {
+  it.each([true, false])("permite marcar outra área com a lista recolhida (diário: %s)", (isDaily) => {
     const diagnosis = originalDiagnosis(2, "Bloqueio de ramo direito", {
       regions: [{ id: 9, x: 10, y: 20, width: 30, height: 15 }],
     });
@@ -137,7 +139,8 @@ describe("DiagnosisPanel", () => {
       diagnoses={[originalDiagnosis(1, "Ritmo sinusal"), diagnosis]} isGeneralReviewDay={false} />);
     if (!isDaily) fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
     expect(screen.getByRole("button", { name: "1 área marcada" })).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar área" }));
+    const item = screen.getByRole("button", { name: "1 área marcada" }).closest('[data-diagnosis-id="2"]');
+    fireEvent.click(within(item).getByRole("button", { name: "Marcar área" }));
     expect(onStartRegion).toHaveBeenCalledWith(diagnosis, undefined);
   });
 
@@ -456,21 +459,24 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
     expect(screen.getByText("2 áreas marcadas")).toBeVisible();
     expect(screen.getByLabelText("2 áreas marcadas")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
+    const optionalItem = screen.getByLabelText("2 áreas marcadas").closest('[data-diagnosis-id="2"]');
+    // Com áreas marcadas o "Marcar área" segue no item, na barra fixa: o mesmo botão e o mesmo lugar de quando não
+    // havia área. O cabeçalho da lista é só o gatilho (contagem + chevron), sem um segundo botão de área.
+    const markAreaButton = within(optionalItem).getByRole("button", { name: "Marcar área" });
+    expect(markAreaButton).toBeVisible();
+    expect(markAreaButton).toHaveAttribute("data-diagnosis-action", "mark-area");
+    expect(markAreaButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
+    expect(markAreaButton.closest('[data-slot="accordion-content"]')).toBeNull();
     fireEvent.click(screen.getByLabelText("2 áreas marcadas"));
-    const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
-    expect(addAreaButton).toBeVisible();
-    expect(addAreaButton.parentElement.closest("button")).toBeNull();
-    expect(addAreaButton.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
-      "size-5",
-      "shrink-0",
-    );
+    expect(within(optionalItem).getAllByRole("button", { name: "Marcar área" })).toHaveLength(1);
+    expect(within(optionalItem).queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
     const optionalAgreeButton = screen.getAllByRole("button", { name: "Concordo" })[1];
     // A decisão do original fica na barra fixa do item (título + ações), fora do painel rolável — o mesmo lugar em que
-    // o adicionado tem "Remover diagnóstico"; a lista de áreas rola por baixo dela.
+    // o adicionado tem "Remover diagnóstico"; a lista de áreas rola por baixo dela. "Marcar área" fecha a linha.
     expect(optionalAgreeButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
     expect(optionalAgreeButton.closest('[data-slot="accordion-content"]')).toBeNull();
-    expect(optionalAgreeButton.compareDocumentPosition(addAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(optionalAgreeButton.compareDocumentPosition(markAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(optionalAgreeButton.parentElement.parentElement).toBe(markAreaButton.parentElement);
     fireEvent.click(optionalAgreeButton);
     fireEvent.click(screen.getByRole("button", { name: "Editar Área 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover Área 1" }));
@@ -498,7 +504,7 @@ describe("DiagnosisPanel", () => {
     expect(onRemove).toHaveBeenCalledWith(3);
   });
 
-  it("mantém Remover diagnóstico na barra fixa do item adicionado, antes das áreas", () => {
+  it("mantém Marcar área e Remover diagnóstico na barra fixa do item adicionado, antes das áreas", () => {
     const onRemove = vi.fn();
     const doctorAdded = {
       ...originalDiagnosis(3, "Fibrilação atrial", {
@@ -523,18 +529,22 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fibrilação atrial/ }));
     fireEvent.click(screen.getByLabelText("3 áreas marcadas"));
     const removeButton = screen.getByRole("button", { name: "Remover diagnóstico" });
-    const addAreaButton = screen.getByRole("button", { name: "Adicionar área" });
+    const doctorAddedItem = removeButton.closest('[data-diagnosis-id="3"]');
+    expect(doctorAddedItem).not.toBeNull();
+    const markAreaButton = within(doctorAddedItem).getByRole("button", { name: "Marcar área" });
     const lastAreaRemoveButton = screen.getByRole("button", { name: "Remover Área 3" });
 
-    // Ordem de leitura: a ação do diagnóstico inteiro vem na barra fixa (logo após o título, onde os originais têm a
-    // decisão) e só depois a gestão das áreas (adicionar/remover área), que rola por baixo da barra.
-    expect(removeButton.compareDocumentPosition(addAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // Ordem de leitura: as ações do diagnóstico inteiro vêm na barra fixa (logo após o título, onde os originais têm a
+    // decisão) — "Marcar área" no mesmo slot de quando não havia área e o Remover no fim da linha — e só depois a gestão
+    // das áreas (editar/remover área), que rola por baixo da barra.
+    expect(markAreaButton.compareDocumentPosition(removeButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(removeButton.compareDocumentPosition(lastAreaRemoveButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(removeButton.closest('[data-slot="accordion-content"]')).toBeNull();
     expect(removeButton.closest('[data-slot="diagnosis-item-bar"]')).not.toBeNull();
-    expect(removeButton.closest('[data-diagnosis-id="3"]')).not.toBeNull();
-    // Com áreas marcadas não há "Marcar área" no item: o Remover é o único controle da linha.
-    expect(within(removeButton.closest('[data-diagnosis-id="3"]')).queryByRole("button", { name: "Marcar área" })).not.toBeInTheDocument();
+    // Com áreas marcadas o "Marcar área" segue na linha ao lado do Remover: sem slot vazio e sem um segundo botão na lista.
+    expect(markAreaButton.parentElement).toBe(removeButton.parentElement);
+    expect(within(doctorAddedItem).getAllByRole("button", { name: "Marcar área" })).toHaveLength(1);
+    expect(within(doctorAddedItem).queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
 
     fireEvent.click(removeButton);
     expect(screen.getByRole("alertdialog", { name: "Remover diagnóstico?" })).toHaveTextContent("O diagnóstico Fibrilação atrial e 3 áreas marcadas serão removidos deste exame.");
@@ -718,8 +728,13 @@ describe("DiagnosisPanel", () => {
     expect(within(dailyPanel).getByRole("button", { name: "Concordo" })).toHaveAttribute("aria-pressed", "true");
     expect(within(dailyPanel).getByRole("button", { name: "Discordo" })).toHaveAttribute("aria-pressed", "false");
     expect(within(dailyPanel).getByText("Concordo", { selector: '[data-slot="badge"]' })).toBeVisible();
-    expect(within(dailyPanel).getByText("Área no ECG")).toBeVisible();
-    expect(within(dailyPanel).getByText("Obrigatória para este diagnóstico.")).toBeVisible();
+    // Área obrigatória pendente: o aviso é só a mensagem (uma linha) e o "Marcar área" é o de sempre, na linha de ações.
+    const requiredAlert = within(dailyPanel).getByText("Área obrigatória no ECG").closest('[data-slot="alert"]');
+    expect(requiredAlert).toBeVisible();
+    expect(within(requiredAlert).queryByRole("button")).not.toBeInTheDocument();
+    const markAreaButton = within(dailyPanel).getByRole("button", { name: "Marcar área" });
+    expect(markAreaButton.closest('[data-slot="diagnosis-action-row"]')).not.toBeNull();
+    expect(markAreaButton.parentElement).toContainElement(within(dailyPanel).getByRole("button", { name: "Concordo" }));
   });
 
   it("usa o mesmo badge para estados rejeitado e confirmado", () => {
@@ -1016,7 +1031,58 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(areaSummary);
     expect(screen.getByRole("button", { name: "Área 1" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Área 2" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Adicionar área" })).toBeVisible();
+    // Com áreas, "Marcar área" continua na linha da decisão (slot fixo), não no cabeçalho da lista.
+    const markAreaButton = screen.getByRole("button", { name: "Marcar área" });
+    expect(markAreaButton.parentElement).toContainElement(decisions);
+    expect(markAreaButton.compareDocumentPosition(areaSummary)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["sem área", {}],
+    ["com áreas", { regions: [{ id: 9, x: 10, y: 10, width: 20, height: 20 }, { id: 10, x: 40, y: 40, width: 10, height: 10 }] }],
+    ["com área obrigatória pendente", { region_required_missing: true }],
+  ])("mantém um único Marcar área no mesmo slot da linha de ações (%s)", (_label, extra) => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", extra)]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const markAreaButtons = screen.getAllByRole("button", { name: "Marcar área" });
+    expect(markAreaButtons).toHaveLength(1);
+    expect(markAreaButtons[0]).toHaveAttribute("data-diagnosis-action", "mark-area");
+    expect(markAreaButtons[0].closest('[data-slot="diagnosis-action-row"]')).not.toBeNull();
+    expect(markAreaButtons[0].parentElement).toContainElement(screen.getByRole("group", { name: "Revisão de Ritmo sinusal" }));
+    expect(screen.queryByRole("button", { name: "Adicionar área" })).not.toBeInTheDocument();
+  });
+
+  it("na revalidação geral mantém Marcar área logo após a decisão e antes da lista de áreas", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Bloqueio de ramo direito", { regions: [{ id: 9, x: 10, y: 10, width: 20, height: 20 }] }),
+          originalDiagnosis(3, "Sobrecarga atrial esquerda", { region_required_missing: true }),
+        ]}
+        isGeneralReviewDay
+      />,
+    );
+
+    const cards = screen.getAllByTestId("diagnosis-card");
+    ["Ritmo sinusal", "Bloqueio de ramo direito", "Sobrecarga atrial esquerda"].forEach((title, index) => {
+      const decisions = within(cards[index]).getByRole("group", { name: `Revisão de ${title}` });
+      const markAreaButton = within(cards[index]).getByRole("button", { name: "Marcar área" });
+      expect(decisions.compareDocumentPosition(markAreaButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    const areas = within(cards[1]).getByRole("button", { name: "1 área marcada" });
+    expect(within(cards[1]).getByRole("button", { name: "Marcar área" }).compareDocumentPosition(areas)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(within(cards[2]).getByText("Área obrigatória no ECG")).toBeVisible();
+    expect(within(within(cards[2]).getByText("Área obrigatória no ECG").closest('[data-slot="alert"]')).queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("edita a justificativa diária em painel neutro e sem mensagem duplicada", () => {
