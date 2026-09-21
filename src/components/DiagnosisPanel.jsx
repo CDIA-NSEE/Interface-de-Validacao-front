@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { InputGroupAddon } from "@/components/ui/input-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -714,7 +713,7 @@ export default function DiagnosisPanel({
   const addDiagnosisTriggerRef = useRef(null);
   const addDiagnosisSelectRef = useRef(null);
   const addDiagnosisAnchorRef = useRef(null);
-  const secondaryScrollRef = useRef(null);
+  const secondaryListRef = useRef(null);
 
   const { doctorDiagnoses, optionalDiagnoses, requiredDiagnoses } = useMemo(
     () => getDiagnosisDisplayGroups(diagnoses, { dailyStandardDiagnosis, isGeneralReviewDay }),
@@ -763,9 +762,10 @@ export default function DiagnosisPanel({
     // Teto de segurança para o acompanhamento (a transição da barra dura 200ms).
     const deadline = performance.now() + 400;
     const reveal = () => {
-      const viewport = secondaryScrollRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
       // A barra (título + linha de ações): revelar só o gatilho podia deixar a linha cortada abaixo do viewport.
-      const header = viewport?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="diagnosis-item-bar"]`);
+      const header = secondaryListRef.current?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="diagnosis-item-bar"]`);
+      // A lista não tem scroll próprio: o viewport é o do painel (ScrollArea da página no desktop, do Sheet no compacto).
+      const viewport = header?.closest('[data-slot="scroll-area-viewport"]');
       if (!header || !viewport) return;
       const bounds = viewport.getBoundingClientRect();
       const target = header.getBoundingClientRect();
@@ -774,7 +774,7 @@ export default function DiagnosisPanel({
       const barPanel = header.querySelector('[data-slot="collapsible-content"]');
       const pendingBarHeight = barPanel ? Math.max(0, barPanel.scrollHeight - barPanel.getBoundingClientRect().height) : 0;
       const targetBottom = target.bottom + pendingBarHeight;
-      // Reveal only a clipped header, without scrolling the surrounding panel or page.
+      // Rola o painel só o necessário para revelar a barra cortada (nunca a página).
       if (target.top < bounds.top) viewport.scrollTop += target.top - bounds.top;
       else if (targetBottom > bounds.bottom) viewport.scrollTop += Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
       // Enquanto a barra cresce o viewport ainda não tem esse overflow (o scrollTop é limitado ao conteúdo atual), então
@@ -931,7 +931,10 @@ export default function DiagnosisPanel({
 
       {secondaryDiagnoses.length || availableOptions.length ? (
         <Collapsible onOpenChange={handleSecondaryToggle} open={Boolean(isSecondaryOpen)}>
-          <Card className="gap-0 overflow-hidden py-0" size="sm">
+          {/* overflow-clip (não hidden) no card e no painel recolhível: `hidden` faz o elemento contar como scroll container e
+              prenderia nele o sticky da barra fixa do item; `clip` recorta igual (cantos, animação de altura) sem criar scroll
+              container, então a barra adere ao viewport rolável do painel (ScrollArea da página / do Sheet). */}
+          <Card className="gap-0 overflow-clip py-0" size="sm">
               <CardHeader className="items-center gap-0 p-0">
                 {/* O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo. */}
                 <CollapsibleTrigger
@@ -949,15 +952,18 @@ export default function DiagnosisPanel({
                   </span>
                 </CollapsibleTrigger>
               </CardHeader>
-              <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
+              <CollapsibleContent className="h-(--collapsible-panel-height) overflow-clip transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
                 <CardContent className="border-t px-0 py-0">
                 {secondaryDiagnoses.length ? (
-                  <div className="grid min-w-0 max-h-[min(32svh,20rem)] grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)]" data-testid="optional-diagnoses-scroll-boundary">
-                    <ScrollArea className="min-h-0 min-w-0 [&_[data-slot=scroll-area-viewport]]:overscroll-contain" data-testid="optional-diagnoses-scroll" ref={secondaryScrollRef}>
-                      <Accordion
-                        onValueChange={handleExpandedDiagnosisChange}
-                        value={openSecondaryDiagnosisKey ? [openSecondaryDiagnosisKey] : []}
-                      >
+                  // Sem teto de altura nem scroll próprio: a lista tem a altura do conteúdo e rola com o painel (um só scroll, na
+                  // borda do painel). Um teto criava um segundo scroll dentro do painel — ambíguo para a roda do mouse, com a barra
+                  // sobreposta aos itens — e espremia áreas e justificativa sob a barra fixa do item aberto.
+                  <Accordion
+                    data-testid="optional-diagnoses-list"
+                    onValueChange={handleExpandedDiagnosisChange}
+                    ref={secondaryListRef}
+                    value={openSecondaryDiagnosisKey ? [openSecondaryDiagnosisKey] : []}
+                  >
                       {secondaryDiagnoses.map((diagnosis) => {
                         const diagnosisId = String(diagnosis.id);
                         const diagnosisReference = getDiagnosisReference(diagnosisReferences, diagnosis.id);
@@ -969,7 +975,8 @@ export default function DiagnosisPanel({
                           // (150ms) para acompanhar a transição de altura — nada troca de uma vez no clique.
                           <AccordionItem className="px-3 transition-colors duration-150 data-open:bg-muted/40 motion-reduce:transition-none" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
-                                Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o
+                                Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky, que
+                                adere ao topo do viewport do painel enquanto o item rola (a lista não tem scroll próprio) — o
                                 mesmo lugar para os dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3
                                 linhas) nem da do Original (1–2). Duas zonas, separadas pela divisória interna: acima dela o gatilho (sempre
                                 visível, sempre clicável, é o que o hover sombreia); abaixo, o que a abertura revela — Original, linha de ações e,
@@ -1048,9 +1055,7 @@ export default function DiagnosisPanel({
                           </AccordionItem>
                         );
                       })}
-                      </Accordion>
-                    </ScrollArea>
-                  </div>
+                  </Accordion>
                 ) : null}
                 </CardContent>
               </CollapsibleContent>

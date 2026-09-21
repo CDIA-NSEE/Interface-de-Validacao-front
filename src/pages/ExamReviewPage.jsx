@@ -108,6 +108,13 @@ function savedRegionKey(diagnosisId, region, index) {
 // os controles — o que fazia a página inteira piscar a cada Concordo/Discordo. A trava lógica (isBusyRef) vale desde o início.
 const BUSY_INDICATION_DELAY_MS = 300;
 
+// Viewport rolável do painel de revisão (aside no desktop, Sheet no compacto). `overflow-anchor: none`: a lista de
+// diagnósticos adicionais rola dentro dele e recolhe/expande itens (um aberto por vez), e a rolagem é deliberada —
+// scrollDiagnosisIntoView revela a barra do item. Com a âncora de rolagem do navegador ativa, o Chrome "restaurava" o
+// deslocamento anterior ao recolhimento assim que o conteúdo voltava a crescer (ex.: abrir a lista de áreas depois de
+// trocar o item aberto), saltando o painel dezenas de pixels sem ação do médico.
+const REVIEW_BODY_SCROLL_CLASS = "min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]]:[overflow-anchor:none]";
+
 function useDelayedFlag(value, delayMs) {
   const [hasSettled, setHasSettled] = useState(false);
 
@@ -984,7 +991,7 @@ export default function ExamReviewPage() {
                 aria-label="Diagnósticos e ações"
                 className="flex min-h-0 min-w-0 flex-col border-r bg-background"
               >
-                <ScrollArea className="min-h-0 flex-1">
+                <ScrollArea className={REVIEW_BODY_SCROLL_CLASS}>
                   <div className="p-4">{reviewBody}</div>
                 </ScrollArea>
                 <div className="shrink-0 border-t bg-background p-4">{reviewFooter}</div>
@@ -1068,7 +1075,7 @@ export default function ExamReviewPage() {
                   <SheetTitle>Diagnósticos e ações</SheetTitle>
                   <SheetDescription>Revise os achados e conclua este ECG.</SheetDescription>
                 </SheetHeader>
-                <ScrollArea className="min-h-0 flex-1">
+                <ScrollArea className={REVIEW_BODY_SCROLL_CLASS}>
                   <div className="p-4">{reviewBody}</div>
                 </ScrollArea>
                 <SheetFooter className="shrink-0 border-t bg-background">

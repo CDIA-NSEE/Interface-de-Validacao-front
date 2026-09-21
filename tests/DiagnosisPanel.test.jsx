@@ -4,6 +4,7 @@ import { useState } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import DiagnosisPanel from "../src/components/DiagnosisPanel.jsx";
+import { ScrollArea } from "../src/components/ui/scroll-area.jsx";
 import { TooltipProvider } from "../src/components/ui/tooltip.jsx";
 
 beforeAll(() => {
@@ -194,15 +195,17 @@ describe("DiagnosisPanel", () => {
     expect(onReview).toHaveBeenLastCalledWith(1, "rejected", "", "decision");
   });
 
-  it("rola apenas a lista quando o cabeçalho está cortado e preserva a posição ao trocar áreas", async () => {
+  it("rola apenas o painel quando a barra do item está cortada e preserva a posição ao trocar áreas", async () => {
     const props = createProps({
       options: [], dailyStandardDiagnosis: "Ritmo sinusal", isGeneralReviewDay: false,
       diagnoses: [originalDiagnosis(1, "Ritmo sinusal"), originalDiagnosis(2, "Bloqueio de ramo direito", {
         regions: [{ id: 9 }, { id: 10 }],
       })],
     });
-    const { rerender } = render(<DiagnosisPanelHarness {...props} />);
-    const viewport = screen.getByTestId("optional-diagnoses-scroll").querySelector('[data-slot="scroll-area-viewport"]');
+    // A lista não tem scroll próprio: quem rola é o ScrollArea do painel que a envolve (na página, o do aside ou o do Sheet).
+    const inPanel = (ui) => <ScrollArea>{ui}</ScrollArea>;
+    const { rerender } = render(inPanel(<DiagnosisPanelHarness {...props} />));
+    const viewport = document.querySelector('[data-slot="scroll-area-viewport"]');
     const header = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
     // O que é revelado é a barra fixa do item (título + linha de ações), não só o gatilho.
     const itemBar = header.closest('[data-slot="diagnosis-item-bar"]');
@@ -211,9 +214,9 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(header);
     await waitFor(() => expect(viewport.scrollTop).toBe(80));
     target.mockReturnValue({ top: 100, bottom: 160 });
-    rerender(<DiagnosisPanelHarness {...props} selectedRegionKey="2:9" />);
+    rerender(inPanel(<DiagnosisPanelHarness {...props} selectedRegionKey="2:9" />));
     await waitFor(() => expect(screen.getByRole("button", { name: "Área 1" })).toHaveAttribute("aria-pressed", "true"));
-    rerender(<DiagnosisPanelHarness {...props} selectedRegionKey="2:10" />);
+    rerender(inPanel(<DiagnosisPanelHarness {...props} selectedRegionKey="2:10" />));
     await waitFor(() => expect(screen.getByRole("button", { name: "Área 2" })).toHaveAttribute("aria-pressed", "true"));
     await new Promise((resolve) => window.setTimeout(resolve, 10));
     expect(viewport.scrollTop).toBe(80);
@@ -366,7 +369,7 @@ describe("DiagnosisPanel", () => {
     // No diagnóstico do dia, "Marcar área" divide a linha com as decisões.
     expect(markAreaButton.parentElement).toContainElement(screen.getByRole("group", { name: "Revisão de Ritmo sinusal" }));
     expect(markAreaButton.querySelector("svg")).toBeTruthy();
-    expect(screen.getByTestId("optional-diagnoses-scroll")).toBeVisible();
+    expect(screen.getByTestId("optional-diagnoses-list")).toBeVisible();
 
     const firstOptionalTrigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
     fireEvent.click(within(firstOptionalTrigger).getByText("Aguardando decisão"));
