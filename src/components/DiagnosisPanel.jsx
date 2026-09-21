@@ -228,7 +228,8 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
 // Logo sob o título em todos os layouts (mesmo quando igual a ele: o médico vê o que o laudo dizia sem precisar
 // comparar). Em todo item com texto: no adicionado pelo médico é o nome escolhido (já padronizado), igual ao título — a
 // linha existe pela paridade com os originais da lista. No diário/plain é o primeiro filho de DiagnosisDetails; nos
-// adicionais fica na barra fixa do item (1–2 linhas nos textos reais, máx. 106 caracteres). Texto simples, sem parada de Tab.
+// adicionais fica na barra fixa do item, abaixo da divisória, abrindo o bloco da linha de ações (1–2 linhas nos textos
+// reais, máx. 106 caracteres). Texto simples, sem parada de Tab.
 function DiagnosisOriginalText({ className, diagnosis, layout }) {
   const styles = DETAILS_STYLES[layout];
   const originalText = diagnosis.original_text || diagnosis.name;
@@ -394,7 +395,7 @@ function DiagnosisDetails({
     }, 0);
   }
 
-  // Nos adicionais a linha "Original:" fica na barra fixa do item (DiagnosisPanel), sob o título.
+  // Nos adicionais a linha "Original:" fica na barra fixa do item (DiagnosisPanel), abrindo o bloco abaixo da divisória.
   const originalLine = !isAdditional ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
 
   const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
@@ -970,11 +971,14 @@ export default function DiagnosisPanel({
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky — o
                                 mesmo lugar para os dois tipos, visível com qualquer quantidade de áreas e sem depender da altura do h3 (1–3
-                                linhas) nem da do Original (1–2). Irmã do painel (o overflow-hidden dele anularia o sticky); Original e linha vivem
-                                num Collapsible controlado pelo item: abrem e fecham com a mesma transição de altura do painel de baixo e
-                                desmontam ao fechar (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item aberto, para as
-                                linhas de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador
-                                título+ações / conteúdo). */}
+                                linhas) nem da do Original (1–2). Duas zonas, separadas pela divisória interna: acima dela o gatilho (sempre
+                                visível, sempre clicável, é o que o hover sombreia); abaixo, o que a abertura revela — Original, linha de ações e,
+                                no painel, as áreas — nada clicável como bloco. A divisória é a fronteira do clicável: o sombreamento termina
+                                exatamente nela, então não há faixa que pareça gatilho e não seja. Irmã do painel (o overflow-hidden dele anularia
+                                o sticky); o bloco revelado vive num Collapsible controlado pelo item: abre e fecha com a mesma transição de altura
+                                do painel de baixo e desmonta ao fechar (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item
+                                aberto, para as linhas de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior
+                                (separador barra / conteúdo). */}
                             <div
                               className={cn(
                                 "sticky top-0 z-10 -mx-3 bg-card transition-colors duration-150 motion-reduce:transition-none",
@@ -985,27 +989,24 @@ export default function DiagnosisPanel({
                               data-slot="diagnosis-item-bar"
                             >
                               <AccordionTrigger className={cn(
-                                // Além das cores, o padding inferior transiciona (ver `pb-1` abaixo): sem isso a barra dava um solavanco de 4px no
-                                // primeiro frame de abrir/fechar, antes de a altura do bloco "Original + ações" começar a animar.
-                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,border-color,padding-bottom] duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
-                                // Aberto, com a linha "Original:" logo abaixo, o padding inferior cai de 8px para 4px: com o py-1.5 do bloco do
-                                // título (abaixo) fecha os mesmos 10px do cartão do dia sem a linha invadir a caixa do gatilho — hover, anel de
-                                // área e "marcando área" terminam exatamente onde a linha começa. O título não se move (padding superior segue 8px).
-                                isOpen && "pb-1",
+                                // O padding não muda com o estado: o cabeçalho tem a mesma caixa aberto e fechado (8+6+20+6+8 = 48px com o título
+                                // numa linha) e o que a abertura revela começa depois da divisória. Sem troca de padding também não há o
+                                // solavanco de 4px no primeiro frame que a transição antiga precisava compensar.
+                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                                 hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
                                 selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
                                 // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
                                 activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
                               )}>
                                 {/* py-1.5 em vez de min-h-8: o respiro do título é padding fixo (6px), não a folga da centralização — que
-                                    some quando o título quebra em 2–3 linhas e deixava a linha "Original:" a 4px dele. Com 1 linha a caixa
+                                    some quando o título quebra em 2–3 linhas e encostava o título na divisória. Com 1 linha a caixa
                                     segue 32px (6+20+6) e a linha fechada, 48px; com mais linhas o item cresce 12px e ganha o mesmo respiro. */}
                                 <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
                                   {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
                                       Aberto: sem clamp, mesmo peso (o item aberto já se distingue pela tinta, pelo chevron e pelo que revela;
                                       engrossar o texto refluía o título e "gritava" em CAIXA ALTA). Sem `title`: repetiria o visível e o
-                                      tooltip nativo cobria a linha "Original:" logo abaixo. */}
+                                      tooltip nativo cobria o que vem logo abaixo (divisória e linha "Original:"). */}
                                   <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
                                   <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                                 </span>
@@ -1014,29 +1015,27 @@ export default function DiagnosisPanel({
                                   altura e opacidade em 200ms, sincronizadas com o painel de baixo, e o conteúdo desmonta ao terminar de fechar. */}
                               <Collapsible open={isOpen}>
                                 <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
-                                  {/* Sob o título, como no Diagnóstico do dia (título → Original → decisão). Fora do gatilho: não entra no nome
-                                      acessível do item nem na área de hover/clique dele. Sem margem negativa: a caixa começa onde a do gatilho
-                                      termina (o pb-1 dele fecha os 10px acima), senão o hover do gatilho cobria o topo do texto; pb-2.5 repete
-                                      os 10px abaixo, antes da divisória. */}
-                                  <DiagnosisOriginalText className="px-3 pb-2.5" diagnosis={diagnosis} layout="additional" />
-                                  {/* Divisória entre o bloco título (gatilho clicável, com hover) + Original e a linha de ações, com respiro igual
-                                      (12px) da linha para as duas divisórias: sem isso o título encostava na caixa dos toggles enquanto sobrava
-                                      ar abaixo. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o slot,
-                                      então a barra tem a mesma altura nos dois tipos. O px-3 também guarda o anel de foco (3px) dos controles
-                                      do overflow-hidden do painel. */}
-                                  <div className="border-t px-3 py-3">
-                                  <DiagnosisActionRow
-                                    className="min-h-10"
-                                    diagnosis={diagnosis}
-                                    isBusy={isBusy}
-                                    isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
-                                    leading={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
-                                    onReview={onReview}
-                                    onReviewDraftChange={handlePanelReviewDraftChange}
-                                    onReviewInteractionBlocked={onReviewInteractionBlocked}
-                                    onStartRegion={handlePanelStartRegion}
-                                    reviewDraft={reviewDrafts[diagnosisId]}
-                                  />
+                                  {/* Tudo o que a abertura revela na barra, abaixo da divisória: "Original:" e a linha de ações. A divisória fecha
+                                      a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o mouse ou clicar
+                                      no texto original não mexe no item, como em qualquer outro conteúdo revelado. Ordem e respiro iguais aos do
+                                      Diagnóstico do dia (título → Original → ações, gap-2 de 8px); py-3 dá os mesmos 12px da linha de ações para
+                                      as duas divisórias. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
+                                      slot, então a barra tem a mesma altura nos dois tipos. O px-3 também guarda o anel de foco (3px) dos
+                                      controles do overflow-hidden do painel. */}
+                                  <div className="flex flex-col gap-2 border-t px-3 py-3">
+                                    <DiagnosisOriginalText diagnosis={diagnosis} layout="additional" />
+                                    <DiagnosisActionRow
+                                      className="min-h-10"
+                                      diagnosis={diagnosis}
+                                      isBusy={isBusy}
+                                      isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
+                                      leading={diagnosis.source === "doctor_added" ? <RemoveDiagnosisAction diagnosis={diagnosis} isBusy={isBusy} onRemove={handlePanelRemove} /> : null}
+                                      onReview={onReview}
+                                      onReviewDraftChange={handlePanelReviewDraftChange}
+                                      onReviewInteractionBlocked={onReviewInteractionBlocked}
+                                      onStartRegion={handlePanelStartRegion}
+                                      reviewDraft={reviewDrafts[diagnosisId]}
+                                    />
                                   </div>
                                 </CollapsibleContent>
                               </Collapsible>
