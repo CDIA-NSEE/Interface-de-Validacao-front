@@ -631,7 +631,12 @@ function DiagnosisCard({
   const isRegionConnected = [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`));
 
   return (
-    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    // Diagnóstico do dia: filete superior na cor de destaque + elevação. Sem eles o cartão era um branco igual aos outros
+    // três do painel ("Diagnósticos adicionais", "Dados clínicos", "Mais informações") e só o badge o distinguia. O filete
+    // fica no eixo horizontal — o do item aberto da lista é lateral —, então os dois sinais não se confundem, e a sombra
+    // soma profundidade à cor (sombra sozinha some em telas de baixo contraste). Só aqui: na revalidação geral todos os
+    // originais são obrigatórios e marcá-los todos não destacaria nada.
+    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", isPrimaryDaily && "border-t-[3px] border-t-primary shadow-md", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
