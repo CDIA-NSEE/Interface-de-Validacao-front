@@ -645,6 +645,8 @@ describe("DiagnosisPanel", () => {
     expect(secondaryTitle).toBeVisible();
     expect(secondaryTitle.closest('[data-slot="card-header"]')).toBeTruthy();
     const secondaryToggle = screen.getByRole("button", { name: "Diagnósticos adicionais" });
+    // Título da seção (h2) com o gatilho dentro; os itens (h3 do acordeão) ficam abaixo dele na árvore de títulos.
+    expect(screen.getByRole("heading", { level: 2, name: "Diagnósticos adicionais" })).toContainElement(secondaryToggle);
     expect(secondaryToggle).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(secondaryToggle.getAttribute("aria-controls"))).toBeVisible();
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });

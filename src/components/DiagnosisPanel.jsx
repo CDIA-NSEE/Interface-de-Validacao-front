@@ -1,4 +1,4 @@
-import { Check, ChevronDown, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ClipboardList, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 
 import {
@@ -54,6 +54,7 @@ import {
   normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
 import { runViewTransition } from "../utils/viewTransition.js";
+import ValidationPanelIconLabel from "./ValidationPanelIconLabel.jsx";
 
 const REVIEW_LABELS = {
   pending: "Aguardando decisão",
@@ -985,21 +986,26 @@ export default function DiagnosisPanel({
               container, então a barra adere ao viewport rolável do painel (ScrollArea da página / do Sheet). */}
           <Card className="gap-0 overflow-clip py-0" size="sm">
               <CardHeader className="items-center gap-0 p-0">
-                {/* O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo. */}
-                <CollapsibleTrigger
-                  render={
-                    <Button
-                      className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
-                      type="button"
-                      variant="collapsible"
-                    />
-                  }
-                >
-                  Diagnósticos adicionais
-                  <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
-                    <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
-                  </span>
-                </CollapsibleTrigger>
+                {/* Título da seção: h2, como "Dados clínicos", com os itens (h3 do acordeão) abaixo dele na árvore de títulos — o
+                    botão do cabeçalho dentro de um heading (padrão de acordeão do APG). Ícone + rótulo na composição de "Mais
+                    informações", o cartão de seção vizinho; o ícone é aria-hidden, então o nome do gatilho segue sendo o rótulo.
+                    O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo. */}
+                <h2>
+                  <CollapsibleTrigger
+                    render={
+                      <Button
+                        className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
+                        type="button"
+                        variant="collapsible"
+                      />
+                    }
+                  >
+                    <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais</ValidationPanelIconLabel>
+                    <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
+                      <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
+                    </span>
+                  </CollapsibleTrigger>
+                </h2>
               </CardHeader>
               <CollapsibleContent className="h-(--collapsible-panel-height) overflow-clip transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
                 <CardContent className="border-t px-0 py-0">
