@@ -22,7 +22,6 @@ import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
 import ValidationPanelIconLabel from "../components/ValidationPanelIconLabel.jsx";
 import ValidationSidebar from "../components/ValidationSidebar.jsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -1025,9 +1024,9 @@ export default function ExamReviewPage() {
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
                         <NotebookPen aria-hidden="true" data-icon="inline-start" />
-                        Observações gerais
+                        Observações gerais{" "}
+                        <span className="font-normal text-muted-foreground">(opcional)</span>
                       </FieldLabel>
-                      <Badge variant="outline">Opcional</Badge>
                       {notesSaveState.status === "saving" || notesSaveState.status === "saved" ? (
                         <span className="text-xs text-muted-foreground" role="status">
                           {notesSaveState.message}
@@ -1036,7 +1035,6 @@ export default function ExamReviewPage() {
                     </div>
                   </div>
                   <Textarea
-                    aria-label="Observações gerais"
                     id="general-observations"
                     value={notes}
                     onChange={(event) => {

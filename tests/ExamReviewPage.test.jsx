@@ -158,7 +158,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
     expect(container.querySelector("header dl")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mais informações" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("textbox", { name: "Observações gerais" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Observações gerais (opcional)" })).toBeVisible();
     const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
     expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
     expect(screen.getByTestId("general-observations-header")).not.toContainElement(ecgToolbar);
@@ -645,7 +645,7 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const notes = await screen.findByRole("textbox", { name: "Observações gerais" });
+    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
     fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
 
@@ -665,7 +665,7 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const notes = await screen.findByRole("textbox", { name: "Observações gerais" });
+    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
     fireEvent.change(notes, { target: { value: "Primeira versão" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Salvando…");

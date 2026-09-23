@@ -127,7 +127,6 @@ const REFINED_DETAILS_STYLES = {
   editorVariant: "default",
   editorClass: ENTER_ANIMATION_CLASS,
   editorTextarea: "bg-background text-foreground dark:bg-background",
-  optionalLabel: "Opcional",
   enterAnimation: ENTER_ANIMATION_CLASS,
 };
 
@@ -147,7 +146,6 @@ const DETAILS_STYLES = {
     editorVariant: "destructive",
     editorClass: "",
     editorTextarea: "",
-    optionalLabel: "(opcional)",
     enterAnimation: "",
   },
   additional: REFINED_DETAILS_STYLES,
@@ -559,7 +557,7 @@ function DiagnosisDetails({
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
         // À direita (`self-end`): o mesmo canto em que, depois de salvar, fica o "Editar" — a ação de justificar não muda de lado.
         <Button className={cn("w-fit self-end", SUBTLE_OUTLINE_BUTTON_CLASS, styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">
-          {isPlain ? "Justificativa (opcional)" : <><Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa</>}
+          <Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa
         </Button>
       ) : null}
 
@@ -568,10 +566,10 @@ function DiagnosisDetails({
           <AlertDescription className="flex flex-col gap-2">
             <Field>
               <div className="flex items-center justify-between gap-2">
-                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <span className="font-normal text-muted-foreground">{styles.optionalLabel}</span></FieldLabel>
+                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
                 {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
               </div>
-              <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância, se necessário" rows={3} value={reviewNoteDraft} />
+              <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância" rows={3} value={reviewNoteDraft} />
             </Field>
             {/* Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com
                 "Salvar" em cima, como o AlertDialogFooter. Na revalidação geral o par só aparece quando há algo a salvar. */}
@@ -1023,14 +1021,14 @@ export default function DiagnosisPanel({
                         />
                       }
                     >
-                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais</ValidationPanelIconLabel>
+                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <span className="ml-1 font-normal text-muted-foreground">(opcional)</span></ValidationPanelIconLabel>
                       <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
                         <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
                       </span>
                     </CollapsibleTrigger>
                   ) : (
                     <span className="flex h-11 items-center px-3 font-heading text-sm font-medium">
-                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais</ValidationPanelIconLabel>
+                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <span className="ml-1 font-normal text-muted-foreground">(opcional)</span></ValidationPanelIconLabel>
                     </span>
                   )}
                 </h2>

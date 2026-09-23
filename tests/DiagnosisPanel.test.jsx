@@ -101,7 +101,7 @@ describe("DiagnosisPanel", () => {
       diagnoses: [originalDiagnosis(1, "Ritmo sinusal"), diagnosis],
     });
     render(<AutoRevealHarness {...props} />);
-    const section = screen.getByRole("button", { name: "Diagnósticos adicionais" });
+    const section = screen.getByRole("button", { name: "Diagnósticos adicionais (opcional)" });
     await user.click(section);
     const diagnosisTrigger = () => screen.getAllByRole("button", { name: /Bloqueio de ramo direito/ })
       .find((button) => button.getAttribute("data-slot") === "accordion-trigger");
@@ -409,7 +409,7 @@ describe("DiagnosisPanel", () => {
 
     const optionalDiagnosis = (await screen.findAllByRole("button", { name: /Bloqueio de ramo direito/ }))
       .find((button) => button.hasAttribute("aria-controls"));
-    expect(screen.getByRole("button", { name: "Diagnósticos adicionais" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Diagnósticos adicionais (opcional)" })).toHaveAttribute("aria-expanded", "true");
     expect(optionalDiagnosis).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByRole("button", { name: "Marcar área" })).toHaveLength(2);
   });
@@ -651,9 +651,9 @@ describe("DiagnosisPanel", () => {
 
     expect(secondaryTitle).toBeVisible();
     expect(secondaryTitle.closest('[data-slot="card-header"]')).toBeTruthy();
-    const secondaryToggle = screen.getByRole("button", { name: "Diagnósticos adicionais" });
+    const secondaryToggle = screen.getByRole("button", { name: "Diagnósticos adicionais (opcional)" });
     // Título da seção (h2) com o gatilho dentro; os itens (h3 do acordeão) ficam abaixo dele na árvore de títulos.
-    expect(screen.getByRole("heading", { level: 2, name: "Diagnósticos adicionais" })).toContainElement(secondaryToggle);
+    expect(screen.getByRole("heading", { level: 2, name: "Diagnósticos adicionais (opcional)" })).toContainElement(secondaryToggle);
     expect(secondaryToggle).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(secondaryToggle.getAttribute("aria-controls"))).toBeVisible();
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
@@ -678,7 +678,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    const headerToggle = screen.getByRole("button", { name: "Diagnósticos adicionais" });
+    const headerToggle = screen.getByRole("button", { name: "Diagnósticos adicionais (opcional)" });
     const addDiagnosisButton = screen.getByRole("button", { name: "Adicionar diagnóstico" });
 
     expect(headerToggle).toHaveAttribute("aria-expanded", "false");
@@ -840,8 +840,8 @@ describe("DiagnosisPanel", () => {
 
     const disagreementAlert = screen.getByRole("group", { name: /Justificativa/ });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(within(disagreementAlert).getByLabelText("Justificativa Opcional")).toBeVisible();
-    fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa Opcional"), { target: { value: "Traçado incompatível" } });
+    expect(within(disagreementAlert).getByLabelText("Justificativa (opcional)")).toBeVisible();
+    fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa (opcional)"), { target: { value: "Traçado incompatível" } });
     fireEvent.click(within(disagreementAlert).getByRole("button", { name: "Salvar justificativa" }));
     expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
@@ -899,7 +899,7 @@ describe("DiagnosisPanel", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Adicionar diagnóstico" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Diagnósticos adicionais" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Diagnósticos adicionais (opcional)" })).not.toBeInTheDocument();
   });
 
   it("mostra a lista vazia como título estático e frase de status, com a ação de adicionar", () => {
@@ -913,7 +913,7 @@ describe("DiagnosisPanel", () => {
     );
 
     // Recolher uma lista vazia não faz nada: o título segue sendo h2, mas sem gatilho.
-    const heading = screen.getByRole("heading", { level: 2, name: "Diagnósticos adicionais" });
+    const heading = screen.getByRole("heading", { level: 2, name: "Diagnósticos adicionais (opcional)" });
     expect(within(heading).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("Nenhum diagnóstico adicional neste ECG.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toBeVisible();
@@ -1147,11 +1147,11 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
     const editor = screen.getByRole("group", { name: /Justificativa/ });
-    const textarea = within(editor).getByLabelText("Justificativa Opcional");
+    const textarea = within(editor).getByLabelText("Justificativa (opcional)");
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
     const cancel = within(editor).getByRole("button", { name: "Cancelar" });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância, se necessário");
+    expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância");
     expect(save).toBeDisabled();
     expect(cancel).toBeVisible();
     // Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé.
@@ -1248,7 +1248,7 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Justificativa Opcional" }), { target: { value: "Rascunho" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Justificativa (opcional)" }), { target: { value: "Rascunho" } });
     fireEvent.click(screen.getByRole("button", { name: "Concordo" }));
 
     expect(onReviewInteractionBlocked).toHaveBeenCalledWith(1);
@@ -1268,7 +1268,7 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Justificativa Opcional" }), { target: { value: "Falhou" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Justificativa (opcional)" }), { target: { value: "Falhou" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar justificativa" }));
 
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Falhou", "justification"));
