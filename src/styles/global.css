@@ -124,6 +124,10 @@
 
   html {
     @apply min-w-80 bg-background font-sans;
+    /* A Source Sans 3 tem altura-x ~10% menor que a Geist: no mesmo px o texto pequeno lia
+       menor. 0.51 é o maior valor que ainda mantém os títulos longos do painel em 1 linha a
+       1920px; não altera font-size calculado nem line-height, só o desenho dos glifos. */
+    font-size-adjust: 0.51;
   }
 
   body {
