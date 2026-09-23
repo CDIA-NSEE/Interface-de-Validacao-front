@@ -191,11 +191,16 @@ function reviewBadgeVariant(status) {
   return "pending";
 }
 
+// Status neutro (nada a decidir nem a corrigir): texto cinza, sem pílula. A pílula fica para o que carrega informação de
+// decisão (Concordo/Discordo) ou pede atenção (Área necessária) — uma coluna de pílulas iguais não destacaria nada.
+const NEUTRAL_STATUS_CLASS = "border-transparent bg-transparent font-normal text-muted-foreground";
+
 // `compact` encurta o pendente para "Pendente" nas linhas da lista (libera ~75px para o título); o nome acessível segue completo.
 function DiagnosisStatusBadge({ compact = false, diagnosis, status, useRefinedLayout = false }) {
   if (diagnosis?.source === "doctor_added") {
+    // "Adicionado" é a origem do item, não um veredito: neutro como "Pendente".
     return (
-      <Badge className="shrink-0" variant={diagnosis.region_required_missing ? "warning" : "secondary"}>
+      <Badge className={cn("shrink-0", useRefinedLayout && !diagnosis.region_required_missing && NEUTRAL_STATUS_CLASS)} variant={diagnosis.region_required_missing ? "warning" : "secondary"}>
         {diagnosis.region_required_missing ? "Área necessária" : "Adicionado"}
       </Badge>
     );
@@ -204,7 +209,7 @@ function DiagnosisStatusBadge({ compact = false, diagnosis, status, useRefinedLa
   return (
     <Badge className={cn(
       "shrink-0",
-      useRefinedLayout && status === "pending" && "border-transparent bg-transparent font-normal text-muted-foreground",
+      useRefinedLayout && status === "pending" && NEUTRAL_STATUS_CLASS,
       useRefinedLayout && status !== "pending" && "font-semibold",
       useRefinedLayout && status === "confirmed" && "border-success/50 bg-success/10",
       useRefinedLayout && status === "rejected" && "border-destructive/50",
