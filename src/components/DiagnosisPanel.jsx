@@ -778,6 +778,7 @@ export default function DiagnosisPanel({
     () => [...optionalDiagnoses, ...doctorDiagnoses],
     [doctorDiagnoses, optionalDiagnoses],
   );
+  const hasSecondaryDiagnoses = secondaryDiagnoses.length > 0;
   const secondaryDiagnosisIds = useMemo(
     () => new Set(secondaryDiagnoses.map((diagnosis) => String(diagnosis.id))),
     [secondaryDiagnoses],
@@ -1005,27 +1006,38 @@ export default function DiagnosisPanel({
                 {/* Título da seção: h2, como "Dados clínicos", com os itens (h3 do acordeão) abaixo dele na árvore de títulos — o
                     botão do cabeçalho dentro de um heading (padrão de acordeão do APG). Ícone + rótulo na composição de "Mais
                     informações", o cartão de seção vizinho; o ícone é aria-hidden, então o nome do gatilho segue sendo o rótulo.
-                    O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo. */}
+                    O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo.
+                    Lista vazia: título estático, sem chevron nem hover — recolher uma lista vazia não faz nada, e um controle
+                    que não controla nada só confunde. Mesma caixa (h-11, px-3) e mesma tipografia do gatilho. */}
                 <h2>
-                  <CollapsibleTrigger
-                    render={
-                      <Button
-                        className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
-                        type="button"
-                        variant="collapsible"
-                      />
-                    }
-                  >
-                    <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais</ValidationPanelIconLabel>
-                    <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
-                      <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
+                  {hasSecondaryDiagnoses ? (
+                    <CollapsibleTrigger
+                      render={
+                        <Button
+                          className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
+                          type="button"
+                          variant="collapsible"
+                        />
+                      }
+                    >
+                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais</ValidationPanelIconLabel>
+                      <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
+                        <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
+                      </span>
+                    </CollapsibleTrigger>
+                  ) : (
+                    <span className="flex h-11 items-center px-3 font-heading text-sm font-medium">
+                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais</ValidationPanelIconLabel>
                     </span>
-                  </CollapsibleTrigger>
+                  )}
                 </h2>
               </CardHeader>
+              {/* Lista vazia (só o diagnóstico do dia no laudo e nada adicionado): uma frase de status no lugar da lista — sem
+                  ela o cartão não diz se está vazio, carregando ou com erro. Linha com a altura do rodapé (40px), mesma margem. */}
+              {hasSecondaryDiagnoses ? (
               <CollapsibleContent className="h-(--collapsible-panel-height) overflow-clip transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
                 <CardContent className="border-t px-0 py-0">
-                {secondaryDiagnoses.length ? (
+                {(
                   // Sem teto de altura nem scroll próprio: a lista tem a altura do conteúdo e rola com o painel (um só scroll, na
                   // borda do painel). Um teto criava um segundo scroll dentro do painel — ambíguo para a roda do mouse, com a barra
                   // sobreposta aos itens — e espremia áreas e justificativa sob a barra fixa do item aberto.
@@ -1134,9 +1146,14 @@ export default function DiagnosisPanel({
                         );
                       })}
                   </Accordion>
-                ) : null}
+                )}
                 </CardContent>
               </CollapsibleContent>
+              ) : (
+                <CardContent className="border-t px-3 py-2.5">
+                  <p className="text-sm text-muted-foreground">Nenhum diagnóstico adicional neste ECG.</p>
+                </CardContent>
+              )}
               {/* Rodapé fixo (fora do conteúdo recolhível): a ação fica sempre visível e o seletor abre no mesmo lugar do botão. */}
               {availableOptions.length ? (
                 // Rodapé persistente: border-t e altura ficam no contêiner, que não é remontado ao alternar botão ↔ campo.

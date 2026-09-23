@@ -900,6 +900,23 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByRole("button", { name: "Diagnósticos adicionais" })).not.toBeInTheDocument();
   });
 
+  it("mostra a lista vazia como título estático e frase de status, com a ação de adicionar", () => {
+    render(
+      <DiagnosisPanelHarness
+        {...createProps()}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    // Recolher uma lista vazia não faz nada: o título segue sendo h2, mas sem gatilho.
+    const heading = screen.getByRole("heading", { level: 2, name: "Diagnósticos adicionais" });
+    expect(within(heading).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByText("Nenhum diagnóstico adicional neste ECG.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toBeVisible();
+  });
+
   it("adiciona o diagnóstico sem região associada", async () => {
     const onAdd = vi.fn().mockResolvedValue(true);
     render(
