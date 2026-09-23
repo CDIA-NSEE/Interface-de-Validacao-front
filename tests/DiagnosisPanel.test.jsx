@@ -324,7 +324,7 @@ describe("DiagnosisPanel", () => {
     expect(within(generalPanel).getAllByText("IA concordou")).toHaveLength(2);
   });
 
-  it("preserva badges clínicos no conteúdo do diagnóstico opcional expandido", () => {
+  it("mostra os badges clínicos do opcional expandido antes do Original e da decisão", () => {
     render(
       <DiagnosisPanelHarness
         {...createProps({ options: [] })}
@@ -342,10 +342,15 @@ describe("DiagnosisPanel", () => {
 
     const trigger = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
     fireEvent.click(trigger);
-    const content = document.getElementById(trigger.getAttribute("aria-controls"));
+    // Na barra do item, abaixo da divisória e antes do "Original:" e de Concordo/Discordo — a ordem do cartão do dia.
+    const bar = trigger.closest('[data-slot="diagnosis-item-bar"]');
+    const grouped = within(bar).getByText("Agrupado");
+    const original = bar.querySelector('[data-slot="diagnosis-original-text"]');
 
-    expect(within(content).getByText("Agrupado")).toBeVisible();
-    expect(within(content).getByText("Área necessária")).toBeVisible();
+    expect(grouped).toBeVisible();
+    expect(within(bar).getByText("Área necessária")).toBeVisible();
+    expect(grouped.compareDocumentPosition(original)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(original.compareDocumentPosition(within(bar).getByRole("group", { name: "Revisão de Bloqueio de ramo direito" }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("mantém os opcionais recolhidos e abre somente um diagnóstico por vez", () => {

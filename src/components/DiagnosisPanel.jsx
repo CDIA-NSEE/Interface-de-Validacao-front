@@ -1087,14 +1087,17 @@ export default function DiagnosisPanel({
                                   altura e opacidade em 200ms, sincronizadas com o painel de baixo, e o conteúdo desmonta ao terminar de fechar. */}
                               <Collapsible open={isOpen}>
                                 <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
-                                  {/* Tudo o que a abertura revela na barra, abaixo da divisória: "Original:" e a linha de ações. A divisória fecha
-                                      a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o mouse ou clicar
-                                      no texto original não mexe no item, como em qualquer outro conteúdo revelado. Ordem e respiro iguais aos do
-                                      Diagnóstico do dia (título → Original → ações, gap-2 de 8px); py-3 dá os mesmos 12px da linha de ações para
+                                  {/* Tudo o que a abertura revela na barra, abaixo da divisória: marcadores, "Original:" e a linha de ações. A
+                                      divisória fecha a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o
+                                      mouse ou clicar no texto original não mexe no item, como em qualquer outro conteúdo revelado. Ordem e respiro
+                                      iguais aos do Diagnóstico do dia (marcadores → título → Original → ações, gap-2 de 8px): o contexto vem antes
+                                      da decisão — "Agrupado" explica por que o título difere do Original e ficava abaixo de Concordo/Discordo.
+                                      Sem marcadores, DiagnosisBadges não renderiza nada. py-3 dá os mesmos 12px da linha de ações para
                                       as duas divisórias. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
                                       slot, então a barra tem a mesma altura nos dois tipos. O px-3 também guarda o anel de foco (3px) dos
                                       controles do overflow-hidden do painel. */}
                                   <div className="flex flex-col gap-2 border-t px-3 py-3">
+                                    <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                                     <DiagnosisOriginalText diagnosis={diagnosis} layout="additional" />
                                     <DiagnosisActionRow
                                       className="min-h-10"
@@ -1112,9 +1115,8 @@ export default function DiagnosisPanel({
                                 </CollapsibleContent>
                               </Collapsible>
                             </div>
-                            {/* Sem badges nem detalhes (ex.: adicionado recém-criado — tudo está na barra), o painel não deixa uma faixa vazia. */}
+                            {/* Sem detalhes (ex.: sem áreas nem justificativa — tudo está na barra), o painel não deixa uma faixa vazia. */}
                             <AccordionContent className="flex flex-col gap-3 pt-2 [&:has(>:empty:only-child)]:py-0">
-                              <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
                           </AccordionItem>
