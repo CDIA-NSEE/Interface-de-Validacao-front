@@ -402,16 +402,38 @@ function DiagnosisDetails({
     );
   }
 
+  // O editor e os botões que o abrem se substituem na tela; sem mover o foco, ele cairia no body. Abrir pelo botão leva
+  // o cursor ao fim do texto (clicou para escrever); fechar — salvo ou cancelado — devolve o foco ao botão que reabre o
+  // editor ("Editar" ou "Adicionar justificativa"), e só se o foco se perdeu (o médico pode já ter clicado em outro lugar).
+  function focusDisagreementControl(target) {
+    window.setTimeout(() => {
+      if (target === "editor") {
+        const textarea = rootRef.current?.querySelector(`#disagreement-note-${diagnosis.id}`);
+        textarea?.focus();
+        textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+        return;
+      }
+      if (document.activeElement && document.activeElement !== document.body) return;
+      rootRef.current?.querySelector('[data-justification-action="open"]')?.focus();
+    }, 0);
+  }
+
   function openDisagreementPanel() {
     onReviewDraftChange?.(diagnosis.id, {
       isOpen: true,
       note: diagnosis.review_notes || "",
     });
+    focusDisagreementControl("editor");
+  }
+
+  function closeDisagreementPanel() {
+    setDisagreementPanelOpen(false);
+    focusDisagreementControl("opener");
   }
 
   async function submitDisagreement(note, feedbackKind = "decision") {
     const wasReviewed = await onReview(diagnosis.id, "rejected", note, feedbackKind);
-    if (wasReviewed) setDisagreementPanelOpen(false);
+    if (wasReviewed) closeDisagreementPanel();
   }
 
   async function handleRemoveRegionClick(region) {
@@ -434,7 +456,7 @@ function DiagnosisDetails({
   const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
     <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
       <AlertTitle className="min-w-0 truncate">Justificativa adicionada</AlertTitle>
-      <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar</Button>
+      <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} data-justification-action="open" onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar</Button>
       <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
     </Alert>
   ) : null;
@@ -557,7 +579,7 @@ function DiagnosisDetails({
       {isPlain && status === "rejected" && diagnosis.review_notes ? (
         <Alert className="grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
           <AlertTitle className="min-w-0">Justificativa registrada</AlertTitle>
-          <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar justificativa</Button>
+          <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} data-justification-action="open" onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar justificativa</Button>
           <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
         </Alert>
       ) : null}
@@ -566,7 +588,7 @@ function DiagnosisDetails({
 
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
         // À direita (`self-end`): o mesmo canto em que, depois de salvar, fica o "Editar" — a ação de justificar não muda de lado.
-        <Button className={cn("w-fit self-end", SUBTLE_OUTLINE_BUTTON_CLASS, styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">
+        <Button className={cn("w-fit self-end", SUBTLE_OUTLINE_BUTTON_CLASS, styles.enterAnimation)} data-justification-action="open" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">
           <Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa
         </Button>
       ) : null}
@@ -577,7 +599,7 @@ function DiagnosisDetails({
             <Field>
               <div className="flex items-center justify-between gap-2">
                 <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <OptionalTag /></FieldLabel>
-                {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
+                {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={closeDisagreementPanel} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
               </div>
               <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância" rows={3} value={reviewNoteDraft} />
             </Field>
@@ -586,7 +608,7 @@ function DiagnosisDetails({
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {!isPlain || isReviewDraftDirty ? (
                 <>
-                  <Button disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="sm" type="button" variant="outline">Cancelar</Button>
+                  <Button disabled={isBusy} onClick={closeDisagreementPanel} size="sm" type="button" variant="outline">Cancelar</Button>
                   <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
                 </>
               ) : null}

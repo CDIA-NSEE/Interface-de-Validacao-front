@@ -1229,6 +1229,56 @@ describe("DiagnosisPanel", () => {
     expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível", "justification");
   });
 
+  it("leva o cursor ao campo ao abrir a justificativa e devolve o foco ao botão que a reabre ao salvar ou cancelar", async () => {
+    const user = userEvent.setup();
+    const onReview = vi.fn().mockResolvedValue(true);
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+    const justification = () => screen.getByRole("textbox", { name: "Justificativa (opcional)" });
+    const addJustification = () => screen.getByRole("button", { name: "Adicionar justificativa" });
+
+    await user.click(addJustification());
+    await waitFor(() => expect(justification()).toHaveFocus());
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(addJustification()).toHaveFocus());
+
+    await user.click(addJustification());
+    await waitFor(() => expect(justification()).toHaveFocus());
+    await user.keyboard("Traçado incompatível");
+    await user.click(screen.getByRole("button", { name: "Salvar justificativa" }));
+    expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível", "justification");
+    // O harness não atualiza `review_notes`: o botão que reabre continua sendo "Adicionar justificativa".
+    await waitFor(() => expect(addJustification()).toHaveFocus());
+  });
+
+  it("abre a justificativa salva com o cursor no fim do texto e devolve o foco ao Editar ao cancelar", async () => {
+    const user = userEvent.setup();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_notes: "Traçado incompatível", review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Editar" }));
+    const justification = screen.getByRole("textbox", { name: "Justificativa (opcional)" });
+    await waitFor(() => expect(justification).toHaveFocus());
+    expect(justification.selectionStart).toBe("Traçado incompatível".length);
+    expect(justification.selectionEnd).toBe("Traçado incompatível".length);
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus());
+  });
+
   it("mantém decisões antes das áreas e reabre a justificativa salva do adicional", async () => {
     const user = userEvent.setup();
     render(
