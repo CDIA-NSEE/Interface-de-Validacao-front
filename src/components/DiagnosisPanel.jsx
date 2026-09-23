@@ -856,9 +856,20 @@ export default function DiagnosisPanel({
 
   useEffect(() => {
     if (!pendingExpandedDiagnosisId || !secondaryDiagnosisIds.has(pendingExpandedDiagnosisId)) return;
-    revealSecondaryDiagnosis(pendingExpandedDiagnosisId);
-    scrollDiagnosisIntoView(pendingExpandedDiagnosisId);
+    const addedDiagnosisId = pendingExpandedDiagnosisId;
+    revealSecondaryDiagnosis(addedDiagnosisId);
+    scrollDiagnosisIntoView(addedDiagnosisId);
     setPendingExpandedDiagnosisId(null);
+    // O campo de busca desmonta ao adicionar e o foco cairia no body: vai para o gatilho do item novo (anuncia o que foi
+    // adicionado; o Tab seguinte chega a "Remover diagnóstico" e "Marcar área"). Sem cleanup: o próprio efeito re-roda ao
+    // zerar o pendente e cancelaria o timer. preventScroll: a rolagem é do scrollDiagnosisIntoView, que acompanha a barra
+    // crescendo; só age se o foco ainda estiver perdido (o médico pode ter clicado em outro lugar).
+    window.setTimeout(() => {
+      if (document.activeElement && document.activeElement !== document.body) return;
+      secondaryListRef.current
+        ?.querySelector(`[data-diagnosis-id="${addedDiagnosisId}"] [data-slot="accordion-trigger"]`)
+        ?.focus({ preventScroll: true });
+    }, 0);
   }, [pendingExpandedDiagnosisId, revealSecondaryDiagnosis, scrollDiagnosisIntoView, secondaryDiagnosisIds]);
 
   // Reage só à troca de área selecionada. As callbacks ficam fora das dependências: `revealSecondaryDiagnosis`

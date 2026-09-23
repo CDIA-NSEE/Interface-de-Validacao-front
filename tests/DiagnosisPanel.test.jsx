@@ -1009,7 +1009,10 @@ describe("DiagnosisPanel", () => {
         isGeneralReviewDay={false}
       />,
     );
-    expect(screen.getByRole("button", { name: /Fibrilação atrial/ })).toHaveAttribute("aria-expanded", "true");
+    const addedTrigger = screen.getByRole("button", { name: /Fibrilação atrial/ });
+    expect(addedTrigger).toHaveAttribute("aria-expanded", "true");
+    // O campo desmontou: o foco não fica perdido no body, vai para o gatilho do item recém-adicionado.
+    await waitFor(() => expect(addedTrigger).toHaveFocus());
   });
 
   it("mantém as decisões antes das áreas e da justificativa no diagnóstico do dia", () => {
