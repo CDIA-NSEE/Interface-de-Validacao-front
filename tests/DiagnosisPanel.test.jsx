@@ -124,6 +124,8 @@ describe("DiagnosisPanel", () => {
     const reopenedAreas = screen.getByRole("button", { name: "1 área marcada" });
     expect(reopenedAreas).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Justificativa adicionada")).toBeVisible();
+    // O texto salvo fica à vista, sem abrir o editor.
+    expect(screen.getByText("Justificativa salva")).toBeVisible();
     reopenedAreas.focus();
     await user.keyboard(" ");
     expect(reopenedAreas).toHaveAttribute("aria-expanded", "false");

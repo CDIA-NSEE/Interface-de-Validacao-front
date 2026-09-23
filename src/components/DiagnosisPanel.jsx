@@ -421,10 +421,13 @@ function DiagnosisDetails({
   // Nos adicionais a linha "Original:" fica na barra fixa do item (DiagnosisPanel), abrindo o bloco abaixo da divisória.
   const originalLine = !isAdditional ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
 
+  // O texto salvo aparece sob o título (como na revalidação geral): conferir o que foi registrado não exige abrir o
+  // editor — antes eram 2 cliques e o diagnóstico entrava em prévia de edição só para ler.
   const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
-    <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
+    <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
       <AlertTitle className="min-w-0 truncate">Justificativa adicionada</AlertTitle>
       <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar</Button>
+      <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
     </Alert>
   ) : null;
 
