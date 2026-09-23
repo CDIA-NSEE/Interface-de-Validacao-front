@@ -54,6 +54,7 @@ import {
   normalizeDiagnosisText,
 } from "../utils/diagnosisReferences.js";
 import { runViewTransition } from "../utils/viewTransition.js";
+import OptionalTag from "./OptionalTag.jsx";
 import ValidationPanelIconLabel from "./ValidationPanelIconLabel.jsx";
 
 const REVIEW_LABELS = {
@@ -566,7 +567,7 @@ function DiagnosisDetails({
           <AlertDescription className="flex flex-col gap-2">
             <Field>
               <div className="flex items-center justify-between gap-2">
-                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <span className="font-normal text-muted-foreground">(opcional)</span></FieldLabel>
+                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <OptionalTag /></FieldLabel>
                 {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={() => setDisagreementPanelOpen(false)} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
               </div>
               <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância" rows={3} value={reviewNoteDraft} />
@@ -1021,14 +1022,14 @@ export default function DiagnosisPanel({
                         />
                       }
                     >
-                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <span className="ml-1 font-normal text-muted-foreground">(opcional)</span></ValidationPanelIconLabel>
+                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <OptionalTag className="ml-1" /></ValidationPanelIconLabel>
                       <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
                         <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
                       </span>
                     </CollapsibleTrigger>
                   ) : (
                     <span className="flex h-11 items-center px-3 font-heading text-sm font-medium">
-                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <span className="ml-1 font-normal text-muted-foreground">(opcional)</span></ValidationPanelIconLabel>
+                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <OptionalTag className="ml-1" /></ValidationPanelIconLabel>
                     </span>
                   )}
                 </h2>

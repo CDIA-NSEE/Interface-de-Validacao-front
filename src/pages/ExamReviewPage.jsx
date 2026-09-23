@@ -13,6 +13,7 @@ import DiagnosisPanel from "../components/DiagnosisPanel.jsx";
 import EcgViewer from "../components/EcgViewer.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import OptionalTag from "../components/OptionalTag.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
@@ -1025,7 +1026,7 @@ export default function ExamReviewPage() {
                       <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
                         <NotebookPen aria-hidden="true" data-icon="inline-start" />
                         Observações gerais{" "}
-                        <span className="font-normal text-muted-foreground">(opcional)</span>
+                        <OptionalTag />
                       </FieldLabel>
                       {notesSaveState.status === "saving" || notesSaveState.status === "saved" ? (
                         <span className="text-xs text-muted-foreground" role="status">

@@ -840,8 +840,8 @@ describe("DiagnosisPanel", () => {
 
     const disagreementAlert = screen.getByRole("group", { name: /Justificativa/ });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(within(disagreementAlert).getByLabelText("Justificativa (opcional)")).toBeVisible();
-    fireEvent.change(within(disagreementAlert).getByLabelText("Justificativa (opcional)"), { target: { value: "Traçado incompatível" } });
+    expect(within(disagreementAlert).getByRole("textbox", { name: "Justificativa (opcional)" })).toBeVisible();
+    fireEvent.change(within(disagreementAlert).getByRole("textbox", { name: "Justificativa (opcional)" }), { target: { value: "Traçado incompatível" } });
     fireEvent.click(within(disagreementAlert).getByRole("button", { name: "Salvar justificativa" }));
     expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
@@ -1147,7 +1147,7 @@ describe("DiagnosisPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
 
     const editor = screen.getByRole("group", { name: /Justificativa/ });
-    const textarea = within(editor).getByLabelText("Justificativa (opcional)");
+    const textarea = within(editor).getByRole("textbox", { name: "Justificativa (opcional)" });
     const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
     const cancel = within(editor).getByRole("button", { name: "Cancelar" });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
