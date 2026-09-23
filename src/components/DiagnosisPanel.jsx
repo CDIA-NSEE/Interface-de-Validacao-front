@@ -1020,12 +1020,13 @@ export default function DiagnosisPanel({
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         const isOpen = openSecondaryDiagnosisKey === diagnosisId;
                         return (
-                          // Item aberto: filete de 3px em `primary` na borda esquerda + tinta primary/4 no item inteiro (a barra fixa, abaixo,
-                          // repete os dois em versão opaca). Um sinal de outro tipo que o hover cinza dos gatilhos (muted/50): tinta cinza
-                          // sobre cinza não distinguia aberto de hover nem de neutro, e nada marcava onde o item aberto termina — o filete
-                          // corre do topo da barra ao fim do conteúdo (áreas, justificativa) e para onde o item para. Filete e tinta entram e
-                          // saem em fade (150ms) para acompanhar a transição de altura — nada troca de uma vez no clique.
-                          <AccordionItem className="px-3 transition-[background-color,box-shadow] duration-150 data-open:bg-primary/4 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          // Item aberto: filete de 3px em `primary` na borda esquerda (a barra fixa, abaixo, repete o filete), sem tinta de
+                          // fundo. Um canal por estado: linha = aberto, preenchimento = hover (muted/50 nos gatilhos) — o hover é o único
+                          // preenchimento da lista. A tinta primary/4 que acompanhava o filete saiu: medida no app, era indistinguível do
+                          // hover (ΔE OKLab ≈ 0,004 no claro e 0,012 no escuro; o muted também é azulado) e mais fraca que ele, então um
+                          // vizinho em hover parecia o item aberto. O filete corre do topo da barra ao fim do conteúdo (áreas, justificativa)
+                          // e para onde o item para; entra e sai em fade (150ms) para acompanhar a transição de altura.
+                          <AccordionItem className="px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky, que
                                 adere ao topo do viewport do painel enquanto o item rola (a lista não tem scroll próprio) — o
@@ -1035,16 +1036,16 @@ export default function DiagnosisPanel({
                                 no painel, as áreas — nada clicável como bloco. A divisória é a fronteira do clicável: o sombreamento termina
                                 exatamente nela, então não há faixa que pareça gatilho e não seja. Irmã do painel (o overflow-hidden dele anularia
                                 o sticky); o bloco revelado vive num Collapsible controlado pelo item: abre e fecha com a mesma transição de altura
-                                do painel de baixo e desmonta ao fechar (nada de gatilho oculto nos fechados). Fundo opaco = mesma mistura do item
-                                aberto, para as linhas de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior
-                                (separador barra / conteúdo). */}
+                                do painel de baixo e desmonta ao fechar (nada de gatilho oculto nos fechados). Fundo opaco (card) para as linhas
+                                de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador barra /
+                                conteúdo). */}
                             <div
                               className={cn(
-                                "sticky top-0 z-10 -mx-3 bg-card transition-[background-color,box-shadow] duration-150 motion-reduce:transition-none",
-                                // Aberta: a mesma tinta do item, opaca (primary a 4% sobre o card), e o mesmo filete — a barra cobre o do item.
+                                "sticky top-0 z-10 -mx-3 bg-card transition-[box-shadow] duration-150 motion-reduce:transition-none",
+                                // Aberta: o mesmo filete do item — a barra, opaca, cobre o dele.
                                 // O separador barra/conteúdo só existe quando o painel tem conteúdo (único filho vazio = só o DiagnosisDetails
                                 // sem nada a mostrar); do contrário encostaria na borda do item seguinte e viraria uma linha dupla.
-                                isOpen && "border-b bg-[color-mix(in_oklab,var(--primary)_4%,var(--card))] shadow-[inset_3px_0_0_var(--primary)] [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
+                                isOpen && "border-b shadow-[inset_3px_0_0_var(--primary)] [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
                               )}
                               data-slot="diagnosis-item-bar"
                             >
@@ -1064,7 +1065,7 @@ export default function DiagnosisPanel({
                                 <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
                                   {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
-                                      Aberto: sem clamp, mesmo peso (o item aberto já se distingue pelo filete, pela tinta, pelo chevron e pelo que revela;
+                                      Aberto: sem clamp, mesmo peso (o item aberto já se distingue pelo filete, pelo chevron e pelo que revela;
                                       engrossar o texto refluía o título e "gritava" em CAIXA ALTA). Sem `title`: repetiria o visível e o
                                       tooltip nativo cobria o que vem logo abaixo (divisória e linha "Original:"). */}
                                   <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
