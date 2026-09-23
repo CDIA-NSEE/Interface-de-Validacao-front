@@ -110,13 +110,13 @@ const COLLAPSIBLE_PANEL_CLASS = "h-(--collapsible-panel-height) overflow-hidden 
 // Estilos que variam por layout de DiagnosisDetails. "plain" é a revalidação geral,
 // "additional" o acordeão de diagnósticos adicionais e "daily" o cartão do diagnóstico do dia.
 const REFINED_DETAILS_STYLES = {
-  // Sem divisória própria: a barra "N áreas marcadas" tem borda em repouso e é ela que separa a lista do que vem acima —
-  // um border-t aqui somaria uma segunda horizontal a poucos pixels da borda da barra.
+  // Sem divisória própria: o contorno do grupo "N áreas marcadas" é o que separa a lista do que vem acima — um border-t
+  // aqui somaria uma segunda horizontal a poucos pixels dele.
   areaCollapsible: "",
   areaPanel: COLLAPSIBLE_PANEL_CLASS,
-  areaRow: "border-input bg-background p-1.5 duration-150 motion-reduce:transition-none",
-  areaRowHovered: "border-info/50 bg-info/5",
-  areaRowSelected: "border-info/70 bg-info/10 ring-1 ring-inset ring-info/30",
+  areaRow: "bg-background p-1.5 duration-150 motion-reduce:transition-none",
+  areaRowHovered: "bg-info/5",
+  areaRowSelected: "bg-info/10 ring-1 ring-inset ring-info/70",
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
@@ -136,7 +136,7 @@ const DETAILS_STYLES = {
     areaPanel: "",
     areaRow: "",
     areaRowHovered: "bg-accent/60",
-    areaRowSelected: "bg-accent ring-2 ring-ring/30",
+    areaRowSelected: "bg-accent ring-2 ring-inset ring-ring/30",
     areaSelectButton: "",
     areaReferenceBadge: "",
     areaActions: "",
@@ -423,23 +423,26 @@ function DiagnosisDetails({
   ) : null;
 
   const regionListContent = regions.length ? (
-    <Collapsible className={styles.areaCollapsible} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
+    // Um só contorno para o grupo inteiro (lista agrupada): fechado ele é só a barra; aberto, a mesma borda cresce até a
+    // última área, então fica claro que todas as linhas pertencem a "N áreas marcadas". Antes a barra fechava a própria
+    // borda e as linhas eram caixas soltas com o mesmo espaço entre si e até a barra — a cabeça lia como mais um irmão
+    // da lista. `overflow-hidden` recorta os fundos da barra e das linhas nos cantos arredondados.
+    <Collapsible className={cn("overflow-hidden rounded-lg border border-input", styles.areaCollapsible)} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
       {/* Cabeçalho do grupo de áreas: continua sendo só a contagem e o chevron na largura toda (marcar outra área é o
-          "Marcar área" da linha de ações — um botão só, no mesmo lugar, com ou sem área), mas agora dentro do Button do
-          DS em `outline`. Sem borda ele tinha cara de legenda e só o hover revelava que era clicável; a largura toda
+          "Marcar área" da linha de ações — um botão só, no mesmo lugar, com ou sem área), no Button do DS em `outline`,
+          mas sem borda nem raio próprios: quem a delimita é o contorno do grupo, do qual ela é o topo. A largura toda
           mantém o alvo grande. Tom `muted` acima das linhas de área (bg-background nos layouts refinados, bg-muted/30 na
           revalidação) para a cabeça do grupo não sumir dentro da própria lista — e `dark:bg-muted/*` explícito porque a
           variante traz bg-input/30 no escuro. Aberta, a variante escurece sozinha pelo `aria-expanded` do Collapsible.
-          `focus-visible:ring-inset` porque o painel do acordeão recorta (overflow-hidden) qualquer anel externo de uma
-          barra `w-full`; `active:translate-y-0` porque o afundar de 1px do Button, numa faixa dessa largura, saltaria
-          sobre a lista que ela acabou de abrir. O ícone é o mesmo de "Marcar área": amarra a barra ao contexto de áreas
-          do cartão. */}
+          `focus-visible:ring-inset` porque o grupo recorta (overflow-hidden) qualquer anel externo;
+          `active:translate-y-0` porque o afundar de 1px do Button, numa faixa dessa largura, saltaria sobre a lista que
+          ela acabou de abrir. O ícone é o mesmo de "Marcar área": amarra a barra ao contexto de áreas do cartão. */}
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
         ref={areaListTriggerRef}
         render={
           <Button
-            className="h-8 w-full min-w-0 cursor-pointer justify-between gap-2 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60"
+            className="h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60"
             size="sm"
             type="button"
             variant="outline"
@@ -455,8 +458,9 @@ function DiagnosisDetails({
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className={styles.areaPanel}>
-      {/* O espaçamento fica dentro do painel para entrar na altura animada e sumir junto com ela. */}
-      <div className="flex flex-col gap-2 pt-2">
+      {/* Linhas coladas, separadas por filetes (sem espaço entre elas), dentro do contorno do grupo. O filete sob a barra
+          fica dentro do painel para entrar na altura animada e sumir junto com ela. */}
+      <div className="flex flex-col divide-y divide-border border-t border-border">
       {regions.map((region, index) => {
         const regionReference = getRegionReference(diagnosisReference, index);
         const areaLabel = `Área ${index + 1}`;
@@ -467,7 +471,9 @@ function DiagnosisDetails({
         return (
           <div
             className={cn(
-              "flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-2 transition-colors",
+              // `last:rounded-b-md` acompanha o canto interno do grupo (6px − 1px de borda), para o anel da última linha
+              // selecionada não ser cortado pelo recorte do contorno.
+              "flex items-center justify-between gap-2 bg-muted/30 p-2 transition-colors last:rounded-b-md",
               styles.areaRow,
               isHovered && !isSelected && styles.areaRowHovered,
               isSelected && styles.areaRowSelected,
