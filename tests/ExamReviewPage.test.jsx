@@ -632,13 +632,13 @@ describe("ExamReviewPage", () => {
 
     await screen.findByRole("heading", { name: "Exame ECG-42" });
     await user.click(screen.getByRole("button", { name: "Discordo" }));
-    await user.click(await screen.findByRole("button", { name: "Adicionar justificativa" }));
-    await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
+    // O Discordo já abre o editor: sem "Adicionar justificativa" no caminho.
+    await user.type(await screen.findByRole("textbox", { name: "Justificativa (opcional)" }), "Traçado incompatível");
 
     act(() => viewport.setCompact(true));
     await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
 
-    expect(await screen.findByLabelText(/Justificativa/)).toHaveValue("Traçado incompatível");
+    expect(await screen.findByRole("textbox", { name: "Justificativa (opcional)" })).toHaveValue("Traçado incompatível");
   });
 
   it("preserva o payload do salvamento do rascunho", async () => {

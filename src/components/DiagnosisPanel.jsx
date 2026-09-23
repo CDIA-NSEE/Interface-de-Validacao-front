@@ -317,8 +317,17 @@ function DiagnosisActionRow({
     const wasReviewed = decision === "confirmed"
       ? await onReview(diagnosis.id, "confirmed")
       : await onReview(diagnosis.id, "rejected", diagnosis.review_notes || "", "decision");
-    // Decisão salva: o rascunho de justificativa (se aberto) fecha.
-    if (wasReviewed) onReviewDraftChange?.(diagnosis.id, null);
+    if (!wasReviewed) return;
+    // Decisão salva. Discordo sem justificativa salva já abre o editor (vazio, então não bloqueia nada): antes era preciso
+    // clicar "Adicionar justificativa" para chegar ao campo. O foco fica no Discordo — mover o foco ao alternar um toggle
+    // é mudança de contexto (WCAG 3.2.2) e, com o foco no campo, os atalhos do ECG (+ − 0 V) virariam texto da
+    // justificativa. Concordo fecha o rascunho, se aberto. `reveal: false`: a resposta chega depois do clique e o médico
+    // pode já ter aberto outro item dos adicionais — o editor abre no lugar, sem puxar a lista de volta.
+    if (decision === "rejected" && !diagnosis.review_notes) {
+      onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: "" }, { reveal: false });
+    } else {
+      onReviewDraftChange?.(diagnosis.id, null);
+    }
   }
 
   function handleDecisionChange(nextValue) {
@@ -677,9 +686,9 @@ function DiagnosisCard({
   const status = getDiagnosisReviewStatus(diagnosis);
   const standardText = diagnosis.standard_text || diagnosis.name;
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
-  const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const cardVariant = isPrimaryDaily && !isRegionTarget ? "default" : diagnosisCardVariant({ isRegionTarget, isRequired });
-  const statusDescription = isDisagreementOpen && !isPrimaryDaily ? "Discordância em edição" : null;
+  // Só com texto não salvo: o Discordo já abre o editor vazio com a decisão salva, e aí não há nada "em edição".
+  const statusDescription = hasDirtyReviewDraft(diagnosis, reviewDraft) && !isPrimaryDaily ? "Discordância em edição" : null;
   const isRegionConnected = [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`));
 
   return (
@@ -902,8 +911,8 @@ export default function DiagnosisPanel({
     onStartRegion(diagnosis, region);
   }
 
-  function handlePanelReviewDraftChange(diagnosisId, draft) {
-    if (draft?.isOpen) revealSecondaryDiagnosis(diagnosisId);
+  function handlePanelReviewDraftChange(diagnosisId, draft, { reveal = true } = {}) {
+    if (draft?.isOpen && reveal) revealSecondaryDiagnosis(diagnosisId);
     onReviewDraftChange?.(diagnosisId, draft);
   }
 

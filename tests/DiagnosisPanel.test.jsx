@@ -802,7 +802,8 @@ describe("DiagnosisPanel", () => {
     ).toBeVisible();
   });
 
-  it("persiste a discordância imediatamente e mantém a justificativa opcional", async () => {
+  it("persiste a discordância imediatamente e já abre a justificativa opcional, sem tirar o foco do Discordo", async () => {
+    const user = userEvent.setup();
     const onReview = vi.fn().mockResolvedValue(true);
     render(
       <DiagnosisPanelHarness
@@ -812,13 +813,76 @@ describe("DiagnosisPanel", () => {
         isGeneralReviewDay={false}
       />,
     );
+    const justification = () => screen.queryByRole("textbox", { name: "Justificativa (opcional)" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Concordo" }));
+    await user.click(screen.getByRole("button", { name: "Concordo" }));
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
+    expect(justification()).not.toBeInTheDocument();
+
+    const disagree = screen.getByRole("button", { name: "Discordo" });
+    await user.click(disagree);
+    await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "", "decision"));
+    await waitFor(() => expect(justification()).toHaveValue(""));
+    expect(screen.queryByRole("button", { name: "Adicionar justificativa" })).not.toBeInTheDocument();
+    expect(disagree).toHaveFocus();
+
+    // Vazio, o editor não bloqueia nada: Concordo segue valendo e o fecha.
+    onReview.mockClear();
+    await user.click(screen.getByRole("button", { name: "Concordo" }));
+    await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
+    await waitFor(() => expect(justification()).not.toBeInTheDocument());
+  });
+
+  it("não abre a justificativa se a discordância não foi salva", async () => {
+    const onReview = vi.fn().mockResolvedValue(false);
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Discordo" }));
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "", "decision"));
-    expect(screen.queryByLabelText(/Justificativa/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Discordo" })).toHaveAttribute("aria-pressed", "false"));
+    expect(screen.queryByRole("textbox", { name: "Justificativa (opcional)" })).not.toBeInTheDocument();
+  });
+
+  it("abre a justificativa do adicional no lugar, sem reabrir o item se o médico já abriu outro", async () => {
+    let resolveReview;
+    const onReview = vi.fn().mockReturnValueOnce(new Promise((resolve) => {
+      resolveReview = resolve;
+    }));
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[
+          originalDiagnosis(1, "Ritmo sinusal"),
+          originalDiagnosis(2, "Bloqueio de ramo direito"),
+          originalDiagnosis(3, "Extrassistolia ventricular"),
+        ]}
+        isGeneralReviewDay={false}
+      />,
+    );
+    const firstTrigger = () => screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
+    const secondTrigger = () => screen.getByRole("button", { name: /Extrassistolia ventricular/ });
+
+    fireEvent.click(firstTrigger());
+    const firstItem = firstTrigger().closest('[data-diagnosis-id="2"]');
+    fireEvent.click(within(firstItem).getByRole("button", { name: "Discordo" }));
+    // A resposta chega depois de o médico já ter passado ao item seguinte.
+    fireEvent.click(secondTrigger());
+    await act(async () => {
+      resolveReview(true);
+    });
+
+    expect(secondTrigger()).toHaveAttribute("aria-expanded", "true");
+    expect(firstTrigger()).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(firstTrigger());
+    expect(await within(firstItem).findByRole("textbox", { name: "Justificativa (opcional)" })).toHaveValue("");
   });
 
   it("exibe uma única identificação da justificativa no diagnóstico adicional", () => {
