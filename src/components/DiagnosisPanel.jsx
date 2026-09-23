@@ -81,7 +81,24 @@ const INLINE_DECISION_ROW_STYLES = {
   markAreaButton: cn("ml-auto shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
   // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
   markAreaButtonActive: "ml-auto h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
+  // "Remover diagnóstico" no slot do veredito: a mesma borda neutra e o mesmo texto do "Marcar área" do outro extremo,
+  // para a barra do item ter duas caixas delimitadas em repouso — não uma caixa e um texto solto. A tinta destrutiva
+  // entra só no hover/foco: o hover acrescenta cor, não revela que ali havia um botão.
+  // `aria-expanded:*` neutraliza a variante outline: o gatilho do AlertDialog marca `aria-expanded` enquanto o diálogo
+  // está aberto e pintaria bg-muted/text-foreground por baixo do overlay — a caixa não pode trocar de cor durante a
+  // confirmação. A constante vem por último no `cn()`: é o que garante h-10, bg-card e disabled:opacity-100 vencendo a
+  // variante (inverter a ordem quebra o dark mode em silêncio).
+  removeButton: cn(
+    "shrink-0 border-border text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive aria-expanded:bg-card aria-expanded:text-muted-foreground dark:hover:bg-destructive/20",
+    INLINE_DECISION_CONTROL_CLASS,
+  ),
 };
+
+// Controles secundários do cartão em `size="sm"` (justificativa): fronteira em repouso, como o "Marcar área" da linha de
+// ações — em ghost eles eram texto solto e só o hover dizia que havia um botão ali. Texto e borda leves para não
+// competirem com a decisão, que é a ação principal do cartão.
+const SUBTLE_OUTLINE_BUTTON_CLASS =
+  "border-border bg-card text-muted-foreground hover:border-input hover:bg-muted hover:text-foreground dark:bg-card";
 
 const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
 
@@ -93,6 +110,8 @@ const COLLAPSIBLE_PANEL_CLASS = "h-(--collapsible-panel-height) overflow-hidden 
 // Estilos que variam por layout de DiagnosisDetails. "plain" é a revalidação geral,
 // "additional" o acordeão de diagnósticos adicionais e "daily" o cartão do diagnóstico do dia.
 const REFINED_DETAILS_STYLES = {
+  // Sem divisória própria: a barra "N áreas marcadas" tem borda em repouso e é ela que separa a lista do que vem acima —
+  // um border-t aqui somaria uma segunda horizontal a poucos pixels da borda da barra.
   areaCollapsible: "",
   areaPanel: COLLAPSIBLE_PANEL_CLASS,
   areaRow: "border-input bg-background p-1.5 duration-150 motion-reduce:transition-none",
@@ -133,7 +152,6 @@ const DETAILS_STYLES = {
   additional: REFINED_DETAILS_STYLES,
   daily: {
     ...REFINED_DETAILS_STYLES,
-    areaCollapsible: "border-t pt-1.5",
     savedJustificationVariant: "default",
     editorVariant: "default",
     editorClass: ENTER_ANIMATION_CLASS,
@@ -400,20 +418,38 @@ function DiagnosisDetails({
   const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
     <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
       <AlertTitle className="min-w-0 truncate">Justificativa adicionada</AlertTitle>
-      <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar</Button>
+      <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar</Button>
     </Alert>
   ) : null;
 
   const regionListContent = regions.length ? (
     <Collapsible className={styles.areaCollapsible} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
-      {/* Só a contagem e o chevron, na largura toda (state layer da variante ghost, altura do size sm): marcar outra
-          área é o mesmo "Marcar área" da linha de ações — um botão só, no mesmo lugar, com ou sem área. */}
+      {/* Cabeçalho do grupo de áreas: continua sendo só a contagem e o chevron na largura toda (marcar outra área é o
+          "Marcar área" da linha de ações — um botão só, no mesmo lugar, com ou sem área), mas agora dentro do Button do
+          DS em `outline`. Sem borda ele tinha cara de legenda e só o hover revelava que era clicável; a largura toda
+          mantém o alvo grande. Tom `muted` acima das linhas de área (bg-background nos layouts refinados, bg-muted/30 na
+          revalidação) para a cabeça do grupo não sumir dentro da própria lista — e `dark:bg-muted/*` explícito porque a
+          variante traz bg-input/30 no escuro. Aberta, a variante escurece sozinha pelo `aria-expanded` do Collapsible.
+          `focus-visible:ring-inset` porque o painel do acordeão recorta (overflow-hidden) qualquer anel externo de uma
+          barra `w-full`; `active:translate-y-0` porque o afundar de 1px do Button, numa faixa dessa largura, saltaria
+          sobre a lista que ela acabou de abrir. O ícone é o mesmo de "Marcar área": amarra a barra ao contexto de áreas
+          do cartão. */}
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
-        className="flex h-7 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-left text-[0.8rem] font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none dark:hover:bg-muted/50"
         ref={areaListTriggerRef}
+        render={
+          <Button
+            className="h-8 w-full min-w-0 cursor-pointer justify-between gap-2 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60"
+            size="sm"
+            type="button"
+            variant="outline"
+          />
+        }
       >
-        <span>{markedRegionCountLabel(regions.length)}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <MapPinned aria-hidden="true" />
+          <span className="truncate">{markedRegionCountLabel(regions.length)}</span>
+        </span>
         <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
           <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
         </span>
@@ -498,7 +534,7 @@ function DiagnosisDetails({
       {isPlain && status === "rejected" && diagnosis.review_notes ? (
         <Alert className="grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
           <AlertTitle className="min-w-0">Justificativa registrada</AlertTitle>
-          <Button disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">Editar justificativa</Button>
+          <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar justificativa</Button>
           <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
         </Alert>
       ) : null}
@@ -507,7 +543,7 @@ function DiagnosisDetails({
 
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
         // À direita (`self-end`): o mesmo canto em que, depois de salvar, fica o "Editar" — a ação de justificar não muda de lado.
-        <Button className={cn("w-fit self-end", styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="ghost">
+        <Button className={cn("w-fit self-end", SUBTLE_OUTLINE_BUTTON_CLASS, styles.enterAnimation)} disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">
           {isPlain ? "Justificativa (opcional)" : <><Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa</>}
         </Button>
       ) : null}
@@ -541,9 +577,11 @@ function DiagnosisDetails({
 
 // Única ação do diagnóstico adicionado pelo médico (originais nunca são removidos). Ocupa o slot do veredito, à esquerda
 // da linha de ações — onde os originais têm Concordo/Discordo — com a mesma altura dos toggles (h-10) para a linha ter o
-// mesmo respiro nos dois tipos; "Marcar área" fecha a linha à direita, no mesmo x dos originais. Ghost como as lixeiras
-// das áreas, com rótulo e tinta destrutiva só no hover/foco, e confirmação em diálogo: é a ação do diagnóstico inteiro,
-// rara e destrutiva — ganha alvo, não o peso de Concordo/Discordo.
+// mesmo respiro nos dois tipos; "Marcar área" fecha a linha à direita, no mesmo x dos originais. Outline neutro, a mesma
+// forma do "Marcar área" do outro extremo: todo controle clicável do cartão tem fronteira em repouso, e a assimetria
+// "texto solto à esquerda, botão delimitado à direita" era a única da barra. O que separa as duas ações é a tinta
+// destrutiva no hover/foco e a confirmação em diálogo: é a ação do diagnóstico inteiro, rara e destrutiva — ganha alvo
+// e fronteira, não o peso de Concordo/Discordo.
 function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
   const standardText = diagnosis.standard_text || diagnosis.name;
   const regionCount = diagnosis.regions?.length ?? 0;
@@ -552,7 +590,7 @@ function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
 
   return (
     <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
-      <AlertDialogTrigger render={<Button className="h-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/20" disabled={isBusy} size="lg" type="button" variant="ghost" />}>
+      <AlertDialogTrigger render={<Button className={INLINE_DECISION_ROW_STYLES.removeButton} disabled={isBusy} size="lg" type="button" variant="outline" />}>
         <Trash2 aria-hidden="true" data-icon="inline-start" />
         Remover diagnóstico
       </AlertDialogTrigger>
