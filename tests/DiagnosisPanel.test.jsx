@@ -1332,11 +1332,14 @@ describe("DiagnosisPanel", () => {
 
     const saved = screen.getByRole("group", { name: "Justificativa" });
     const savedText = within(saved).getByText((_, element) => element?.textContent === note && element.children.length === 0);
-    expect(savedText).toHaveClass("whitespace-pre-line");
+    // A área de leitura tem a geometria do campo e quebra linhas como ele: o texto fica onde foi digitado.
+    const sharedGeometry = ["rounded-lg", "border", "px-2.5", "py-2"];
+    expect(savedText).toHaveClass("whitespace-pre-wrap", ...sharedGeometry);
 
-    // A caixa não é trocada por outra: é o mesmo elemento que vira o editor e volta a ser o texto salvo.
+    // O bloco não é trocado por outro: é o mesmo elemento que vira o editor e volta a ser o texto salvo.
     await user.click(within(saved).getByRole("button", { name: "Editar" }));
     expect(screen.getByRole("group", { name: "Justificativa (opcional)" })).toBe(saved);
+    expect(within(saved).getByRole("textbox")).toHaveClass(...sharedGeometry, "resize-none");
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(screen.getByRole("group", { name: "Justificativa" })).toBe(saved);
   });
