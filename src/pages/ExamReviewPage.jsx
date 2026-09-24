@@ -65,6 +65,7 @@ import {
 } from "../services/validationService.js";
 import { formatDate } from "../utils/dateUtils.js";
 import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
+import { normalizeReviewNote } from "../utils/disagreementReview.js";
 import {
   DEFAULT_ECG_ASPECT_RATIO,
   REVIEW_MOBILE_BREAKPOINT,
@@ -747,7 +748,8 @@ export default function ExamReviewPage() {
       const diagnosis = (exam?.diagnoses || []).find(
         (item) => String(item.id) === diagnosisId,
       );
-      return (draft.note || "") !== (diagnosis?.review_notes || "");
+      // Texto já limpo, como no painel: espaços e enters nas bordas não contam como alteração não salva.
+      return normalizeReviewNote(draft.note) !== normalizeReviewNote(diagnosis?.review_notes);
     },
   )?.[0] || null;
   const hasUnsavedDiagnosisReview = Boolean(dirtyDiagnosisReviewId);

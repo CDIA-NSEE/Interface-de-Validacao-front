@@ -1279,6 +1279,45 @@ describe("DiagnosisPanel", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus());
   });
 
+  it("salva a justificativa limpa e não conta espaços ou enters nas bordas como alteração", async () => {
+    const onReview = vi.fn().mockResolvedValue(true);
+    const { unmount } = render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+    const justification = () => screen.getByRole("textbox", { name: "Justificativa (opcional)" });
+    const save = () => screen.getByRole("button", { name: "Salvar justificativa" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    // Só espaços e enters: não há justificativa, então não há o que salvar.
+    fireEvent.change(justification(), { target: { value: "  \n\n  " } });
+    expect(save()).toBeDisabled();
+    fireEvent.change(justification(), { target: { value: "\n\nTraçado incompatível.   \n\n\n\nRitmo irregular.\n\n" } });
+    fireEvent.click(save());
+    expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível.\n\nRitmo irregular.", "justification");
+    unmount();
+
+    // Justificativa já salva: um enter a mais no fim não habilita o Salvar nem bloqueia a decisão.
+    onReview.mockClear();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, onReviewInteractionBlocked: vi.fn(), options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_notes: "Traçado incompatível.", review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.change(justification(), { target: { value: "Traçado incompatível.\n\n" } });
+    expect(save()).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Concordo" }));
+    await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
+  });
+
   it("usa a mesma caixa e o mesmo rótulo no editor e na justificativa salva, com as quebras de linha digitadas", async () => {
     const user = userEvent.setup();
     const note = "Traçado não sustenta o achado.\n\nRitmo irregular em D2 longo.";

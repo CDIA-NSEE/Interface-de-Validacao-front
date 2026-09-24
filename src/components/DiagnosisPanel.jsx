@@ -47,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { getDiagnosisReviewStatus, getDiagnosisVisualStatus } from "../utils/diagnosisRegionVisuals.js";
+import { normalizeReviewNote } from "../utils/disagreementReview.js";
 import {
   getDiagnosisDisplayGroups,
   getDiagnosisReference,
@@ -176,9 +177,10 @@ function markedRegionCountLabel(count) {
 }
 
 // Rascunho de justificativa aberto e diferente do salvo: bloqueia novas decisões e a troca de item até salvar/cancelar.
+// Compara o texto já limpo: um enter ou espaço a mais nas bordas não é alteração (não habilita "Salvar" nem bloqueia).
 function hasDirtyReviewDraft(diagnosis, reviewDraft) {
   if (!reviewDraft?.isOpen) return false;
-  return (reviewDraft.note ?? diagnosis.review_notes ?? "") !== (diagnosis.review_notes || "");
+  return normalizeReviewNote(reviewDraft.note ?? diagnosis.review_notes) !== normalizeReviewNote(diagnosis.review_notes);
 }
 
 function reviewBadgeVariant(status) {
@@ -635,7 +637,7 @@ function DiagnosisDetails({
                   {!isPlain || isReviewDraftDirty ? (
                     <>
                       <Button disabled={isBusy} onClick={closeDisagreementPanel} size="sm" type="button" variant="outline">Cancelar</Button>
-                      <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
+                      <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(normalizeReviewNote(reviewNoteDraft), "justification")} size="sm" type="button">Salvar justificativa</Button>
                     </>
                   ) : null}
                 </div>
