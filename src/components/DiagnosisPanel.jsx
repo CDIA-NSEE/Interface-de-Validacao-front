@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ClipboardList, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   Accordion,
@@ -126,7 +126,6 @@ const REFINED_DETAILS_STYLES = {
   originalPreview: "text-foreground/75",
   savedJustificationVariant: "default",
   editorVariant: "default",
-  editorClass: ENTER_ANIMATION_CLASS,
   editorTextarea: "bg-background text-foreground dark:bg-background",
   enterAnimation: ENTER_ANIMATION_CLASS,
 };
@@ -145,7 +144,6 @@ const DETAILS_STYLES = {
     originalPreview: "",
     savedJustificationVariant: "default",
     editorVariant: "destructive",
-    editorClass: "",
     editorTextarea: "",
     enterAnimation: "",
   },
@@ -154,7 +152,6 @@ const DETAILS_STYLES = {
     ...REFINED_DETAILS_STYLES,
     savedJustificationVariant: "default",
     editorVariant: "default",
-    editorClass: ENTER_ANIMATION_CLASS,
   },
 };
 
@@ -392,8 +389,57 @@ function DiagnosisDetails({
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
   const isReviewDraftDirty = hasDirtyReviewDraft(diagnosis, reviewDraft);
+  const isJustificationBlockVisible = isDisagreementOpen || (status === "rejected" && Boolean(diagnosis.review_notes));
   const rootRef = useRef(null);
   const areaListTriggerRef = useRef(null);
+  const justificationBlockRef = useRef(null);
+  const justificationContentRef = useRef(null);
+  const justificationHeightRef = useRef(0);
+  const justificationAnimationRef = useRef(null);
+  const wasDisagreementOpenRef = useRef(isDisagreementOpen);
+
+  // Altura atual da caixa da justificativa, por observação (redimensionar o campo não re-renderiza): é de onde parte a
+  // transição editor ↔ texto salvo. Zera quando a caixa sai, para a próxima abertura usar a animação de entrada, e não
+  // uma transição a partir de uma altura antiga.
+  useEffect(() => {
+    const block = justificationBlockRef.current;
+    if (!block || typeof ResizeObserver === "undefined") return undefined;
+    justificationHeightRef.current = block.offsetHeight;
+    const observer = new ResizeObserver(() => {
+      justificationHeightRef.current = block.offsetHeight;
+    });
+    observer.observe(block);
+    return () => {
+      observer.disconnect();
+      justificationHeightRef.current = 0;
+    };
+  }, [isJustificationBlockVisible]);
+
+  // Editor ↔ texto salvo na mesma caixa (container transform): a borda fica, a altura desliza de um estado ao outro e o
+  // miolo entra esmaecendo. Antes a caixa encolhia ~90px num quadro só, o conteúdo de baixo saltava e o texto recém-
+  // escrito sumia até o bloco novo aparecer. 200ms com a curva dos colapsáveis; `clip`, e não `hidden`, para o foco
+  // no campo durante a transição não rolar o miolo. Sem movimento com movimento reduzido e na revalidação geral, que não anima.
+  useLayoutEffect(() => {
+    const wasOpen = wasDisagreementOpenRef.current;
+    wasDisagreementOpenRef.current = isDisagreementOpen;
+    const block = justificationBlockRef.current;
+    const fromHeight = justificationHeightRef.current;
+    if (wasOpen === isDisagreementOpen || isPlain || !block || !fromHeight || typeof block.animate !== "function") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    justificationAnimationRef.current?.cancel();
+    const toHeight = block.offsetHeight;
+    if (Math.abs(toHeight - fromHeight) < 1) return;
+    const easing = "cubic-bezier(0, 0, 0.2, 1)";
+    block.style.overflow = "clip";
+    const animation = block.animate([{ height: `${fromHeight}px` }, { height: `${toHeight}px` }], { duration: 200, easing });
+    const restoreOverflow = () => {
+      block.style.overflow = "";
+    };
+    animation.onfinish = restoreOverflow;
+    animation.oncancel = restoreOverflow;
+    justificationAnimationRef.current = animation;
+    justificationContentRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing });
+  }, [isDisagreementOpen, isPlain]);
 
   function setDisagreementPanelOpen(isOpen) {
     onReviewDraftChange?.(
@@ -451,15 +497,6 @@ function DiagnosisDetails({
   // Nos adicionais a linha "Original:" fica na barra fixa do item (DiagnosisPanel), abrindo o bloco abaixo da divisória.
   const originalLine = !isAdditional ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
 
-  // O texto salvo aparece sob o título (como na revalidação geral): conferir o que foi registrado não exige abrir o
-  // editor — antes eram 2 cliques e o diagnóstico entrava em prévia de edição só para ler.
-  const savedJustificationContent = !isPlain && !isDisagreementOpen && status === "rejected" && diagnosis.review_notes ? (
-    <Alert aria-label="Justificativa adicionada" className={cn("grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2", styles.enterAnimation)} role="group" variant={styles.savedJustificationVariant}>
-      <AlertTitle className="min-w-0 truncate">Justificativa adicionada</AlertTitle>
-      <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} data-justification-action="open" onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar</Button>
-      <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
-    </Alert>
-  ) : null;
 
   const regionListContent = regions.length ? (
     // Um só contorno para o grupo inteiro (lista agrupada): fechado ele é só a barra; aberto, a mesma borda cresce até a
@@ -574,47 +611,55 @@ function DiagnosisDetails({
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
-      {/* Justificativa salva, na mesma posição em todos os layouts (depois da decisão e das áreas). Na revalidação geral
-          mostra o texto: título e ação na mesma linha, ação à direita (como "Justificativa adicionada … Editar"), texto abaixo. */}
-      {isPlain && status === "rejected" && diagnosis.review_notes ? (
-        <Alert className="grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
-          <AlertTitle className="min-w-0">Justificativa registrada</AlertTitle>
-          <Button className={SUBTLE_OUTLINE_BUTTON_CLASS} disabled={isBusy} data-justification-action="open" onClick={openDisagreementPanel} size="sm" type="button" variant="outline">Editar justificativa</Button>
-          <AlertDescription className="col-span-2 break-words">{diagnosis.review_notes}</AlertDescription>
+      {/* Justificativa, na mesma posição em todos os layouts (depois da decisão e das áreas): uma caixa só para o editor
+          e para o texto salvo, que se transforma de um no outro. O rótulo "Justificativa" não muda de texto, cor nem lugar
+          entre os dois estados e o texto escrito mantém a cor do campo — antes o rótulo virava "Justificativa adicionada"
+          escuro e o texto ia para o cinza, invertendo a hierarquia justamente no que o médico acabou de escrever. Salvo:
+          rótulo e "Editar" na mesma linha (ação à direita), texto abaixo com as quebras de linha que o médico digitou. */}
+      {isJustificationBlockVisible ? (
+        <Alert aria-labelledby={disagreementLabelId} className={styles.enterAnimation} ref={justificationBlockRef} role="group" variant={isDisagreementOpen ? styles.editorVariant : styles.savedJustificationVariant}>
+          {/* gap-2 nos dois estados: o texto salvo começa onde começava o campo, a 8px do rótulo. */}
+          <AlertDescription className="flex flex-col gap-2" ref={justificationContentRef}>
+            {isDisagreementOpen ? (
+              <>
+                <Field>
+                  <div className="flex items-center justify-between gap-2">
+                    <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <OptionalTag /></FieldLabel>
+                    {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={closeDisagreementPanel} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
+                  </div>
+                  <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância" rows={3} value={reviewNoteDraft} />
+                </Field>
+                {/* Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com
+                    "Salvar" em cima, como o AlertDialogFooter. Na revalidação geral o par só aparece quando há algo a salvar. */}
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  {!isPlain || isReviewDraftDirty ? (
+                    <>
+                      <Button disabled={isBusy} onClick={closeDisagreementPanel} size="sm" type="button" variant="outline">Cancelar</Button>
+                      <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
+                    </>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* `-my-1`: o botão (28px) não engorda a linha além dos 20px da linha do rótulo no editor, então o rótulo
+                    fica na mesma altura nos dois estados. */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 leading-snug font-medium" id={disagreementLabelId}>Justificativa</span>
+                  <Button className={cn("-my-1", SUBTLE_OUTLINE_BUTTON_CLASS)} data-justification-action="open" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">{isPlain ? "Editar justificativa" : "Editar"}</Button>
+                </div>
+                <div className="break-words whitespace-pre-line text-foreground">{diagnosis.review_notes}</div>
+              </>
+            )}
+          </AlertDescription>
         </Alert>
       ) : null}
-
-      {savedJustificationContent}
 
       {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
         // À direita (`self-end`): o mesmo canto em que, depois de salvar, fica o "Editar" — a ação de justificar não muda de lado.
         <Button className={cn("w-fit self-end", SUBTLE_OUTLINE_BUTTON_CLASS, styles.enterAnimation)} data-justification-action="open" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">
           <Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa
         </Button>
-      ) : null}
-
-      {isDisagreementOpen ? (
-        <Alert aria-labelledby={disagreementLabelId} className={styles.editorClass} role="group" variant={styles.editorVariant}>
-          <AlertDescription className="flex flex-col gap-2">
-            <Field>
-              <div className="flex items-center justify-between gap-2">
-                <FieldLabel htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <OptionalTag /></FieldLabel>
-                {isPlain ? <Button aria-label="Cancelar justificativa" disabled={isBusy} onClick={closeDisagreementPanel} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button> : null}
-              </div>
-              <Textarea className={styles.editorTextarea} id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância" rows={3} value={reviewNoteDraft} />
-            </Field>
-            {/* Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com
-                "Salvar" em cima, como o AlertDialogFooter. Na revalidação geral o par só aparece quando há algo a salvar. */}
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              {!isPlain || isReviewDraftDirty ? (
-                <>
-                  <Button disabled={isBusy} onClick={closeDisagreementPanel} size="sm" type="button" variant="outline">Cancelar</Button>
-                  <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(reviewNoteDraft, "justification")} size="sm" type="button">Salvar justificativa</Button>
-                </>
-              ) : null}
-            </div>
-          </AlertDescription>
-        </Alert>
       ) : null}
     </div>
   );

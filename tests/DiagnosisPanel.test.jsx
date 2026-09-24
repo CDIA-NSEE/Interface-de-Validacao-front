@@ -123,7 +123,7 @@ describe("DiagnosisPanel", () => {
     expect(diagnosisTrigger()).toHaveAttribute("aria-expanded", "true");
     const reopenedAreas = screen.getByRole("button", { name: "1 área marcada" });
     expect(reopenedAreas).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Justificativa adicionada")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Justificativa" })).toBeVisible();
     // O texto salvo fica à vista, sem abrir o editor.
     expect(screen.getByText("Justificativa salva")).toBeVisible();
     reopenedAreas.focus();
@@ -1118,7 +1118,7 @@ describe("DiagnosisPanel", () => {
     const original = screen.getByText("Original:").parentElement;
     const decisions = screen.getByRole("group", { name: "Revisão de Ritmo sinusal" });
     const areaSummary = screen.getByRole("button", { name: "2 áreas marcadas" });
-    const savedJustification = screen.getByText("Justificativa adicionada");
+    const savedJustification = screen.getByRole("group", { name: "Justificativa" });
 
     expect(original.compareDocumentPosition(decisions)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(decisions.compareDocumentPosition(areaSummary)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -1186,11 +1186,11 @@ describe("DiagnosisPanel", () => {
     expect(within(cards[1]).getByRole("button", { name: "Marcar área" }).compareDocumentPosition(areas)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(within(cards[2]).getByText("Área obrigatória no ECG")).toBeVisible();
     expect(within(within(cards[2]).getByText("Área obrigatória no ECG").closest('[data-slot="alert"]')).queryByRole("button")).not.toBeInTheDocument();
-    // Justificativa salva: título e "Editar justificativa" na mesma caixa, texto abaixo.
-    const savedAlert = within(cards[3]).getByText("Justificativa registrada").closest('[data-slot="alert"]');
+    // Justificativa salva: rótulo e "Editar justificativa" na mesma linha, texto abaixo.
+    const savedAlert = within(cards[3]).getByRole("group", { name: "Justificativa" });
     expect(within(savedAlert).getByText("Artefato de movimento.")).toBeVisible();
     const editButton = within(savedAlert).getByRole("button", { name: "Editar justificativa" });
-    expect(within(cards[3]).getByText("Justificativa registrada").compareDocumentPosition(editButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(within(savedAlert).getByText("Justificativa").compareDocumentPosition(editButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(editButton.compareDocumentPosition(within(savedAlert).getByText("Artefato de movimento."))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
@@ -1279,6 +1279,29 @@ describe("DiagnosisPanel", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus());
   });
 
+  it("usa a mesma caixa e o mesmo rótulo no editor e na justificativa salva, com as quebras de linha digitadas", async () => {
+    const user = userEvent.setup();
+    const note = "Traçado não sustenta o achado.\n\nRitmo irregular em D2 longo.";
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_notes: note, review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    const saved = screen.getByRole("group", { name: "Justificativa" });
+    const savedText = within(saved).getByText((_, element) => element?.textContent === note && element.children.length === 0);
+    expect(savedText).toHaveClass("whitespace-pre-line");
+
+    // A caixa não é trocada por outra: é o mesmo elemento que vira o editor e volta a ser o texto salvo.
+    await user.click(within(saved).getByRole("button", { name: "Editar" }));
+    expect(screen.getByRole("group", { name: "Justificativa (opcional)" })).toBe(saved);
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.getByRole("group", { name: "Justificativa" })).toBe(saved);
+  });
+
   it("mantém decisões antes das áreas e reabre a justificativa salva do adicional", async () => {
     const user = userEvent.setup();
     render(
@@ -1305,10 +1328,10 @@ describe("DiagnosisPanel", () => {
     expect(areas).toHaveAttribute("aria-expanded", "false");
     await user.click(screen.getByRole("button", { name: "Editar", exact: true }));
     expect(screen.getByRole("textbox")).toHaveValue("Justificativa salva");
-    expect(screen.queryByText("Justificativa adicionada")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Justificativa" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancelar", exact: true }));
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(screen.getByText("Justificativa adicionada")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Justificativa" })).toBeVisible();
   });
 
   it("reserva o feedback compacto junto ao status sem deslocar o cabeçalho", () => {
@@ -1387,7 +1410,7 @@ describe("DiagnosisPanel", () => {
 
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Falhou", "justification"));
     expect(screen.getByRole("textbox")).toHaveValue("Falhou");
-    expect(screen.queryByText("Justificativa adicionada")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Justificativa" })).not.toBeInTheDocument();
   });
 
   it("anuncia o erro de salvamento uma única vez e mostra o resumo no cabeçalho", () => {
@@ -1419,7 +1442,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.getByRole("group", { name: "Justificativa adicionada" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Justificativa" })).toBeVisible();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Editar", exact: true }));
     const editor = screen.getByRole("group", { name: /Justificativa/ });
