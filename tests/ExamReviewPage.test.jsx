@@ -420,7 +420,7 @@ describe("ExamReviewPage", () => {
     expect(
       clinicalHeading.closest("[data-slot='card-title']").querySelector(".lucide-stethoscope"),
     ).toBeTruthy();
-    expect(trigger.querySelector(".lucide-info")).toBeTruthy();
+    expect(trigger.querySelector(".lucide-file-text")).toBeTruthy();
     expect(trigger.querySelector(".lucide-chevron-down")).toHaveClass("text-muted-foreground");
     const clinicalIconLabel = clinicalHeading.querySelector('[data-slot="validation-panel-icon-label"]');
     const informationIconLabel = trigger.querySelector('[data-slot="validation-panel-icon-label"]');
