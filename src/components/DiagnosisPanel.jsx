@@ -107,6 +107,11 @@ const GROUP_BAR_CLASS =
 // O campo da justificativa não tem moldura própria: com foco nele, o contorno do grupo faz o papel da borda do campo.
 const JUSTIFICATION_FOCUS_CLASS =
   "has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-3 has-[textarea:focus-visible]:ring-ring/50";
+// Troca do texto entre o campo e a barra: ao recolher, a prévia (e os dois-pontos do rótulo) entra 50ms depois e termina
+// junto com o painel (200ms) — o texto não aparece em dois lugares ao mesmo tempo; ao abrir, sai em 100ms, antes de o
+// campo crescer. A transição em si vem de `justificationFade` (só nos layouts que animam).
+const JUSTIFICATION_PREVIEW_IN_CLASS = "opacity-100 delay-50 duration-150";
+const JUSTIFICATION_PREVIEW_OUT_CLASS = "opacity-0 duration-100";
 
 // Painel do Collapsible (Base UI) com altura e opacidade animadas na entrada e na saída — 200ms ease-out, como o painel
 // do acordeão. Usado pela lista de áreas e pelo bloco "Original + ações" da barra fixa do item adicional, para que tudo o
@@ -129,6 +134,7 @@ const REFINED_DETAILS_STYLES = {
   originalLabel: "",
   originalPreview: "text-foreground/75",
   enterAnimation: ENTER_ANIMATION_CLASS,
+  justificationFade: "transition-opacity ease-out motion-reduce:transition-none",
 };
 
 const DETAILS_STYLES = {
@@ -144,6 +150,7 @@ const DETAILS_STYLES = {
     originalLabel: "",
     originalPreview: "",
     enterAnimation: "",
+    justificationFade: "",
   },
   additional: REFINED_DETAILS_STYLES,
   daily: REFINED_DETAILS_STYLES,
@@ -386,6 +393,9 @@ function DiagnosisDetails({
   const savedReviewNote = normalizeReviewNote(diagnosis.review_notes);
   // Só originais em Discordo têm justificativa (o rascunho aberto cobre a prévia de Discordo antes da resposta).
   const hasJustificationGroup = isDisagreementOpen || (status === "rejected" && diagnosis.source !== "doctor_added");
+  // Recolhida com texto salvo, a barra mostra o começo dele — e o leitor de tela o ouve como descrição da barra.
+  const isJustificationPreviewShown = Boolean(savedReviewNote) && !isDisagreementOpen;
+  const justificationPreviewId = useId();
   const rootRef = useRef(null);
   const areaListTriggerRef = useRef(null);
 
@@ -572,17 +582,39 @@ function DiagnosisDetails({
       {hasJustificationGroup ? (
         <Collapsible aria-label="Justificativa" className={cn(GROUP_OUTLINE_CLASS, JUSTIFICATION_FOCUS_CLASS, styles.enterAnimation)} data-slot="justification" onOpenChange={handleJustificationOpenChange} open={isDisagreementOpen} role="group">
           <CollapsibleTrigger
+            aria-describedby={isJustificationPreviewShown ? justificationPreviewId : undefined}
             aria-label={savedReviewNote ? "Justificativa" : "Justificativa (opcional)"}
             data-justification-action="toggle"
             render={<Button className={GROUP_BAR_CLASS} size="sm" type="button" variant="outline" />}
           >
-            <span className="flex min-w-0 items-center gap-1.5">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
               <MessageSquareText aria-hidden="true" />
-              <span className="shrink-0">Justificativa</span>
-              {!savedReviewNote ? <OptionalTag /> : null}
-              {savedReviewNote && !isDisagreementOpen ? (
-                <span className="min-w-0 truncate font-normal" data-slot="justification-preview">{savedReviewNote.replace(/\s+/g, " ")}</span>
-              ) : null}
+              {/* Rótulo e valor na mesma linha levam dois-pontos, como "Original:"; aberto, o rótulo fica acima do campo e
+                  os perde. */}
+              <span className="shrink-0">
+                Justificativa
+                {savedReviewNote ? (
+                  <span aria-hidden="true" className={cn(styles.justificationFade, isJustificationPreviewShown ? JUSTIFICATION_PREVIEW_IN_CLASS : JUSTIFICATION_PREVIEW_OUT_CLASS)}>:</span>
+                ) : null}
+              </span>
+              {/* Etiqueta e prévia dividem a mesma célula e só trocam de opacidade: nada anda na barra. Cada uma tem a sua
+                  forma — a etiqueta, fundo invertido (o `muted` dela sumia na barra `muted`: 1,00:1 no hover e aberta); a
+                  prévia, a letra do texto no campo (14px, `foreground`), para não se ler como parte do rótulo. A coluna
+                  `minmax(0,1fr)` tira a prévia da largura mínima do cartão: o conteúdo do ScrollArea do painel tem
+                  `min-width: fit-content`, e o texto sem quebra alargava o cartão em vez de cortar com "…". */}
+              <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center text-left *:col-start-1 *:row-start-1">
+                <OptionalTag className={cn("justify-self-start bg-card dark:bg-background", styles.justificationFade, "duration-150", savedReviewNote && "opacity-0")} />
+                {savedReviewNote ? (
+                  <span
+                    aria-hidden={isJustificationPreviewShown ? undefined : "true"}
+                    className={cn("truncate text-sm font-normal text-foreground", styles.justificationFade, isJustificationPreviewShown ? JUSTIFICATION_PREVIEW_IN_CLASS : JUSTIFICATION_PREVIEW_OUT_CLASS)}
+                    data-slot="justification-preview"
+                    id={justificationPreviewId}
+                  >
+                    {savedReviewNote.replace(/\s+/g, " ")}
+                  </span>
+                ) : null}
+              </span>
             </span>
             <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
               <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isDisagreementOpen && "rotate-180")} />

@@ -1274,13 +1274,17 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    // Recolhida ao abrir o exame (como as áreas), a barra mostra o começo do texto.
+    // Recolhida ao abrir o exame (como as áreas), a barra mostra o começo do texto — e o leitor de tela o ouve como
+    // descrição da barra, cujo nome continua "Justificativa".
     const bar = screen.getByRole("button", { name: "Justificativa" });
     expect(bar).toHaveAttribute("aria-expanded", "false");
     expect(bar).toHaveTextContent("Traçado incompatível");
+    expect(bar).toHaveAccessibleDescription("Traçado incompatível");
     await user.click(bar);
     expect(bar).toHaveAttribute("aria-expanded", "true");
-    expect(bar).not.toHaveTextContent("Traçado incompatível");
+    // Aberta, a prévia continua montada (para esmaecer), mas oculta e fora da descrição: o texto está no campo.
+    expect(bar.querySelector('[data-slot="justification-preview"]')).toHaveAttribute("aria-hidden", "true");
+    expect(bar).not.toHaveAccessibleDescription();
     expect(screen.getByRole("textbox", { name: "Justificativa (opcional)" })).toHaveValue("Traçado incompatível");
     // Abriu para ler: o foco fica na barra (só o grupo vazio leva o cursor ao campo).
     expect(bar).toHaveFocus();
