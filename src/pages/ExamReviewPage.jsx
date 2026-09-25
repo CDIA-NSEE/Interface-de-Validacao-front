@@ -1043,8 +1043,10 @@ export default function ExamReviewPage() {
                       ) : null}
                     </div>
                   </div>
-                  {/* Campo no formato de composer: começa com uma linha e cresce com o texto até cinco (depois rola por
-                      dentro), com a própria ação no canto inferior direito — neutra sem alteração, primária com alteração;
+                  {/* Campo no formato de composer: começa com uma linha e cresce com o texto até duas (depois rola por
+                      dentro, com a barra dos campos de texto) — medido a 1536×730 (1080p a 125%), duas linhas não tiram
+                      nada do ECG e cada linha a mais o encolhe; o campo é largo, então duas linhas já comportam ~300
+                      caracteres. A própria ação fica no canto inferior direito — neutra sem alteração, primária com alteração;
                       Ctrl+Enter salva e Enter quebra linha. O "Salvar" morava no rodapé, a ~1000px do campo. Só no fluxo
                       diário, como era no rodapé: na revalidação as observações vão com "Validar exame". O nome acessível
                       "Salvar observações" contém o rótulo visível. O InputGroup esmaece o grupo inteiro quando há algo
@@ -1052,7 +1054,7 @@ export default function ExamReviewPage() {
                   <InputGroup className="items-end has-disabled:bg-transparent has-disabled:opacity-100 dark:has-disabled:bg-input/30">
                     <InputGroupTextarea
                       aria-keyshortcuts={usesDailyFlow ? "Control+Enter Meta+Enter" : undefined}
-                      className="max-h-30 min-h-0 overflow-y-auto px-2.5 py-2.5"
+                      className="subtle-scrollbar max-h-15 min-h-0 overflow-y-auto px-2.5 py-2.5"
                       id="general-observations"
                       value={notes}
                       onChange={(event) => {
@@ -1067,8 +1069,9 @@ export default function ExamReviewPage() {
                     />
                     {usesDailyFlow ? (
                       // Mesmo recuo nos três lados do botão (7px: 6px + a borda): a margem negativa padrão do addon o
-                      // encostava na borda direita (4px) enquanto o topo e a base ficavam a 7px.
-                      <InputGroupAddon align="inline-end" className="pr-1.5 has-[>button]:mr-0">
+                      // encostava na borda direita (4px) enquanto o topo e a base ficavam a 7px. `pl-1.5` afasta o botão da
+                      // barra de rolagem do texto, que fica no fim da coluna do texto — lida como do texto, não do botão.
+                      <InputGroupAddon align="inline-end" className="pr-1.5 pl-1.5 has-[>button]:mr-0">
                         <Button
                           aria-label="Salvar observações"
                           className="disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
