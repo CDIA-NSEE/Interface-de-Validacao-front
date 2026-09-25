@@ -23,6 +23,7 @@ import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
 import ValidationPanelIconLabel from "../components/ValidationPanelIconLabel.jsx";
 import ValidationSidebar from "../components/ValidationSidebar.jsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -918,7 +919,21 @@ export default function ExamReviewPage() {
                 />
               }
             >
-              <ValidationPanelIconLabel icon={FileText}>Dados do exame</ValidationPanelIconLabel>
+              {/* "Notas do laudo": as notas do próprio exame (comments) às vezes são o texto do laudo original e ficavam
+                  escondidas no cartão fechado, sem sinal. Etiqueta neutra no formato da "Opcional" (propriedade do exame,
+                  não estado: não muda ao abrir/fechar); o leitor de tela ouve "Dados do exame (com notas do laudo)". */}
+              <ValidationPanelIconLabel icon={FileText}>
+                Dados do exame
+                {exam.comments ? (
+                  <>
+                    {" "}
+                    <Badge aria-hidden="true" className="ml-1 rounded-md bg-muted px-1.5 text-muted-foreground" variant="secondary">
+                      Notas do laudo
+                    </Badge>
+                    <span className="sr-only">(com notas do laudo)</span>
+                  </>
+                ) : null}
+              </ValidationPanelIconLabel>
               <span
                 aria-hidden="true"
                 className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"

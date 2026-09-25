@@ -158,6 +158,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
     expect(container.querySelector("header dl")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dados do exame" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Notas do laudo")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Observações gerais (opcional)" })).toBeVisible();
     const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
     expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
@@ -409,8 +410,9 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const trigger = await screen.findByRole("button", { name: "Dados do exame" });
-    expect(screen.getByRole("heading", { level: 2, name: "Dados do exame" })).toContainElement(trigger);
+    const trigger = await screen.findByRole("button", { name: "Dados do exame (com notas do laudo)" });
+    expect(screen.getByRole("heading", { level: 2, name: "Dados do exame (com notas do laudo)" })).toContainElement(trigger);
+    expect(trigger).toContainElement(screen.getByText("Notas do laudo"));
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
     expect(trigger).toHaveClass("h-11", "border-x-0", "focus-visible:ring-inset");
     expect(trigger).not.toHaveClass("active:not-aria-[haspopup]:translate-y-px");
