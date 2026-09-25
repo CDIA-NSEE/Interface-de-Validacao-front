@@ -622,10 +622,13 @@ function DiagnosisDetails({
           </CollapsibleTrigger>
           <CollapsibleContent className={styles.areaPanel}>
             {/* Sem moldura própria (o contorno do grupo é a do campo; com foco, o grupo inteiro acende) e sem alça de
-                redimensionar: o campo cresce com o texto (`field-sizing-content`). A divisória sob a barra é a da lista de áreas. */}
+                redimensionar: o campo cresce com o texto (`field-sizing-content`). A divisória sob a barra é a da lista de áreas.
+                `wrap-anywhere`: com `field-sizing-content`, a palavra mais longa vira a largura mínima do campo, e o conteúdo
+                do ScrollArea do painel (`min-width: fit-content`) cresce junto — uma palavra longa sem espaço alargava o
+                painel inteiro. Assim ela quebra dentro do campo e o campo só cresce para baixo. */}
             <Textarea
               aria-label="Justificativa (opcional)"
-              className="resize-none rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none focus-visible:border-border focus-visible:ring-0 dark:bg-background"
+              className="resize-none rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none wrap-anywhere focus-visible:border-border focus-visible:ring-0 dark:bg-background"
               id={`disagreement-note-${diagnosis.id}`}
               onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })}
               placeholder="Registre o motivo da discordância"
