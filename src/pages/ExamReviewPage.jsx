@@ -880,7 +880,7 @@ export default function ExamReviewPage() {
             <CollapsibleTrigger
               render={
                 <Button
-                  className="h-11 w-full justify-between border-x-0 px-3 transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset motion-reduce:transition-none"
+                  className="h-11 w-full justify-between border-x-0 px-3 transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                   type="button"
                   variant="collapsible"
                 />
