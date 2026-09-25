@@ -433,11 +433,12 @@ describe("ExamReviewPage", () => {
     );
     expect(screen.getByText("Nascimento")).toBeVisible();
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
-    expect(clinicalGrid).toHaveClass("grid-cols-2", "gap-2", "sm:grid-cols-3");
+    expect(clinicalGrid).toHaveClass("grid-cols-2", "sm:grid-cols-3");
     expect(clinicalGrid).not.toHaveClass("bg-muted/40");
     expect(clinicalGrid.children).toHaveLength(6);
     [...clinicalGrid.children].forEach((clinicalItem) => {
-      expect(clinicalItem).toHaveClass("rounded-lg", "border", "bg-muted/40");
+      expect(clinicalItem).not.toHaveClass("border");
+      expect(clinicalItem).not.toHaveClass("bg-muted/40");
     });
     expect([...clinicalGrid.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
       "Idade",

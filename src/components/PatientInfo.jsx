@@ -31,10 +31,11 @@ export default function PatientInfo({ patient }) {
     ([, value]) => value !== null && value !== undefined && value !== "",
   );
 
+  // Lista de pares rótulo/valor sem caixa por item: o cartão já agrupa (caixa dentro do cartão era cartão dentro de cartão).
   return (
-    <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
       {availableRows.map(([label, value]) => (
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5" key={label}>
+        <div className="min-w-0" key={label}>
           <dt className="truncate text-xs font-medium text-muted-foreground">{label}</dt>
           <dd className="mt-0.5 whitespace-nowrap text-xs font-medium text-foreground tabular-nums sm:text-sm">{value}</dd>
         </div>
