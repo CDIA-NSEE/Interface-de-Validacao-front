@@ -849,12 +849,14 @@ function DiagnosisCard({
     // três do painel ("Diagnósticos adicionais", "Dados clínicos", "Dados do exame") e só o badge o distinguia. O filete
     // fica no eixo horizontal — o do item aberto da lista é lateral —, então os dois sinais não se confundem, e a sombra
     // soma profundidade à cor (sombra sozinha some em telas de baixo contraste). Só aqui: na revalidação geral todos os
-    // originais são obrigatórios e marcá-los todos não destacaria nada.
+    // originais são obrigatórios e marcá-los todos não destacaria nada. O contorno é uma borda de 1px (a mesma cor do
+    // `ring-1` dos outros cartões), não o ring: o ring fica por fora da borda e passava por cima do filete, uma linha
+    // cinza sobre o azul. `-mx-px` põe a borda no x do ring dos cartões de baixo e mantém a largura do conteúdo.
     // Ritmo do cartão do dia: marcadores → título → 4px → Original → 12px → ações. O Original é o par do título (o médico
     // compara os dois), então fica colado a ele e separado das ações — antes ficava a 10px do título e a 8px dos botões,
     // e se lia como parte da linha de decisão. Fundo e anel mudam juntos (marcando área, área em hover/selecionada no
     // ECG): só com `transition-shadow` o anel entrava em 150ms e o fundo "info" trocava num quadro.
-    <Card className={cn("gap-2.5 overflow-visible transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none", isPrimaryDaily && "gap-3 border-t-[3px] border-t-primary shadow-md shadow-elevation", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    <Card className={cn("gap-2.5 overflow-visible transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none", isPrimaryDaily && "-mx-px gap-3 border border-t-[3px] border-foreground/10 border-t-primary shadow-md shadow-elevation ring-0", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
