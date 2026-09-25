@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Check,
   ChevronDown,
   FileText,
   NotebookPen,
@@ -592,7 +593,7 @@ export default function ExamReviewPage() {
         setNotesSaveState({ status: "idle", message: "" });
         return true;
       }
-      setNotesSaveState({ status: "saved", message: "✓ Salvas" });
+      setNotesSaveState({ status: "saved", message: "Salvas" });
       notesSaveTimerRef.current = window.setTimeout(() => {
         setNotesSaveState({ status: "idle", message: "" });
         notesSaveTimerRef.current = null;
@@ -1134,7 +1135,9 @@ export default function ExamReviewPage() {
                         <OptionalTag />
                       </FieldLabel>
                       {notesSaveState.status === "saving" || notesSaveState.status === "saved" ? (
-                        <span className="text-xs text-muted-foreground" role="status">
+                        <span className="flex items-center gap-0.5 text-xs text-muted-foreground" role="status">
+                          {/* O "✓" é o ícone Check, não o caractere: a Source Sans 3 não o tem e ele caía numa fonte de sistema. */}
+                          {notesSaveState.status === "saved" ? <Check aria-hidden="true" className="size-3" /> : null}
                           {notesSaveState.message}
                         </span>
                       ) : null}

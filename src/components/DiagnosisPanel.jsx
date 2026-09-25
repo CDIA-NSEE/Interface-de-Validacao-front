@@ -571,8 +571,11 @@ function DiagnosisDetails({
       {actionRow}
 
       {decisionFeedback && (isPlain || decisionFeedback.type === "error") ? (
-        <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
-          {decisionFeedback.message}
+        <p className={cn("text-xs", decisionFeedback.type === "error" ? "text-destructive" : "flex items-center gap-0.5 text-muted-foreground")} role={decisionFeedback.type === "error" ? "alert" : "status"}>
+          {/* O "✓" da mensagem vira o ícone Check: a Source Sans 3 não tem o caractere (ver o "Salvo" do status). */}
+          {decisionFeedback.type === "success"
+            ? <><Check aria-hidden="true" className="size-3" />{decisionFeedback.message.replace(/^✓\s*/, "")}</>
+            : decisionFeedback.message}
         </p>
       ) : null}
 

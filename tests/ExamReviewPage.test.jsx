@@ -719,7 +719,7 @@ describe("ExamReviewPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
 
     await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("✓ Salvas");
+    expect(await screen.findByRole("status")).toHaveTextContent("Salvas");
     expect(screen.getByTestId("general-observations-header")).toContainElement(screen.getByRole("status"));
     expect(screen.getByTestId("general-observations-header")).not.toContainElement(
       screen.getByRole("toolbar", { name: "Controles do ECG" }),
@@ -746,7 +746,7 @@ describe("ExamReviewPage", () => {
     expect(saveExamDraft).not.toHaveBeenCalled();
     fireEvent.keyDown(notes, { ctrlKey: true, key: "Enter" });
     await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("✓ Salvas");
+    expect(await screen.findByRole("status")).toHaveTextContent("Salvas");
   });
 
   it("não confirma como salvo um texto alterado durante a requisição", async () => {
@@ -767,7 +767,7 @@ describe("ExamReviewPage", () => {
       resolveSave({ ...exam, draft_notes: "Primeira versão" });
     });
 
-    expect(screen.queryByText("✓ Salvas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Salvas")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar observações" })).toBeEnabled();
   });
 
