@@ -509,6 +509,18 @@ describe("ExamReviewPage", () => {
     expect(window.localStorage.getItem("medpage.examDataOpen")).toBe("true");
   });
 
+  it("avisa no rótulo quando a idade foi calculada pela API", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      patient: { age: 89, age_calculated: true, birth_date: "06/07/1935", sex: "Masculino" },
+    });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const ageValue = await screen.findByText("89 anos");
+    expect(ageValue.previousElementSibling).toHaveTextContent("Idade (calculada)");
+  });
+
   it("informa quando o exame não tem nenhum dado clínico", async () => {
     getExamById.mockResolvedValue({
       ...exam,
