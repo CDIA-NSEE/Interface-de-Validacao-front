@@ -414,7 +414,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Dados do exame (com notas do laudo)" })).toContainElement(trigger);
     expect(trigger).toContainElement(screen.getByText("Notas do laudo"));
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
-    expect(trigger).toHaveClass("h-11", "border-x-0", "focus-visible:ring-inset");
+    expect(trigger).toHaveClass("h-11", "border-0", "focus-visible:ring-inset");
     expect(trigger).not.toHaveClass("active:not-aria-[haspopup]:translate-y-px");
     expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted/50");
     expect(trigger).not.toHaveClass("hover:bg-muted");
