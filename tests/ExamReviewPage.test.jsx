@@ -657,6 +657,29 @@ describe("ExamReviewPage", () => {
     );
   });
 
+  it("salva as observações pelo botão do próprio campo ou com Ctrl+Enter, fora do rodapé", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
+    const save = screen.getByRole("button", { name: "Salvar observações" });
+    // A ação mora no campo (canto inferior direito), não no rodapé — que fica com Voltar e a primária.
+    expect(notes.closest('[data-slot="input-group"]')).toContainElement(save);
+    expect(screen.getByRole("group", { name: "Ações da validação" })).not.toContainElement(save);
+    expect(save).toHaveTextContent("Salvar");
+    expect(save).toBeDisabled();
+
+    fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
+    expect(save).toBeEnabled();
+    saveExamDraft.mockClear();
+    // Enter sozinho quebra linha; Ctrl+Enter salva.
+    fireEvent.keyDown(notes, { key: "Enter" });
+    expect(saveExamDraft).not.toHaveBeenCalled();
+    fireEvent.keyDown(notes, { ctrlKey: true, key: "Enter" });
+    await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("✓ Salvas");
+  });
+
   it("não confirma como salvo um texto alterado durante a requisição", async () => {
     let resolveSave;
     saveExamDraft.mockReturnValueOnce(new Promise((resolve) => {

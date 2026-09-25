@@ -1224,6 +1224,10 @@ describe("DiagnosisPanel", () => {
     fireEvent.change(textarea, { target: { value: "Traçado incompatível" } });
     const save = screen.getByRole("button", { name: "Salvar justificativa" });
     const cancel = screen.getByRole("button", { name: "Cancelar" });
+    // Dentro do contorno do grupo, no fim do campo — as ações pertencem ao texto. O rótulo visível é só "Salvar" (como
+    // nas observações); o nome acessível mantém o objeto.
+    expect(screen.getByRole("group", { name: "Justificativa" })).toContainElement(save);
+    expect(save.textContent).toBe("Salvar");
     // Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé.
     expect(cancel.compareDocumentPosition(save)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(save.parentElement).toHaveClass("sm:justify-end");
@@ -1261,6 +1265,33 @@ describe("DiagnosisPanel", () => {
     // Salvo, o grupo continua aberto e o foco volta à barra.
     await waitFor(() => expect(bar()).toHaveFocus());
     expect(bar()).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("salva a justificativa com Ctrl+Enter sem tirar o foco do campo", async () => {
+    const user = userEvent.setup();
+    const onReview = vi.fn().mockResolvedValue(true);
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ onReview, options: [] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal", { review_status: "rejected" })]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
+    const justification = screen.getByRole("textbox", { name: "Justificativa (opcional)" });
+    await waitFor(() => expect(justification).toHaveFocus());
+    // Sem alteração, não há o que salvar.
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(onReview).not.toHaveBeenCalled();
+    // Enter sozinho quebra linha.
+    await user.keyboard("Traçado incompatível{Enter}Repetir ECG");
+    expect(justification).toHaveValue("Traçado incompatível\nRepetir ECG");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível\nRepetir ECG", "justification");
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Salvar justificativa" })).not.toBeInTheDocument());
+    expect(justification).toHaveFocus();
   });
 
   it("mostra o começo da justificativa salva na barra recolhida e abre para ler sem tirar o foco da barra", async () => {

@@ -443,6 +443,14 @@ function DiagnosisDetails({
     focusJustificationControl("toggle");
   }
 
+  // Ctrl/Cmd+Enter salva (como nos comentários do GitHub) e o foco fica no campo. Esc não cancela: com o foco no campo,
+  // ele ainda cancela a marcação de área no ECG.
+  function handleJustificationKeyDown(event) {
+    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    if (isReviewDraftDirty && !isBusy) submitJustification(normalizeReviewNote(reviewNoteDraft));
+  }
+
   async function handleRemoveRegionClick(region) {
     await onRemoveRegion(diagnosis.id, region.id);
     // A linha desmonta com a área: foco no gatilho da lista ou, se era a última (a lista some junto), no "Marcar área",
@@ -625,27 +633,31 @@ function DiagnosisDetails({
                 redimensionar: o campo cresce com o texto (`field-sizing-content`). A divisória sob a barra é a da lista de áreas.
                 `wrap-anywhere`: com `field-sizing-content`, a palavra mais longa vira a largura mínima do campo, e o conteúdo
                 do ScrollArea do painel (`min-width: fit-content`) cresce junto — uma palavra longa sem espaço alargava o
-                painel inteiro. Assim ela quebra dentro do campo e o campo só cresce para baixo. */}
+                painel inteiro. Assim ela quebra dentro do campo e o campo só cresce para baixo. Vazio, duas linhas; sem
+                altura máxima, porque o painel tem uma rolagem só. Ctrl/Cmd+Enter salva; Enter quebra linha. */}
             <Textarea
+              aria-keyshortcuts="Control+Enter Meta+Enter"
               aria-label="Justificativa (opcional)"
-              className="resize-none rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none wrap-anywhere focus-visible:border-border focus-visible:ring-0 dark:bg-background"
+              className="min-h-14 resize-none rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none wrap-anywhere focus-visible:border-border focus-visible:ring-0 dark:bg-background"
               id={`disagreement-note-${diagnosis.id}`}
               onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })}
+              onKeyDown={handleJustificationKeyDown}
               placeholder="Registre o motivo da discordância"
-              rows={3}
               value={reviewNoteDraft}
             />
+            {/* Só com alteração não salva. Dentro do contorno, no fim do campo (canto inferior direito), como ao editar
+                uma mensagem: as ações pertencem ao texto, e o anel de foco do grupo as envolve. Dispensar à esquerda,
+                confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com "Salvar" em cima, como o
+                AlertDialogFooter. Só "Salvar", como nas observações: dentro do grupo, "justificativa" seria redundante; o
+                nome acessível mantém o objeto ("Salvar justificativa"). */}
+            {isReviewDraftDirty ? (
+              <div className={cn("flex flex-col-reverse gap-2 bg-background px-2 pb-2 sm:flex-row sm:justify-end", styles.enterAnimation)}>
+                <Button disabled={isBusy} onClick={discardJustificationChanges} size="sm" type="button" variant="outline">Cancelar</Button>
+                <Button aria-label="Salvar justificativa" disabled={isBusy} onClick={() => submitJustification(normalizeReviewNote(reviewNoteDraft))} size="sm" type="button">Salvar</Button>
+              </div>
+            ) : null}
           </CollapsibleContent>
         </Collapsible>
-      ) : null}
-
-      {/* Só com alteração não salva, como na revalidação geral e em "Observações gerais". Dispensar à esquerda, confirmar à
-          direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com "Salvar" em cima, como o AlertDialogFooter. */}
-      {isDisagreementOpen && isReviewDraftDirty ? (
-        <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", styles.enterAnimation)}>
-          <Button disabled={isBusy} onClick={discardJustificationChanges} size="sm" type="button" variant="outline">Cancelar</Button>
-          <Button disabled={isBusy} onClick={() => submitJustification(normalizeReviewNote(reviewNoteDraft))} size="sm" type="button">Salvar justificativa</Button>
-        </div>
       ) : null}
     </div>
   );

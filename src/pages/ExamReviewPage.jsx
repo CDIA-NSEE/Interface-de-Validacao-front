@@ -31,6 +31,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -42,7 +43,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
@@ -586,6 +586,13 @@ export default function ExamReviewPage() {
     await saveCurrentDraft();
   }
 
+  // Ctrl/Cmd+Enter salva as observações (como nos comentários do GitHub); Enter sozinho continua quebrando linha.
+  function handleNotesKeyDown(event) {
+    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    if (usesDailyFlow && hasUnsavedNotes) handleSave();
+  }
+
   function handleReturnHome() {
     // Voltar/Início ficam travados durante uma ação; na janela silenciosa o botão ainda não está `disabled`.
     if (isBusyRef.current) return;
@@ -754,8 +761,8 @@ export default function ExamReviewPage() {
     },
   )?.[0] || null;
   const hasUnsavedDiagnosisReview = Boolean(dirtyDiagnosisReviewId);
-  const hasUnsavedChanges =
-    notes !== (exam?.draft_notes || "") || hasUnsavedDiagnosisReview;
+  const hasUnsavedNotes = notes !== (exam?.draft_notes || "");
+  const hasUnsavedChanges = hasUnsavedNotes || hasUnsavedDiagnosisReview;
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
   const primaryDisabledReason = usesDailyFlow && !requiredDecisionComplete
     ? requiredDiagnoses.some(
@@ -948,17 +955,15 @@ export default function ExamReviewPage() {
           />
         </CardHeader>
       </Card>
+      {/* "Salvar observações" mora no próprio campo (ver Observações gerais): o rodapé fica com Voltar e a primária. */}
       <ReviewActions
         onBack={handleReturnHome}
-        onSave={usesDailyFlow ? handleSave : undefined}
         onValidate={handlePrimaryAction}
         canValidate={requiredDecisionComplete}
         isBusy={isBusyIndicated}
         isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
         primaryDisabledReason={primaryDisabledReason}
         primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
-        saveDisabled={notes === (exam?.draft_notes || "")}
-        saveLabel="Salvar observações"
       />
     </div>
   );
@@ -1038,19 +1043,45 @@ export default function ExamReviewPage() {
                       ) : null}
                     </div>
                   </div>
-                  <Textarea
-                    id="general-observations"
-                    value={notes}
-                    onChange={(event) => {
-                      clearNotesSaveTimer();
-                      latestNotesRef.current = event.target.value;
-                      setNotes(latestNotesRef.current);
-                      setNotesSaveState({ status: "idle", message: "" });
-                    }}
-                    placeholder="Registre comentários gerais sobre o exame"
-                    rows={2}
-                    className="field-sizing-fixed h-16 max-h-16 resize-none overflow-y-auto"
-                  />
+                  {/* Campo no formato de composer: começa com uma linha e cresce com o texto até cinco (depois rola por
+                      dentro), com a própria ação no canto inferior direito — neutra sem alteração, primária com alteração;
+                      Ctrl+Enter salva e Enter quebra linha. O "Salvar" morava no rodapé, a ~1000px do campo. Só no fluxo
+                      diário, como era no rodapé: na revalidação as observações vão com "Validar exame". O nome acessível
+                      "Salvar observações" contém o rótulo visível. O InputGroup esmaece o grupo inteiro quando há algo
+                      desabilitado dentro (`has-disabled`): aqui só o botão desabilita, e o campo não pode parecer inativo. */}
+                  <InputGroup className="items-end has-disabled:bg-transparent has-disabled:opacity-100 dark:has-disabled:bg-input/30">
+                    <InputGroupTextarea
+                      aria-keyshortcuts={usesDailyFlow ? "Control+Enter Meta+Enter" : undefined}
+                      className="max-h-30 min-h-0 overflow-y-auto px-2.5 py-2.5"
+                      id="general-observations"
+                      value={notes}
+                      onChange={(event) => {
+                        clearNotesSaveTimer();
+                        latestNotesRef.current = event.target.value;
+                        setNotes(latestNotesRef.current);
+                        setNotesSaveState({ status: "idle", message: "" });
+                      }}
+                      onKeyDown={handleNotesKeyDown}
+                      placeholder="Registre comentários gerais sobre o exame"
+                      rows={1}
+                    />
+                    {usesDailyFlow ? (
+                      // Mesmo recuo nos três lados do botão (7px: 6px + a borda): a margem negativa padrão do addon o
+                      // encostava na borda direita (4px) enquanto o topo e a base ficavam a 7px.
+                      <InputGroupAddon align="inline-end" className="pr-1.5 has-[>button]:mr-0">
+                        <Button
+                          aria-label="Salvar observações"
+                          className="disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                          disabled={isBusyIndicated || !hasUnsavedNotes}
+                          onClick={handleSave}
+                          size="sm"
+                          type="button"
+                        >
+                          Salvar
+                        </Button>
+                      </InputGroupAddon>
+                    ) : null}
+                  </InputGroup>
                   {notesSaveState.status === "error" ? (
                     <p className="text-xs text-destructive" role="alert">
                       {notesSaveState.message}
