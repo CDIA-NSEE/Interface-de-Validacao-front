@@ -1235,9 +1235,10 @@ export default function DiagnosisPanel({
                                 // Separador barra/conteúdo só com a barra grudada no topo do painel (a linha vem do Collapsible abaixo, pelo
                                 // scroll-state da barra): em repouso sobrava — o cartão do dia não tem — e cortava o filete; grudada, é ela que
                                 // dá borda às áreas que rolam por baixo (sem ela a linha de área parecia cortada no ar). Sem suporte a
-                                // scroll-state (Firefox, Safari) fica o border-b fixo, só quando o painel tem conteúdo (único filho vazio = só o
-                                // DiagnosisDetails sem nada a mostrar); do contrário encostaria na borda do item seguinte e viraria linha dupla.
-                                isOpen && "border-b shadow-[inset_3px_0_0_var(--primary)] supports-[container-type:scroll-state]:border-b-0 [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
+                                // scroll-state (Firefox, Safari) fica o border-b fixo, só quando o painel tem conteúdo (nenhum filho do
+                                // DiagnosisDetails com conteúdo — as raízes vazias dos blocos que entram e saem não contam, como no painel
+                                // abaixo); do contrário encostaria na borda do item seguinte e viraria linha dupla.
+                                isOpen && "border-b shadow-[inset_3px_0_0_var(--primary)] supports-[container-type:scroll-state]:border-b-0 [&:not(:has(+[data-slot=accordion-content]>*>*>:not(:empty)))]:border-b-0",
                               )}
                               data-slot="diagnosis-item-bar"
                             >
