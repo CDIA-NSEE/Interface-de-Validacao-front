@@ -124,7 +124,7 @@ describe("DiagnosisPanel", () => {
     const reopenedAreas = screen.getByRole("button", { name: "1 área marcada" });
     expect(reopenedAreas).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("group", { name: "Justificativa" })).toBeVisible();
-    // O texto salvo fica à vista, sem abrir o editor.
+    // Recolhida, a barra da justificativa mostra o começo do texto salvo.
     expect(screen.getByText("Justificativa salva")).toBeVisible();
     reopenedAreas.focus();
     await user.keyboard(" ");
@@ -900,13 +900,15 @@ describe("DiagnosisPanel", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Bloqueio de ramo direito/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
 
-    const disagreementAlert = screen.getByRole("group", { name: /Justificativa/ });
+    expect(screen.getAllByRole("group", { name: "Justificativa" })).toHaveLength(1);
+    const justificationGroup = screen.getByRole("group", { name: "Justificativa" });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(within(disagreementAlert).getByRole("textbox", { name: "Justificativa (opcional)" })).toBeVisible();
-    fireEvent.change(within(disagreementAlert).getByRole("textbox", { name: "Justificativa (opcional)" }), { target: { value: "Traçado incompatível" } });
-    fireEvent.click(within(disagreementAlert).getByRole("button", { name: "Salvar justificativa" }));
+    const field = within(justificationGroup).getByRole("textbox", { name: "Justificativa (opcional)" });
+    expect(field).toBeVisible();
+    fireEvent.change(field, { target: { value: "Traçado incompatível" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar justificativa" }));
     expect(onReview).toHaveBeenCalledWith(2, "rejected", "Traçado incompatível", "justification");
   });
 
@@ -1186,15 +1188,16 @@ describe("DiagnosisPanel", () => {
     expect(within(cards[1]).getByRole("button", { name: "Marcar área" }).compareDocumentPosition(areas)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(within(cards[2]).getByText("Área obrigatória no ECG")).toBeVisible();
     expect(within(within(cards[2]).getByText("Área obrigatória no ECG").closest('[data-slot="alert"]')).queryByRole("button")).not.toBeInTheDocument();
-    // Justificativa salva: rótulo e "Editar justificativa" na mesma linha, texto abaixo.
-    const savedAlert = within(cards[3]).getByRole("group", { name: "Justificativa" });
-    expect(within(savedAlert).getByText("Artefato de movimento.")).toBeVisible();
-    const editButton = within(savedAlert).getByRole("button", { name: "Editar justificativa" });
-    expect(within(savedAlert).getByText("Justificativa").compareDocumentPosition(editButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(editButton.compareDocumentPosition(within(savedAlert).getByText("Artefato de movimento."))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // Justificativa salva: o mesmo grupo do diário — recolhida, a barra resume o texto; aberta, o próprio campo com ele.
+    const justificationGroup = within(cards[3]).getByRole("group", { name: "Justificativa" });
+    const justificationBar = within(justificationGroup).getByRole("button", { name: "Justificativa" });
+    expect(justificationBar).toHaveAttribute("aria-expanded", "false");
+    expect(justificationBar).toHaveTextContent("Artefato de movimento.");
+    fireEvent.click(justificationBar);
+    expect(within(justificationGroup).getByRole("textbox", { name: "Justificativa (opcional)" })).toHaveValue("Artefato de movimento.");
   });
 
-  it("edita a justificativa diária em painel neutro e sem mensagem duplicada", () => {
+  it("edita a justificativa diária no próprio campo, com Cancelar │ Salvar só quando há alteração", () => {
     const onReview = vi.fn().mockResolvedValue(true);
     render(
       <DiagnosisPanelHarness
@@ -1206,30 +1209,30 @@ describe("DiagnosisPanel", () => {
     );
 
     expect(screen.queryByText("Discordância em edição")).not.toBeInTheDocument();
-    // A ação de justificar fica à direita, no canto em que depois aparece o "Editar".
-    expect(screen.getByRole("button", { name: "Adicionar justificativa" })).toHaveClass("self-end");
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    // A barra do grupo substitui o "Adicionar justificativa".
+    expect(screen.queryByRole("button", { name: "Adicionar justificativa" })).not.toBeInTheDocument();
+    const bar = screen.getByRole("button", { name: "Justificativa (opcional)" });
+    expect(bar).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(bar);
 
-    const editor = screen.getByRole("group", { name: /Justificativa/ });
-    const textarea = within(editor).getByRole("textbox", { name: "Justificativa (opcional)" });
-    const save = within(editor).getByRole("button", { name: "Salvar justificativa" });
-    const cancel = within(editor).getByRole("button", { name: "Cancelar" });
+    const textarea = screen.getByRole("textbox", { name: "Justificativa (opcional)" });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(textarea).toHaveAttribute("placeholder", "Registre o motivo da discordância");
-    expect(save).toBeDisabled();
-    expect(cancel).toBeVisible();
+    // Sem alteração, não há o que salvar nem cancelar.
+    expect(screen.queryByRole("button", { name: "Salvar justificativa" })).not.toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "Traçado incompatível" } });
+    const save = screen.getByRole("button", { name: "Salvar justificativa" });
+    const cancel = screen.getByRole("button", { name: "Cancelar" });
     // Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé.
     expect(cancel.compareDocumentPosition(save)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(save.parentElement).toHaveClass("sm:justify-end");
     expect(save.parentElement.lastElementChild).toBe(save);
-
-    fireEvent.change(textarea, { target: { value: "Traçado incompatível" } });
-    expect(save).toBeEnabled();
     fireEvent.click(save);
     expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível", "justification");
   });
 
-  it("leva o cursor ao campo ao abrir a justificativa e devolve o foco ao botão que a reabre ao salvar ou cancelar", async () => {
+  it("leva o cursor ao campo ao abrir a justificativa vazia e devolve o foco à barra ao salvar ou cancelar", async () => {
     const user = userEvent.setup();
     const onReview = vi.fn().mockResolvedValue(true);
     render(
@@ -1241,24 +1244,26 @@ describe("DiagnosisPanel", () => {
       />,
     );
     const justification = () => screen.getByRole("textbox", { name: "Justificativa (opcional)" });
-    const addJustification = () => screen.getByRole("button", { name: "Adicionar justificativa" });
+    const bar = () => screen.getByRole("button", { name: "Justificativa (opcional)" });
 
-    await user.click(addJustification());
+    await user.click(bar());
     await waitFor(() => expect(justification()).toHaveFocus());
-
+    await user.keyboard("Rascunho");
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
-    await waitFor(() => expect(addJustification()).toHaveFocus());
+    // Cancelar volta ao texto salvo (aqui, nenhum) e mantém o grupo aberto.
+    expect(justification()).toHaveValue("");
+    await waitFor(() => expect(bar()).toHaveFocus());
 
-    await user.click(addJustification());
-    await waitFor(() => expect(justification()).toHaveFocus());
+    await user.click(justification());
     await user.keyboard("Traçado incompatível");
     await user.click(screen.getByRole("button", { name: "Salvar justificativa" }));
     expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível", "justification");
-    // O harness não atualiza `review_notes`: o botão que reabre continua sendo "Adicionar justificativa".
-    await waitFor(() => expect(addJustification()).toHaveFocus());
+    // Salvo, o grupo continua aberto e o foco volta à barra.
+    await waitFor(() => expect(bar()).toHaveFocus());
+    expect(bar()).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("abre a justificativa salva com o cursor no fim do texto e devolve o foco ao Editar ao cancelar", async () => {
+  it("mostra o começo da justificativa salva na barra recolhida e abre para ler sem tirar o foco da barra", async () => {
     const user = userEvent.setup();
     render(
       <DiagnosisPanelHarness
@@ -1269,14 +1274,18 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Editar" }));
-    const justification = screen.getByRole("textbox", { name: "Justificativa (opcional)" });
-    await waitFor(() => expect(justification).toHaveFocus());
-    expect(justification.selectionStart).toBe("Traçado incompatível".length);
-    expect(justification.selectionEnd).toBe("Traçado incompatível".length);
-
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus());
+    // Recolhida ao abrir o exame (como as áreas), a barra mostra o começo do texto.
+    const bar = screen.getByRole("button", { name: "Justificativa" });
+    expect(bar).toHaveAttribute("aria-expanded", "false");
+    expect(bar).toHaveTextContent("Traçado incompatível");
+    await user.click(bar);
+    expect(bar).toHaveAttribute("aria-expanded", "true");
+    expect(bar).not.toHaveTextContent("Traçado incompatível");
+    expect(screen.getByRole("textbox", { name: "Justificativa (opcional)" })).toHaveValue("Traçado incompatível");
+    // Abriu para ler: o foco fica na barra (só o grupo vazio leva o cursor ao campo).
+    expect(bar).toHaveFocus();
+    await user.click(bar);
+    expect(bar).toHaveAttribute("aria-expanded", "false");
   });
 
   it("salva a justificativa limpa e não conta espaços ou enters nas bordas como alteração", async () => {
@@ -1292,10 +1301,10 @@ describe("DiagnosisPanel", () => {
     const justification = () => screen.getByRole("textbox", { name: "Justificativa (opcional)" });
     const save = () => screen.getByRole("button", { name: "Salvar justificativa" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
     // Só espaços e enters: não há justificativa, então não há o que salvar.
     fireEvent.change(justification(), { target: { value: "  \n\n  " } });
-    expect(save()).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Salvar justificativa" })).not.toBeInTheDocument();
     fireEvent.change(justification(), { target: { value: "\n\nTraçado incompatível.   \n\n\n\nRitmo irregular.\n\n" } });
     fireEvent.click(save());
     expect(onReview).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível.\n\nRitmo irregular.", "justification");
@@ -1311,14 +1320,14 @@ describe("DiagnosisPanel", () => {
         isGeneralReviewDay={false}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Justificativa" }));
     fireEvent.change(justification(), { target: { value: "Traçado incompatível.\n\n" } });
-    expect(save()).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Salvar justificativa" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Concordo" }));
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "confirmed"));
   });
 
-  it("usa a mesma caixa e o mesmo rótulo no editor e na justificativa salva, com as quebras de linha digitadas", async () => {
+  it("mostra a justificativa salva no próprio campo, com as quebras de linha digitadas, num grupo com a forma do de áreas", async () => {
     const user = userEvent.setup();
     const note = "Traçado não sustenta o achado.\n\nRitmo irregular em D2 longo.";
     render(
@@ -1330,18 +1339,20 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    const saved = screen.getByRole("group", { name: "Justificativa" });
-    const savedText = within(saved).getByText((_, element) => element?.textContent === note && element.children.length === 0);
-    // A área de leitura tem a geometria do campo e quebra linhas como ele: o texto fica onde foi digitado.
-    const sharedGeometry = ["rounded-lg", "border", "px-2.5", "py-2"];
-    expect(savedText).toHaveClass("whitespace-pre-wrap", ...sharedGeometry);
+    const group = screen.getByRole("group", { name: "Justificativa" });
+    const bar = within(group).getByRole("button", { name: "Justificativa" });
+    // Mesma forma do grupo "N áreas marcadas": contorno e barra.
+    expect(group).toHaveClass("overflow-hidden", "rounded-lg", "border", "border-input");
+    expect(bar).toHaveClass("h-8", "bg-muted/60");
+    // Recolhida, a barra resume o texto numa linha.
+    expect(within(bar).getByText("Traçado não sustenta o achado. Ritmo irregular em D2 longo.")).toHaveClass("truncate");
 
-    // O bloco não é trocado por outro: é o mesmo elemento que vira o editor e volta a ser o texto salvo.
-    await user.click(within(saved).getByRole("button", { name: "Editar" }));
-    expect(screen.getByRole("group", { name: "Justificativa (opcional)" })).toBe(saved);
-    expect(within(saved).getByRole("textbox")).toHaveClass(...sharedGeometry, "resize-none");
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(screen.getByRole("group", { name: "Justificativa" })).toBe(saved);
+    await user.click(bar);
+    // O texto salvo é o próprio campo, com as quebras de linha: clicou, escreveu — sem "Editar".
+    const field = within(group).getByRole("textbox", { name: "Justificativa (opcional)" });
+    expect(field).toHaveValue(note);
+    expect(field).toHaveClass("resize-none", "border-0");
+    expect(screen.queryByRole("button", { name: /^Editar/ })).not.toBeInTheDocument();
   });
 
   it("mantém decisões antes das áreas e reabre a justificativa salva do adicional", async () => {
@@ -1368,12 +1379,12 @@ describe("DiagnosisPanel", () => {
     const areas = screen.getByRole("button", { name: "1 área marcada" });
     expect(decisions.compareDocumentPosition(areas)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(areas).toHaveAttribute("aria-expanded", "false");
-    await user.click(screen.getByRole("button", { name: "Editar", exact: true }));
-    expect(screen.getByRole("textbox")).toHaveValue("Justificativa salva");
-    expect(screen.queryByRole("group", { name: "Justificativa" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Cancelar", exact: true }));
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Justificativa" })).toBeVisible();
+    const justificationBar = screen.getByRole("button", { name: "Justificativa" });
+    expect(areas.compareDocumentPosition(justificationBar)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    await user.click(justificationBar);
+    expect(screen.getByRole("textbox", { name: "Justificativa (opcional)" })).toHaveValue("Justificativa salva");
+    await user.click(justificationBar);
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: "Justificativa (opcional)" })).not.toBeInTheDocument());
   });
 
   it("reserva o feedback compacto junto ao status sem deslocar o cabeçalho", () => {
@@ -1426,7 +1437,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Justificativa (opcional)" }), { target: { value: "Rascunho" } });
     fireEvent.click(screen.getByRole("button", { name: "Concordo" }));
 
@@ -1446,13 +1457,14 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar justificativa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Justificativa (opcional)" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Justificativa (opcional)" }), { target: { value: "Falhou" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar justificativa" }));
 
     await waitFor(() => expect(onReview).toHaveBeenCalledWith(1, "rejected", "Falhou", "justification"));
     expect(screen.getByRole("textbox")).toHaveValue("Falhou");
-    expect(screen.queryByRole("group", { name: "Justificativa" })).not.toBeInTheDocument();
+    // A alteração continua pendente: o par de botões segue à vista para tentar de novo.
+    expect(screen.getByRole("button", { name: "Salvar justificativa" })).toBeVisible();
   });
 
   it("anuncia o erro de salvamento uma única vez e mostra o resumo no cabeçalho", () => {
@@ -1486,9 +1498,9 @@ describe("DiagnosisPanel", () => {
 
     expect(screen.getByRole("group", { name: "Justificativa" })).toBeVisible();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Editar", exact: true }));
-    const editor = screen.getByRole("group", { name: /Justificativa/ });
-    expect(within(editor).getByRole("textbox")).toHaveValue("Nota");
+    await user.click(screen.getByRole("button", { name: "Justificativa" }));
+    const group = screen.getByRole("group", { name: "Justificativa" });
+    expect(within(group).getByRole("textbox")).toHaveValue("Nota");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

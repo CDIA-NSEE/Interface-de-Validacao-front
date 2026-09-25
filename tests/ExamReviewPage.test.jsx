@@ -757,8 +757,9 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Adicionar justificativa" }));
-    await user.type(screen.getByLabelText(/Justificativa/), "Traçado incompatível");
+    // Justificativa vazia: a barra do grupo abre o campo, já com o cursor nele.
+    await user.click(await screen.findByRole("button", { name: "Justificativa (opcional)" }));
+    await user.type(screen.getByRole("textbox", { name: "Justificativa (opcional)" }), "Traçado incompatível");
     await user.click(screen.getByRole("button", { name: "Salvar justificativa" }));
 
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível");

@@ -748,8 +748,9 @@ export default function ExamReviewPage() {
       const diagnosis = (exam?.diagnoses || []).find(
         (item) => String(item.id) === diagnosisId,
       );
-      // Texto já limpo, como no painel: espaços e enters nas bordas não contam como alteração não salva.
-      return normalizeReviewNote(draft.note) !== normalizeReviewNote(diagnosis?.review_notes);
+      // Texto já limpo, como no painel: espaços e enters nas bordas não contam como alteração não salva. Sem `note`
+      // próprio (grupo da justificativa aberto, mostrando o texto salvo), não há alteração.
+      return normalizeReviewNote(draft.note ?? diagnosis?.review_notes) !== normalizeReviewNote(diagnosis?.review_notes);
     },
   )?.[0] || null;
   const hasUnsavedDiagnosisReview = Boolean(dirtyDiagnosisReviewId);

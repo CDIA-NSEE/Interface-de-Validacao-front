@@ -1,5 +1,5 @@
-import { Check, ChevronDown, ClipboardList, MapPinned, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useEffectEvent, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, ClipboardList, MapPinned, MessageSquareText, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 
 import {
   Accordion,
@@ -41,7 +41,6 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import { FieldLabel } from "@/components/ui/field";
 import { InputGroupAddon } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -97,13 +96,17 @@ const INLINE_DECISION_ROW_STYLES = {
   ),
 };
 
-// Controles secundários do cartão em `size="sm"` (justificativa): fronteira em repouso, como o "Marcar área" da linha de
-// ações — em ghost eles eram texto solto e só o hover dizia que havia um botão ali. Texto e borda leves para não
-// competirem com a decisão, que é a ação principal do cartão.
-const SUBTLE_OUTLINE_BUTTON_CLASS =
-  "border-border bg-card text-muted-foreground hover:border-input hover:bg-muted hover:text-foreground dark:bg-card";
-
 const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none";
+
+// Grupo recolhível do cartão ("N áreas marcadas" e "Justificativa"): um contorno que envolve a barra e o conteúdo, e a
+// barra que o abre e fecha (contagem ou rótulo à esquerda, chevron à direita, na largura toda). Os dois grupos usam as
+// mesmas classes para terem a mesma forma — o médico aprende um e reconhece o outro. Ver o comentário da barra de áreas.
+const GROUP_OUTLINE_CLASS = "overflow-hidden rounded-lg border border-input";
+const GROUP_BAR_CLASS =
+  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
+// O campo da justificativa não tem moldura própria: com foco nele, o contorno do grupo faz o papel da borda do campo.
+const JUSTIFICATION_FOCUS_CLASS =
+  "has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-3 has-[textarea:focus-visible]:ring-ring/50";
 
 // Painel do Collapsible (Base UI) com altura e opacidade animadas na entrada e na saída — 200ms ease-out, como o painel
 // do acordeão. Usado pela lista de áreas e pelo bloco "Original + ações" da barra fixa do item adicional, para que tudo o
@@ -374,106 +377,60 @@ function DiagnosisDetails({
   const layout = isPrimaryDaily ? "daily" : isAdditional ? "additional" : "plain";
   const styles = DETAILS_STYLES[layout];
   const isPlain = layout === "plain";
-  const disagreementLabelId = useId();
   const status = getDiagnosisReviewStatus(diagnosis);
   const regions = diagnosis.regions || [];
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
   const isReviewDraftDirty = hasDirtyReviewDraft(diagnosis, reviewDraft);
-  const isJustificationBlockVisible = isDisagreementOpen || (status === "rejected" && Boolean(diagnosis.review_notes));
+  const savedReviewNote = normalizeReviewNote(diagnosis.review_notes);
+  // Só originais em Discordo têm justificativa (o rascunho aberto cobre a prévia de Discordo antes da resposta).
+  const hasJustificationGroup = isDisagreementOpen || (status === "rejected" && diagnosis.source !== "doctor_added");
   const rootRef = useRef(null);
   const areaListTriggerRef = useRef(null);
-  const justificationBlockRef = useRef(null);
-  const justificationHeightRef = useRef(0);
-  const justificationAnimationRef = useRef(null);
-  const wasDisagreementOpenRef = useRef(isDisagreementOpen);
 
-  // Altura atual da caixa da justificativa, por observação (redimensionar o campo não re-renderiza): é de onde parte a
-  // transição editor ↔ texto salvo. Zera quando a caixa sai, para a próxima abertura usar a animação de entrada, e não
-  // uma transição a partir de uma altura antiga.
-  useEffect(() => {
-    const block = justificationBlockRef.current;
-    if (!block || typeof ResizeObserver === "undefined") return undefined;
-    justificationHeightRef.current = block.offsetHeight;
-    const observer = new ResizeObserver(() => {
-      justificationHeightRef.current = block.offsetHeight;
-    });
-    observer.observe(block);
-    return () => {
-      observer.disconnect();
-      justificationHeightRef.current = 0;
-    };
-  }, [isJustificationBlockVisible]);
-
-  // Editor ↔ texto salvo no mesmo bloco (container transform): a altura desliza de um estado ao outro e só os controles
-  // que entram ("Editar", "Opcional", o par de botões) esmaecem — o texto não pisca nem se move, porque o campo e a área
-  // de leitura têm a mesma geometria. Antes o bloco encolhia ~90px num quadro só e o texto recém-escrito sumia até o
-  // bloco novo aparecer. 200ms com a curva dos colapsáveis; `clip`, e não `hidden`, para o foco no campo durante a
-  // transição não rolar o conteúdo. Sem movimento com movimento reduzido e na revalidação geral, que não anima.
-  useLayoutEffect(() => {
-    const wasOpen = wasDisagreementOpenRef.current;
-    wasDisagreementOpenRef.current = isDisagreementOpen;
-    const block = justificationBlockRef.current;
-    const fromHeight = justificationHeightRef.current;
-    if (wasOpen === isDisagreementOpen || isPlain || !block || !fromHeight || typeof block.animate !== "function") return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    justificationAnimationRef.current?.cancel();
-    const toHeight = block.offsetHeight;
-    if (Math.abs(toHeight - fromHeight) < 1) return;
-    const easing = "cubic-bezier(0, 0, 0.2, 1)";
-    block.style.overflow = "clip";
-    const animation = block.animate([{ height: `${fromHeight}px` }, { height: `${toHeight}px` }], { duration: 200, easing });
-    const restoreOverflow = () => {
-      block.style.overflow = "";
-    };
-    animation.onfinish = restoreOverflow;
-    animation.oncancel = restoreOverflow;
-    justificationAnimationRef.current = animation;
-    block.querySelectorAll('[data-justification-fade], [data-slot="field-label"] [data-slot="badge"]').forEach((control) => {
-      control.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing });
-    });
-  }, [isDisagreementOpen, isPlain]);
-
-  function setDisagreementPanelOpen(isOpen) {
-    onReviewDraftChange?.(
-      diagnosis.id,
-      isOpen ? { isOpen: true, note: reviewNoteDraft } : null,
-    );
-  }
-
-  // O editor e os botões que o abrem se substituem na tela; sem mover o foco, ele cairia no body. Abrir pelo botão leva
-  // o cursor ao fim do texto (clicou para escrever); fechar — salvo ou cancelado — devolve o foco ao botão que reabre o
-  // editor ("Editar" ou "Adicionar justificativa"), e só se o foco se perdeu (o médico pode já ter clicado em outro lugar).
-  function focusDisagreementControl(target) {
+  // Abrir o grupo vazio pela barra leva o cursor ao campo (abriu para escrever). Salvar ou cancelar desmonta os botões:
+  // o foco volta à barra do grupo, e só se ele se perdeu (o médico pode já ter clicado em outro lugar).
+  function focusJustificationControl(target) {
     window.setTimeout(() => {
-      if (target === "editor") {
+      if (target === "field") {
         const textarea = rootRef.current?.querySelector(`#disagreement-note-${diagnosis.id}`);
         textarea?.focus();
         textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
         return;
       }
       if (document.activeElement && document.activeElement !== document.body) return;
-      rootRef.current?.querySelector('[data-justification-action="open"]')?.focus();
+      rootRef.current?.querySelector('[data-justification-action="toggle"]')?.focus();
     }, 0);
   }
 
-  function openDisagreementPanel() {
-    onReviewDraftChange?.(diagnosis.id, {
-      isOpen: true,
-      note: diagnosis.review_notes || "",
-    });
-    focusDisagreementControl("editor");
+  // Grupo aberto = rascunho aberto (`isOpen`); sem `note` próprio, o campo mostra o texto salvo. Recolher descarta o
+  // rascunho, por isso não recolhe com alteração não salva — vale o bloqueio "Salve ou cancele a justificativa…".
+  function handleJustificationOpenChange(open) {
+    if (open) {
+      onReviewDraftChange?.(diagnosis.id, { isOpen: true });
+      if (!savedReviewNote) focusJustificationControl("field");
+      return;
+    }
+    if (isReviewDraftDirty) {
+      onReviewInteractionBlocked?.(diagnosis.id);
+      return;
+    }
+    onReviewDraftChange?.(diagnosis.id, null);
   }
 
-  function closeDisagreementPanel() {
-    setDisagreementPanelOpen(false);
-    focusDisagreementControl("opener");
+  // Cancelar volta ao texto salvo e mantém o grupo aberto; salvar também o mantém aberto, agora com o texto salvo (já
+  // limpo). `reveal: false`: a resposta pode chegar quando o médico já abriu outro item dos adicionais.
+  function discardJustificationChanges() {
+    onReviewDraftChange?.(diagnosis.id, { isOpen: true }, { reveal: false });
+    focusJustificationControl("toggle");
   }
 
-  async function submitDisagreement(note, feedbackKind = "decision") {
-    const wasReviewed = await onReview(diagnosis.id, "rejected", note, feedbackKind);
-    if (wasReviewed) closeDisagreementPanel();
+  async function submitJustification(note) {
+    const wasReviewed = await onReview(diagnosis.id, "rejected", note, "justification");
+    if (!wasReviewed) return;
+    onReviewDraftChange?.(diagnosis.id, { isOpen: true }, { reveal: false });
+    focusJustificationControl("toggle");
   }
 
   async function handleRemoveRegionClick(region) {
@@ -497,7 +454,7 @@ function DiagnosisDetails({
     // última área, então fica claro que todas as linhas pertencem a "N áreas marcadas". Antes a barra fechava a própria
     // borda e as linhas eram caixas soltas com o mesmo espaço entre si e até a barra — a cabeça lia como mais um irmão
     // da lista. `overflow-hidden` recorta os fundos da barra e das linhas nos cantos arredondados.
-    <Collapsible className={cn("overflow-hidden rounded-lg border border-input", styles.areaCollapsible)} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
+    <Collapsible className={cn(GROUP_OUTLINE_CLASS, styles.areaCollapsible)} onOpenChange={onAreaListOpenChange} open={isAreaListOpen}>
       {/* Cabeçalho do grupo de áreas: continua sendo só a contagem e o chevron na largura toda (marcar outra área é o
           "Marcar área" da linha de ações — um botão só, no mesmo lugar, com ou sem área), no Button do DS em `outline`,
           mas sem borda nem raio próprios: quem a delimita é o contorno do grupo, do qual ela é o topo. A largura toda
@@ -512,7 +469,7 @@ function DiagnosisDetails({
         ref={areaListTriggerRef}
         render={
           <Button
-            className="h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60"
+            className={GROUP_BAR_CLASS}
             size="sm"
             type="button"
             variant="outline"
@@ -605,56 +562,55 @@ function DiagnosisDetails({
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
-      {/* Justificativa, na mesma posição em todos os layouts (depois da decisão e das áreas). Sem caixa própria: rótulo,
-          campo e botões ficam direto no cartão, nas mesmas bordas de "Original:", da decisão e de "Marcar área" — a caixa
-          em volta do campo era uma terceira moldura (cartão › caixa › campo) que só recuava tudo 11px de cada lado.
-          Editor e texto salvo são o mesmo bloco, que se transforma de um no outro: o rótulo "Justificativa" não muda de
-          texto, cor nem lugar, e o texto salvo fica numa área de leitura com a geometria do campo (borda, raio, recuo,
-          largura e quebra `pre-wrap`), então aparece exatamente onde e como foi digitado — muda só o fundo, para o tom de
-          leitura de "Dados clínicos" (`bg-muted/40`). Ações à direita: "Editar" na linha do rótulo; no editor,
-          `Cancelar │ Salvar justificativa` abaixo do campo. */}
-      {isJustificationBlockVisible ? (
-        // `mt-1` (12px no total) fora dos adicionais: sem caixa, o "Editar" ficava a 4px de "Marcar área" e parecia parte
-        // da linha de ações. Nos adicionais a divisória da barra já separa.
-        <div aria-labelledby={disagreementLabelId} className={cn("flex flex-col gap-2", !isAdditional && "mt-1", styles.enterAnimation)} data-slot="justification" ref={justificationBlockRef} role="group">
-          {/* Linha do rótulo com 20px nos dois estados (`-my-1` nos botões de 28px): o campo e a área de leitura começam
-              na mesma altura. */}
-          <div className="flex items-center justify-between gap-2">
-            {isDisagreementOpen ? (
-              <FieldLabel className="text-muted-foreground" htmlFor={`disagreement-note-${diagnosis.id}`} id={disagreementLabelId}>Justificativa <OptionalTag /></FieldLabel>
-            ) : (
-              <span className="min-w-0 text-sm leading-snug font-medium text-muted-foreground" id={disagreementLabelId}>Justificativa</span>
-            )}
-            {!isDisagreementOpen ? (
-              <Button className={cn("-my-1", SUBTLE_OUTLINE_BUTTON_CLASS)} data-justification-action="open" data-justification-fade="" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">{isPlain ? "Editar justificativa" : "Editar"}</Button>
-            ) : isPlain ? (
-              <Button aria-label="Cancelar justificativa" className="-my-1" disabled={isBusy} onClick={closeDisagreementPanel} size="icon-sm" type="button" variant="ghost"><X aria-hidden="true" /></Button>
-            ) : null}
-          </div>
-          {isDisagreementOpen ? (
-            <>
-              {/* Sem alça de redimensionar: o campo já cresce com o texto (`field-sizing-content`). */}
-              <Textarea className="resize-none bg-background text-foreground dark:bg-background" id={`disagreement-note-${diagnosis.id}`} onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })} placeholder="Registre o motivo da discordância" rows={3} value={reviewNoteDraft} />
-              {/* Dispensar à esquerda, confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com
-                  "Salvar" em cima, como o AlertDialogFooter. Na revalidação geral o par só aparece quando há algo a salvar. */}
-              {!isPlain || isReviewDraftDirty ? (
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end" data-justification-fade="">
-                  <Button disabled={isBusy} onClick={closeDisagreementPanel} size="sm" type="button" variant="outline">Cancelar</Button>
-                  <Button disabled={isBusy || !isReviewDraftDirty} onClick={() => submitDisagreement(normalizeReviewNote(reviewNoteDraft), "justification")} size="sm" type="button">Salvar justificativa</Button>
-                </div>
+      {/* Justificativa (só originais em Discordo), na mesma posição em todos os layouts (depois da decisão e das áreas): um
+          grupo como o de "N áreas marcadas" — mesmo contorno, mesma barra com chevron, mesma animação —, com o próprio
+          campo dentro. O contorno diz de quem é cada coisa (um "Editar" solto abaixo das áreas lia como ação delas) e a
+          barra recolhe o texto quando o médico não precisa mais dele. O campo é sempre o campo: clicou, escreveu — sem
+          "Editar" nem "Adicionar justificativa", como em "Observações gerais". Recolhido, a barra mostra o começo do texto;
+          vazio, a etiqueta "Opcional". O grupo nasce recolhido ao abrir o exame (como as áreas), abre com o Discordo e
+          continua aberto depois de salvar. */}
+      {hasJustificationGroup ? (
+        <Collapsible aria-label="Justificativa" className={cn(GROUP_OUTLINE_CLASS, JUSTIFICATION_FOCUS_CLASS, styles.enterAnimation)} data-slot="justification" onOpenChange={handleJustificationOpenChange} open={isDisagreementOpen} role="group">
+          <CollapsibleTrigger
+            aria-label={savedReviewNote ? "Justificativa" : "Justificativa (opcional)"}
+            data-justification-action="toggle"
+            render={<Button className={GROUP_BAR_CLASS} size="sm" type="button" variant="outline" />}
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <MessageSquareText aria-hidden="true" />
+              <span className="shrink-0">Justificativa</span>
+              {!savedReviewNote ? <OptionalTag /> : null}
+              {savedReviewNote && !isDisagreementOpen ? (
+                <span className="min-w-0 truncate font-normal" data-slot="justification-preview">{savedReviewNote.replace(/\s+/g, " ")}</span>
               ) : null}
-            </>
-          ) : (
-            <div className="rounded-lg border bg-muted/40 px-2.5 py-2 text-sm break-words whitespace-pre-wrap text-foreground" data-slot="justification-text">{diagnosis.review_notes}</div>
-          )}
-        </div>
+            </span>
+            <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
+              <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isDisagreementOpen && "rotate-180")} />
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className={styles.areaPanel}>
+            {/* Sem moldura própria (o contorno do grupo é a do campo; com foco, o grupo inteiro acende) e sem alça de
+                redimensionar: o campo cresce com o texto (`field-sizing-content`). A divisória sob a barra é a da lista de áreas. */}
+            <Textarea
+              aria-label="Justificativa (opcional)"
+              className="resize-none rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none focus-visible:border-border focus-visible:ring-0 dark:bg-background"
+              id={`disagreement-note-${diagnosis.id}`}
+              onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })}
+              placeholder="Registre o motivo da discordância"
+              rows={3}
+              value={reviewNoteDraft}
+            />
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
 
-      {status === "rejected" && !diagnosis.review_notes && !isDisagreementOpen && diagnosis.source !== "doctor_added" ? (
-        // À direita (`self-end`): o mesmo canto em que, depois de salvar, fica o "Editar" — a ação de justificar não muda de lado.
-        <Button className={cn("w-fit self-end", SUBTLE_OUTLINE_BUTTON_CLASS, styles.enterAnimation)} data-justification-action="open" disabled={isBusy} onClick={openDisagreementPanel} size="sm" type="button" variant="outline">
-          <Plus aria-hidden="true" data-icon="inline-start" />Adicionar justificativa
-        </Button>
+      {/* Só com alteração não salva, como na revalidação geral e em "Observações gerais". Dispensar à esquerda, confirmar à
+          direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com "Salvar" em cima, como o AlertDialogFooter. */}
+      {isDisagreementOpen && isReviewDraftDirty ? (
+        <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", styles.enterAnimation)}>
+          <Button disabled={isBusy} onClick={discardJustificationChanges} size="sm" type="button" variant="outline">Cancelar</Button>
+          <Button disabled={isBusy} onClick={() => submitJustification(normalizeReviewNote(reviewNoteDraft))} size="sm" type="button">Salvar justificativa</Button>
+        </div>
       ) : null}
     </div>
   );
