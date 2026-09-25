@@ -103,7 +103,7 @@ const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration
 // mesmas classes para terem a mesma forma — o médico aprende um e reconhece o outro. Ver o comentário da barra de áreas.
 const GROUP_OUTLINE_CLASS = "overflow-hidden rounded-lg border border-input";
 const GROUP_BAR_CLASS =
-  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
+  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
 // O campo da justificativa não tem moldura própria: com foco nele, o contorno do grupo faz o papel da borda do campo.
 const JUSTIFICATION_FOCUS_CLASS =
   "has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-3 has-[textarea:focus-visible]:ring-ring/50";
@@ -480,8 +480,9 @@ function DiagnosisDetails({
           revalidação) para a cabeça do grupo não sumir dentro da própria lista — e `dark:bg-muted/*` explícito porque a
           variante traz bg-input/30 no escuro. Aberta, a variante escurece sozinha pelo `aria-expanded` do Collapsible.
           `focus-visible:ring-inset` porque o grupo recorta (overflow-hidden) qualquer anel externo;
-          `active:translate-y-0` porque o afundar de 1px do Button, numa faixa dessa largura, saltaria sobre a lista que
-          ela acabou de abrir. O ícone é o mesmo de "Marcar área": amarra a barra ao contexto de áreas do cartão. */}
+          `active:not-aria-[haspopup]:translate-y-0` porque o afundar de 1px do Button, numa faixa dessa largura, saltaria
+          sobre a lista que ela acabou de abrir (tem de ser a mesma variante da regra do Button: `active:translate-y-0`
+          tem seletor menos específico e não a vence). O ícone é o mesmo de "Marcar área": amarra a barra ao contexto de áreas do cartão. */}
       <CollapsibleTrigger
         aria-label={markedRegionCountLabel(regions.length)}
         ref={areaListTriggerRef}
@@ -1093,7 +1094,7 @@ export default function DiagnosisPanel({
                     <CollapsibleTrigger
                       render={
                         <Button
-                          className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:translate-y-0 motion-reduce:transition-none"
+                          className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                           type="button"
                           variant="collapsible"
                         />
