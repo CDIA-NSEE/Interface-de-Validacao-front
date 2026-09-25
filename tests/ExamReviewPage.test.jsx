@@ -777,7 +777,7 @@ describe("ExamReviewPage", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Concordo" }));
     const decisionFeedback = await screen.findByLabelText("✓ Decisão salva");
-    expect(decisionFeedback).toHaveTextContent("✓ Salvo");
+    expect(decisionFeedback).toHaveTextContent("Salvo");
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "confirmed", "");
   });
 
@@ -856,7 +856,7 @@ describe("ExamReviewPage", () => {
 
     expect(reviewDailyDiagnosis).toHaveBeenCalledWith(1, "rejected", "Traçado incompatível");
     const justificationFeedback = await screen.findByLabelText("✓ Justificativa salva");
-    expect(justificationFeedback).toHaveTextContent("✓ Salvo");
+    expect(justificationFeedback).toHaveTextContent("Salvo");
   });
 
   it("explica junto ao diagnóstico quando a última área obrigatória não pode ser removida", async () => {

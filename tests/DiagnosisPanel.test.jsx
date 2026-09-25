@@ -1408,7 +1408,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
     const header = screen.getByRole("button", { name: /Bloqueio de ramo direito/ });
-    expect(within(header).getByRole("status")).toHaveTextContent("✓ Salvo");
+    expect(within(header).getByRole("status")).toHaveTextContent("Salvo");
     await user.click(header);
     const decisions = screen.getByRole("group", { name: "Revisão de Bloqueio de ramo direito" });
     const areas = screen.getByRole("button", { name: "1 área marcada" });
@@ -1434,7 +1434,9 @@ describe("DiagnosisPanel", () => {
     );
 
     const feedback = screen.getByLabelText("✓ Decisão salva");
-    expect(feedback).toHaveTextContent("✓ Salvo");
+    // O check é o ícone (a Source Sans 3 não tem o caractere "✓", que caía numa fonte de sistema).
+    expect(feedback).toHaveTextContent(/^Salvo$/);
+    expect(feedback.querySelector("svg")).toBeInTheDocument();
     expect(feedback).toHaveAttribute("role", "status");
     expect(feedback.closest('[data-slot="card-header"]')).toBeTruthy();
     // A mensagem completa não é repetida no corpo do cartão.

@@ -734,8 +734,10 @@ function DiagnosisStatusSummary({ className, compact = false, diagnosis, status,
             // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
             <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
           ) : feedback ? (
-            <span aria-label={feedback.message} title={feedback.message} role="status">
-              {feedback.type === "success" ? "✓ Salvo" : feedback.message}
+            // Ícone, não o caractere "✓": ele não existe na Source Sans 3 e caía na fonte de símbolos do sistema (Segoe UI
+            // Symbol no Windows), fino e inclinado como um "√". É o mesmo Check do Concordo.
+            <span aria-label={feedback.message} className="inline-flex items-center gap-0.5" title={feedback.message} role="status">
+              {feedback.type === "success" ? <><Check aria-hidden="true" className="size-3" />Salvo</> : feedback.message}
             </span>
           ) : null}
         </span>
