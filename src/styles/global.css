@@ -37,6 +37,9 @@
   --border: oklch(0.88 0.025 220);
   --input: oklch(0.8 0.025 220);
   --ring: oklch(0.57 0.105 222);
+  /* Sombra do destaque (só o cartão do dia): a tinta azul-noite do texto a 12%, com a profundidade do preto a 10%
+     que ela substitui (ΔL ~0,05 sob o cartão) — o preto ficava cinza sobre o fundo azulado. */
+  --elevation: oklch(0.245 0.042 235 / 12%);
   --radius: 0.375rem;
 }
 
@@ -44,6 +47,7 @@
   --font-heading: var(--font-sans);
   --font-sans: "Source Sans 3 Variable", sans-serif;
   --color-ring: var(--ring);
+  --color-elevation: var(--elevation);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
@@ -115,6 +119,9 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.7 0.115 215);
+  /* No escuro a sombra precisa de quase preto a 90% para a mesma profundidade do claro (ΔL ~0,05); o preto a 10%
+     tirava 0,005 do fundo e sumia. */
+  --elevation: oklch(0.05 0.02 235 / 90%);
 }
 
 @layer base {
