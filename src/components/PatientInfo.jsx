@@ -31,6 +31,11 @@ export default function PatientInfo({ patient }) {
     ([, value]) => value !== null && value !== undefined && value !== "",
   );
 
+  // Sem nenhum dado, uma frase de status (como a lista vazia dos adicionais): sem ela o cartão ficava só com o título.
+  if (availableRows.length === 0) {
+    return <p className="text-sm text-muted-foreground">Nenhum dado clínico neste exame.</p>;
+  }
+
   // Lista de pares rótulo/valor sem caixa por item: o cartão já agrupa (caixa dentro do cartão era cartão dentro de cartão).
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">

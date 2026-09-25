@@ -475,6 +475,20 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Traçado recebido sem intercorrências.")).toBeVisible();
   });
 
+  it("informa quando o exame não tem nenhum dado clínico", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      patient: { age: 0, birth_date: null, bmi: null, height: 0, sex: "", weight: null },
+    });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const clinicalHeading = await screen.findByRole("heading", { name: "Dados clínicos" });
+    const clinicalCard = clinicalHeading.closest("[data-slot='card']");
+    expect(clinicalCard).toContainElement(screen.getByText("Nenhum dado clínico neste exame."));
+    expect(clinicalCard.querySelector("dl")).toBeNull();
+  });
+
   it("encaminha o modo IA do contexto para o diagnóstico com concordância", async () => {
     getExamById.mockResolvedValue({
       ...exam,
