@@ -160,7 +160,7 @@
       </article>
       <article class="mini">
         <h3>Dados e ações finais</h3>
-        <p>“Dados clínicos” exibe somente Nascimento, Idade, Sexo, Peso, Altura e IMC que estiverem presentes. “Mais informações” contém Data/hora, Tipo e notas de origem.</p>
+        <p>“Dados clínicos” exibe somente Idade, Sexo, Nascimento, Peso, Altura e IMC que estiverem presentes. “Dados do exame” contém Data, Hora, Tipo e notas de origem.</p>
         <p>O rodapé é fixo: mostra o estado da fila e oferece Voltar, Salvar observações e Salvar e próximo ou Validar exame, conforme o modo atual.</p>
       </article>
     </div>
@@ -286,28 +286,28 @@
   </section>
 
   <section>
-    <h2>8. Dados clínicos e Mais informações</h2>
+    <h2>8. Dados clínicos e Dados do exame</h2>
     <div class="grid">
       <article class="mini">
         <h3>Dados clínicos</h3>
-        <p>A API expõe Nascimento, Idade, Sexo, Peso, Altura e IMC. O frontend filtra valores nulos, indefinidos ou vazios e cria uma caixa independente somente para os presentes.</p>
+        <p>A API expõe Nascimento, Idade, Sexo, Peso, Altura e IMC. Sem idade na origem, a API calcula os anos completos entre o nascimento e a data do exame. O frontend filtra valores nulos, indefinidos, vazios ou zero e mostra os presentes numa lista de pares rótulo/valor, sem caixa por item, na ordem Idade · Sexo · Nascimento · Peso · Altura · IMC. Sem nenhum dado: “Nenhum dado clínico neste exame.”</p>
         <ul>
           <li>Idade recebe “anos”.</li>
-          <li>Peso recebe “kg”.</li>
-          <li>Altura acima de 3 é tratada como centímetros; caso contrário, metros.</li>
+          <li>Peso recebe “kg”; IMC, “kg/m²”; números com vírgula decimal.</li>
+          <li>Altura acima de 3 é tratada como centímetros; caso contrário, metros com duas casas.</li>
           <li>Desktop usa três colunas; mobile, duas.</li>
         </ul>
         <p>Embora o modelo de banco possua o nome do paciente, <code>_patient_payload</code> não o envia para esta tela.</p>
       </article>
       <article class="mini">
-        <h3>Mais informações</h3>
+        <h3>Dados do exame</h3>
         <p>Começa recolhida e contém metadados somente de leitura:</p>
         <ul>
-          <li>Data e hora do exame.</li>
+          <li>Data e hora do exame, em campos separados (mesmas colunas dos dados clínicos).</li>
           <li>Tipo do exame.</li>
-          <li>Notas, quando <code>comments</code> ou <code>source_notes</code> existem.</li>
+          <li>Notas, quando <code>comments</code> ou <code>source_notes</code> existem, com as quebras de linha preservadas; o <code>source_notes</code> (texto padrão da origem) aparece menor e em cinza, abaixo das notas do exame.</li>
         </ul>
-        <p>O cabeçalho inteiro é botão. O hover, o foco e o clique cobrem toda a caixa; a seta apenas comunica o estado aberto ou fechado.</p>
+        <p>O cabeçalho inteiro é botão, dentro de um título <code>h2</code>. O hover, o foco e o clique cobrem toda a caixa; a seta apenas comunica o estado aberto ou fechado.</p>
       </article>
     </div>
   </section>
@@ -319,7 +319,7 @@
     <ul>
       <li><strong>Observações gerais:</strong> <code>ExamDraft.notes</code> por exame e por médico; na validação final, migram para <code>Review.notes</code>.</li>
       <li><strong>Justificativa:</strong> <code>DiagnosisValidation.notes</code>, associada ao diagnóstico padronizado e ao ciclo.</li>
-      <li><strong>Notas de origem:</strong> <code>Exam.comments/source_notes</code>, apenas leitura em “Mais informações”.</li>
+      <li><strong>Notas de origem:</strong> <code>Exam.comments/source_notes</code>, apenas leitura em “Dados do exame”.</li>
     </ul>
     <p>“Salvar observações” aparece apenas no fluxo diário e fica desabilitado sem alterações. Texto vazio ou apenas espaços remove o rascunho do usuário. Rascunhos de médicos diferentes são isolados.</p>
     <h3>Voltar</h3>
