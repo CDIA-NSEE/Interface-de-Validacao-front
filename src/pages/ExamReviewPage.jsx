@@ -184,6 +184,8 @@ export default function ExamReviewPage() {
   const [selectedRegionKey, setSelectedRegionKey] = useState(null);
   const decisionFeedbackTimersRef = useRef(new Map());
   const notesSaveTimerRef = useRef(null);
+  const moreInformationCardRef = useRef(null);
+  const moreInformationRevealFrameRef = useRef(0);
   const latestNotesRef = useRef("");
   const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
@@ -244,6 +246,7 @@ export default function ExamReviewPage() {
     decisionFeedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     decisionFeedbackTimersRef.current.clear();
     clearNotesSaveTimer();
+    window.cancelAnimationFrame(moreInformationRevealFrameRef.current);
   }, [clearNotesSaveTimer]);
 
   useEffect(() => {
@@ -801,6 +804,35 @@ export default function ExamReviewPage() {
     setError("Salve ou cancele a justificativa antes de continuar.");
   }
 
+  // "Dados do exame" é o último cartão do painel: na tela real (1536×730) ele abria abaixo da dobra e só 16 dos ~240px
+  // apareciam — o médico via a seta virar e nada mais. Ao abrir, rola o painel só o necessário para mostrar o conteúdo
+  // (nunca esconde o título acima do topo), como scrollDiagnosisIntoView nos adicionais: o painel cresce em transição de
+  // 200ms e o viewport ainda não tem o overflow final, então o acompanhamento segue frame a frame até ela terminar.
+  function handleMoreInformationOpenChange(open) {
+    setIsMoreInformationOpen(open);
+    window.cancelAnimationFrame(moreInformationRevealFrameRef.current);
+    if (!open) return;
+
+    const deadline = performance.now() + 400;
+    const reveal = () => {
+      const card = moreInformationCardRef.current;
+      const viewport = card?.closest('[data-slot="scroll-area-viewport"]');
+      if (!card || !viewport) return;
+      const panel = card.querySelector('[data-slot="collapsible-content"]');
+      const pendingHeight = panel ? Math.max(0, panel.scrollHeight - panel.getBoundingClientRect().height) : 0;
+      const bounds = viewport.getBoundingClientRect();
+      const target = card.getBoundingClientRect();
+      const targetBottom = target.bottom + pendingHeight;
+      if (targetBottom > bounds.bottom) {
+        viewport.scrollTop += Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
+      }
+      if (pendingHeight > 0.5 && performance.now() < deadline) {
+        moreInformationRevealFrameRef.current = window.requestAnimationFrame(reveal);
+      }
+    };
+    moreInformationRevealFrameRef.current = window.requestAnimationFrame(reveal);
+  }
+
   function handleSidebarOpenChange(open, options = {}) {
     if (!open) {
       shouldRestoreSidebarFocusRef.current = options.restoreFocus ?? true;
@@ -870,8 +902,8 @@ export default function ExamReviewPage() {
   );
 
   const moreInformation = (
-    <Collapsible onOpenChange={setIsMoreInformationOpen} open={isMoreInformationOpen}>
-      <Card className="gap-0 overflow-hidden py-0" size="sm">
+    <Collapsible onOpenChange={handleMoreInformationOpenChange} open={isMoreInformationOpen}>
+      <Card className="gap-0 overflow-hidden py-0" ref={moreInformationCardRef} size="sm">
         <CardHeader className="p-0">
           {/* Botão dentro do h2 (padrão de acordeão do APG), como "Diagnósticos adicionais": a seção entra na navegação
               por títulos junto de "Dados clínicos". A barra repete a de "Diagnósticos adicionais" (h-11: o título cai a 22px
