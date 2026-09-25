@@ -912,12 +912,14 @@ export default function ExamReviewPage() {
               {exam.comments || exam.source_notes ? (
                 <div className="col-span-2 min-w-0">
                   <dt className="text-xs font-medium text-muted-foreground">Notas</dt>
+                  {/* pre-line: as notas vêm do laudo com quebras de linha (lista numerada "1. Ritmo… 2. Ativação…"); sem ele
+                      viravam um parágrafo corrido. Texto como vem da API, também as quebras do PDF. */}
                   <dd className="mt-0.5 flex flex-col gap-2">
                     {exam.comments ? (
-                      <p className="break-words text-sm text-foreground">{exam.comments}</p>
+                      <p className="whitespace-pre-line break-words text-sm text-foreground">{exam.comments}</p>
                     ) : null}
                     {exam.source_notes ? (
-                      <p className="break-words text-sm text-foreground">{exam.source_notes}</p>
+                      <p className="whitespace-pre-line break-words text-sm text-foreground">{exam.source_notes}</p>
                     ) : null}
                   </dd>
                 </div>
