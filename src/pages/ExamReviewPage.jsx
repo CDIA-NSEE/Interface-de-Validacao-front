@@ -927,8 +927,10 @@ export default function ExamReviewPage() {
                     {exam.comments ? (
                       <p className="whitespace-pre-line break-words text-sm text-foreground">{exam.comments}</p>
                     ) : null}
+                    {/* source_notes é quase sempre texto padrão da origem (aviso de interpretação, Diretriz SBC, preparo de
+                        pele), repetido em todo exame: vai em caption muted, abaixo das notas do próprio exame. */}
                     {exam.source_notes ? (
-                      <p className="whitespace-pre-line break-words text-sm text-foreground">{exam.source_notes}</p>
+                      <p className="whitespace-pre-line break-words text-xs text-muted-foreground">{exam.source_notes}</p>
                     ) : null}
                   </dd>
                 </div>
