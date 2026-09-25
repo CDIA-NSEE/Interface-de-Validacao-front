@@ -243,7 +243,9 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       {isRequired ? <Badge variant="info">Diagnóstico do dia</Badge> : null}
       {aiModeEnabled && diagnosis.ai_suggested ? <AiAgreementBadge /> : null}
-      {diagnosis.is_grouped ? <Badge variant="outline">Agrupado</Badge> : null}
+      {/* Neutro como "IA concordou" (texto `muted-foreground`, peso 400): informa por que o título difere do Original,
+          não pede ação. No `outline` puro (texto `foreground`, 500) ele era o marcador mais forte da linha. */}
+      {diagnosis.is_grouped ? <Badge className="font-normal text-muted-foreground" variant="outline">Agrupado</Badge> : null}
       {diagnosis.source !== "doctor_added" && diagnosis.region_required_missing ? <Badge variant="warning">Área necessária</Badge> : null}
     </div>
   );
