@@ -37,12 +37,13 @@ export default function PatientInfo({ patient }) {
   }
 
   // Lista de pares rótulo/valor sem caixa por item: o cartão já agrupa (caixa dentro do cartão era cartão dentro de cartão).
+  // Valor em peso 400 (body): é dado de leitura; 500 é o peso dos controles e do título da seção, que assim fica acima.
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
       {availableRows.map(([label, value]) => (
         <div className="min-w-0" key={label}>
           <dt className="truncate text-xs font-medium text-muted-foreground">{label}</dt>
-          <dd className="mt-0.5 whitespace-nowrap text-xs font-medium text-foreground tabular-nums sm:text-sm">{value}</dd>
+          <dd className="mt-0.5 whitespace-nowrap text-xs text-foreground tabular-nums sm:text-sm">{value}</dd>
         </div>
       ))}
     </dl>

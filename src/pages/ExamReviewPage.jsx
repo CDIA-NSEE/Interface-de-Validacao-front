@@ -943,17 +943,17 @@ export default function ExamReviewPage() {
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
               <div className="min-w-0">
                 <dt className="text-xs font-medium text-muted-foreground">Data</dt>
-                <dd className="mt-0.5 font-medium text-foreground tabular-nums">{formatDate(exam.exam_date)}</dd>
+                <dd className="mt-0.5 text-foreground tabular-nums">{formatDate(exam.exam_date)}</dd>
               </div>
               {exam.exam_time ? (
                 <div className="min-w-0">
                   <dt className="text-xs font-medium text-muted-foreground">Hora</dt>
-                  <dd className="mt-0.5 font-medium text-foreground tabular-nums">{exam.exam_time}</dd>
+                  <dd className="mt-0.5 text-foreground tabular-nums">{exam.exam_time}</dd>
                 </div>
               ) : null}
               <div className="min-w-0">
                 <dt className="text-xs font-medium text-muted-foreground">Tipo</dt>
-                <dd className="mt-0.5 font-medium text-foreground">{exam.exam_type}</dd>
+                <dd className="mt-0.5 text-foreground">{exam.exam_type}</dd>
               </div>
               {exam.comments || exam.source_notes ? (
                 <div className="col-span-full min-w-0">
