@@ -892,13 +892,17 @@ export default function ExamReviewPage() {
                 className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"
               >
                 <ChevronDown
-                  className={cn("text-muted-foreground transition-transform", isMoreInformationOpen && "rotate-180")}
+                  className={cn(
+                    "text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none",
+                    isMoreInformationOpen && "rotate-180",
+                  )}
                 />
               </span>
             </CollapsibleTrigger>
           </h2>
         </CardHeader>
-        <CollapsibleContent>
+        {/* Abre e fecha com a transição de altura do painel de "Diagnósticos adicionais" (200ms, ease-out). */}
+        <CollapsibleContent className="h-(--collapsible-panel-height) overflow-clip transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
           <Separator />
           {/* Mesma lista de pares rótulo/valor dos "Dados clínicos", sem caixa por item, e a mesma grade de 3 colunas:
               Data · Hora · Tipo ficam alinhados com Idade · Sexo · Nascimento. "Data e hora" numa célula só não cabia na
