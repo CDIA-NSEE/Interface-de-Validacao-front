@@ -874,12 +874,13 @@ export default function ExamReviewPage() {
       <Card className="gap-0 overflow-hidden py-0" size="sm">
         <CardHeader className="p-0">
           {/* Botão dentro do h2 (padrão de acordeão do APG), como "Diagnósticos adicionais": a seção entra na navegação
-              por títulos junto de "Dados clínicos". */}
+              por títulos junto de "Dados clínicos". A barra repete a de "Diagnósticos adicionais" (h-11: o título cai a 22px
+              do topo nos três cartões de seção). */}
           <h2>
             <CollapsibleTrigger
               render={
                 <Button
-                  className="h-auto w-full justify-between border-x-0 px-3 py-3"
+                  className="h-11 w-full justify-between border-x-0 px-3"
                   type="button"
                   variant="collapsible"
                 />

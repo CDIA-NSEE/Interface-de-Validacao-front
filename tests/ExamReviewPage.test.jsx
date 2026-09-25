@@ -410,7 +410,7 @@ describe("ExamReviewPage", () => {
     const trigger = await screen.findByRole("button", { name: "Dados do exame" });
     expect(screen.getByRole("heading", { level: 2, name: "Dados do exame" })).toContainElement(trigger);
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
-    expect(trigger).toHaveClass("border-x-0");
+    expect(trigger).toHaveClass("h-11", "border-x-0");
     expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted");
     expect(trigger).not.toHaveClass("aria-expanded:bg-muted");
     const clinicalHeading = screen.getByRole("heading", { name: "Dados clínicos" });
