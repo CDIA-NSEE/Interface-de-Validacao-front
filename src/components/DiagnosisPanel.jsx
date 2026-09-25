@@ -725,7 +725,28 @@ function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
   );
 }
 
+// Duração da saída do "Salvo" (fade-out) — a mesma do `duration-150` da classe dele.
+const SAVED_FEEDBACK_EXIT_MS = 150;
+
 function DiagnosisStatusSummary({ className, compact = false, diagnosis, status, feedback }) {
+  // Quando o "Salvo" expira (a página zera o feedback 1,8s depois), ele sai com fade em vez de sumir num quadro — um
+  // corte na periferia puxa o olhar do traçado. Guarda a última mensagem de sucesso só durante a saída; um feedback
+  // novo (outra decisão, "Salvando…", erro) entra no lugar dela na hora.
+  const [previousFeedback, setPreviousFeedback] = useState(feedback);
+  const [leavingFeedback, setLeavingFeedback] = useState(null);
+  if (feedback !== previousFeedback) {
+    setPreviousFeedback(feedback);
+    setLeavingFeedback(!feedback && previousFeedback?.type === "success" ? previousFeedback : null);
+  }
+
+  useEffect(() => {
+    if (!leavingFeedback) return undefined;
+    const timer = window.setTimeout(() => setLeavingFeedback(null), SAVED_FEEDBACK_EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [leavingFeedback]);
+
+  const shownFeedback = feedback ?? leavingFeedback;
+
   // pb-2 reserva só o necessário para o micro-feedback absoluto abaixo do badge sem tocar a linha do título.
   return (
     <span className={cn("flex shrink-0 flex-col items-end pb-2", className)}>
@@ -738,11 +759,18 @@ function DiagnosisStatusSummary({ className, compact = false, diagnosis, status,
           {feedback?.type === "error" ? (
             // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
             <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
-          ) : feedback ? (
+          ) : shownFeedback ? (
             // Ícone, não o caractere "✓": ele não existe na Source Sans 3 e caía na fonte de símbolos do sistema (Segoe UI
-            // Symbol no Windows), fino e inclinado como um "√". É o mesmo Check do Concordo.
-            <span aria-label={feedback.message} className="inline-flex items-center gap-0.5" title={feedback.message} role="status">
-              {feedback.type === "success" ? <><Check aria-hidden="true" className="size-3" />Salvo</> : feedback.message}
+            // Symbol no Windows), fino e inclinado como um "√". É o mesmo Check do Concordo. Saindo, é só desenho: sem
+            // `role`, nome nem `title`, e fora da árvore de acessibilidade.
+            <span
+              aria-hidden={feedback ? undefined : "true"}
+              aria-label={feedback ? feedback.message : undefined}
+              className={cn("inline-flex items-center gap-0.5 transition-opacity duration-150 ease-out motion-reduce:transition-none", !feedback && "opacity-0")}
+              role={feedback ? "status" : undefined}
+              title={feedback ? feedback.message : undefined}
+            >
+              {shownFeedback.type === "success" ? <><Check aria-hidden="true" className="size-3" />Salvo</> : shownFeedback.message}
             </span>
           ) : null}
         </span>

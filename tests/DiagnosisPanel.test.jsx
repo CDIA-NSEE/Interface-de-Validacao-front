@@ -1443,6 +1443,29 @@ describe("DiagnosisPanel", () => {
     expect(screen.queryByText("✓ Decisão salva")).not.toBeInTheDocument();
   });
 
+  it("tira o \"Salvo\" expirado com fade, fora da árvore de acessibilidade, e o desmonta ao fim", () => {
+    const props = {
+      ...createProps({ options: [] }),
+      dailyStandardDiagnosis: "Ritmo sinusal",
+      diagnoses: [originalDiagnosis(1, "Ritmo sinusal", { review_status: "confirmed" })],
+      isGeneralReviewDay: false,
+    };
+    const { rerender } = render(<DiagnosisPanelHarness {...props} decisionFeedbacks={{ "1": { message: "✓ Decisão salva", type: "success" } }} />);
+    expect(screen.getByRole("status", { name: "✓ Decisão salva" })).toBeInTheDocument();
+
+    vi.useFakeTimers();
+    try {
+      rerender(<DiagnosisPanelHarness {...props} decisionFeedbacks={{}} />);
+      // Saindo: ainda desenhado (para o fade), mas sem papel de status e escondido do leitor de tela.
+      expect(screen.queryByRole("status", { name: "✓ Decisão salva" })).not.toBeInTheDocument();
+      expect(screen.getByText("Salvo")).toHaveAttribute("aria-hidden", "true");
+      act(() => vi.advanceTimersByTime(150));
+      expect(screen.queryByText("Salvo")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("não desfaz a decisão ao clicar no toggle já pressionado", async () => {
     const onReview = vi.fn().mockResolvedValue(true);
     render(
