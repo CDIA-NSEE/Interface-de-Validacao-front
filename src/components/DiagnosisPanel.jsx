@@ -123,6 +123,18 @@ const COLLAPSIBLE_PANEL_CLASS = "h-(--collapsible-panel-height) overflow-hidden 
 // de margem no lugar do `hidden`: recorta a altura animada sem cortar o anel de foco (3px) dos grupos.
 const BLOCK_PRESENCE_PANEL_CLASS = cn(COLLAPSIBLE_PANEL_CLASS, "overflow-clip [overflow-clip-margin:4px]");
 
+// Item adicional cujo conteúdo abre com o grupo da justificativa (sem áreas, sem aviso de área nem erro antes dele),
+// visto do AccordionItem (`group/item`). O anel de foco do grupo (3px, por fora) caía sobre a barra fixa — opaca e pintada
+// por cima — e fora do recorte do painel: aparecia cortado no topo. Nesse caso 4px do respiro de baixo da barra passam
+// para o topo do conteúdo (12 = 8 + 4): o grupo fica no mesmo lugar e o anel ganha espaço dentro do painel. As duas
+// transições de padding correm juntas, então nada se move quando a condição muda. Só com scroll-state: sem ele, o
+// conteúdo já tem 8px de pt abaixo do border-b fixo. O seletor se repete literal nas duas classes (o Tailwind só gera o
+// que lê no código): primeira raiz = áreas, vazia; depois o aviso, vazio; logo em seguida a justificativa, com conteúdo.
+const ITEM_BAR_BLOCK_PADDING_CLASS =
+  "transition-[padding] duration-200 ease-out motion-reduce:transition-none supports-[container-type:scroll-state]:group-has-[>[data-slot=accordion-content]>*>*>[data-card-block=areas]:first-child:empty+[data-card-block=required-area]:empty+[data-card-block=justification]:not(:empty)]/item:pb-2";
+const ITEM_CONTENT_RING_ROOM_CLASS =
+  "supports-[container-type:scroll-state]:group-has-[>[data-slot=accordion-content]>*>*>[data-card-block=areas]:first-child:empty+[data-card-block=required-area]:empty+[data-card-block=justification]:not(:empty)]/item:pt-1";
+
 // Estilos que variam por layout de DiagnosisDetails. "plain" é a revalidação geral,
 // "additional" o acordeão de diagnósticos adicionais e "daily" o cartão do diagnóstico do dia.
 const REFINED_DETAILS_STYLES = {
@@ -371,9 +383,11 @@ function DiagnosisActionRow({
 // Um bloco do cartão que entra e sai com altura animada (ver BLOCK_PRESENCE_PANEL_CLASS). A raiz `contents` e o
 // `-mt-2` + `pt-2` fazem o gap-2 da coluna crescer junto com o painel, em vez de surgir inteiro no primeiro quadro; fechado,
 // o painel desmonta e não sobra espaço. Saindo, o bloco fica `inert`: ainda desenhado, mas fora do foco e dos cliques.
-function CardBlockPresence({ children, open, panelClassName }) {
+// `name` vai em `data-card-block` na raiz: nos adicionais, o CSS do item vê qual bloco abre o conteúdo (ver
+// ITEM_BAR_BLOCK_PADDING_CLASS).
+function CardBlockPresence({ children, name, open, panelClassName }) {
   return (
-    <Collapsible className="contents" open={open}>
+    <Collapsible className="contents" data-card-block={name} open={open}>
       <CollapsibleContent className={cn("-mt-2", panelClassName)}>
         <div className="pt-2" inert={!open}>{children}</div>
       </CollapsibleContent>
@@ -603,14 +617,14 @@ function DiagnosisDetails({
         </p>
       ) : null}
 
-      <CardBlockPresence open={Boolean(regions.length)} panelClassName={styles.blockPresence}>
+      <CardBlockPresence name="areas" open={Boolean(regions.length)} panelClassName={styles.blockPresence}>
         {regionListContent}
       </CardBlockPresence>
 
       {/* Só o aviso, numa linha: a ação é o "Marcar área" da linha de ações (o de sempre, no mesmo lugar) e o badge
           "Área necessária" já sinaliza no título. O ícone vai num span para não acionar o grid de duas linhas do Alert
           (has-[>svg]). Criada a primeira área, ele sai enquanto o grupo de áreas entra no mesmo lugar. */}
-      <CardBlockPresence open={!regions.length && Boolean(diagnosis.region_required_missing)} panelClassName={styles.blockPresence}>
+      <CardBlockPresence name="required-area" open={!regions.length && Boolean(diagnosis.region_required_missing)} panelClassName={styles.blockPresence}>
         <Alert className="grid-cols-[auto_minmax(0,1fr)] items-center gap-2" variant="warning">
           <span aria-hidden="true" className="flex size-4 items-center justify-center [&_svg]:size-4"><MapPinned /></span>
           <AlertTitle className="min-w-0">Área obrigatória no ECG</AlertTitle>
@@ -627,7 +641,7 @@ function DiagnosisDetails({
           vazio, a etiqueta "Opcional". O grupo nasce recolhido ao abrir o exame (como as áreas), abre com o Discordo e
           continua aberto depois de salvar. Entra e sai com altura animada (CardBlockPresence). */}
       {diagnosis.source !== "doctor_added" ? (
-        <CardBlockPresence open={hasJustificationGroup} panelClassName={styles.blockPresence}>
+        <CardBlockPresence name="justification" open={hasJustificationGroup} panelClassName={styles.blockPresence}>
           <Collapsible aria-label="Justificativa" className={cn(GROUP_OUTLINE_CLASS, JUSTIFICATION_FOCUS_CLASS)} data-slot="justification" onOpenChange={handleJustificationOpenChange} open={isDisagreementOpen} role="group">
             <CollapsibleTrigger
               aria-describedby={isJustificationPreviewShown ? justificationPreviewId : undefined}
@@ -1216,7 +1230,7 @@ export default function DiagnosisPanel({
                           // hover (ΔE OKLab ≈ 0,004 no claro e 0,012 no escuro; o muted também é azulado) e mais fraca que ele, então um
                           // vizinho em hover parecia o item aberto. O filete corre do topo da barra ao fim do conteúdo (áreas, justificativa)
                           // e para onde o item para; entra e sai em fade (150ms) para acompanhar a transição de altura.
-                          <AccordionItem className="px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className="group/item px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky, que
                                 adere ao topo do viewport do painel enquanto o item rola (a lista não tem scroll próprio) — o
@@ -1278,7 +1292,7 @@ export default function DiagnosisPanel({
                                       as duas divisórias. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
                                       slot, então a barra tem a mesma altura nos dois tipos. O px-3 também guarda o anel de foco (3px) dos
                                       controles do overflow-hidden do painel. */}
-                                  <div className="flex flex-col gap-2 border-t px-3 py-3">
+                                  <div className={cn("flex flex-col gap-2 border-t px-3 py-3", ITEM_BAR_BLOCK_PADDING_CLASS)}>
                                     <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                                     <DiagnosisOriginalText diagnosis={diagnosis} layout="additional" />
                                     <DiagnosisActionRow
@@ -1305,7 +1319,7 @@ export default function DiagnosisPanel({
                                 raízes dos blocos que entram e saem (CardBlockPresence: áreas, aviso de área, justificativa) ficam
                                 montadas, vazias, para os blocos poderem sair animados; o padding anima junto com eles, para a faixa de
                                 baixo não surgir nem sumir de uma vez. */}
-                            <AccordionContent className="flex flex-col gap-3 px-3 pt-2 transition-[padding] duration-200 ease-out supports-[container-type:scroll-state]:pt-0 motion-reduce:transition-none [&:not(:has(>*>:not(:empty)))]:py-0">
+                            <AccordionContent className={cn("flex flex-col gap-3 px-3 pt-2 transition-[padding] duration-200 ease-out supports-[container-type:scroll-state]:pt-0 motion-reduce:transition-none [&:not(:has(>*>:not(:empty)))]:py-0", ITEM_CONTENT_RING_ROOM_CLASS)}>
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
                           </AccordionItem>
