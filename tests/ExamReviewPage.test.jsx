@@ -489,6 +489,26 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Traçado recebido sem intercorrências.")).toBeVisible();
   });
 
+  it("abre Dados do exame como o médico deixou no último exame", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("medpage.examDataOpen", "true");
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const trigger = await screen.findByRole("button", { name: "Dados do exame" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Data")).toBeVisible();
+
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(window.localStorage.getItem("medpage.examDataOpen")).toBe("false");
+
+    await user.click(trigger);
+
+    expect(window.localStorage.getItem("medpage.examDataOpen")).toBe("true");
+  });
+
   it("informa quando o exame não tem nenhum dado clínico", async () => {
     getExamById.mockResolvedValue({
       ...exam,

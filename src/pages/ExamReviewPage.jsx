@@ -117,6 +117,26 @@ const BUSY_INDICATION_DELAY_MS = 300;
 // trocar o item aberto), saltando o painel dezenas de pixels sem ação do médico.
 const REVIEW_BODY_SCROLL_CLASS = "min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]]:[overflow-anchor:none]";
 
+// "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
+// reabrir a cada exame da fila. Preferência deste navegador, como o tema; sem armazenamento, vale só a sessão.
+const EXAM_DATA_OPEN_KEY = "medpage.examDataOpen";
+
+function readExamDataOpen() {
+  try {
+    return window.localStorage.getItem(EXAM_DATA_OPEN_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function storeExamDataOpen(open) {
+  try {
+    window.localStorage.setItem(EXAM_DATA_OPEN_KEY, String(open));
+  } catch {
+    // Armazenamento indisponível (janela privada, bloqueio): a escolha vale só até recarregar.
+  }
+}
+
 function useDelayedFlag(value, delayMs) {
   const [hasSettled, setHasSettled] = useState(false);
 
@@ -171,7 +191,7 @@ export default function ExamReviewPage() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
-  const [isMoreInformationOpen, setIsMoreInformationOpen] = useState(false);
+  const [isMoreInformationOpen, setIsMoreInformationOpen] = useState(readExamDataOpen);
   const [isReviewSheetOpen, setIsReviewSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -218,7 +238,7 @@ export default function ExamReviewPage() {
       setActiveRegionTarget(null);
       setSelectedRegion(null);
       setIsSecondaryPanelOpen(true);
-      setIsMoreInformationOpen(false);
+      setIsMoreInformationOpen(readExamDataOpen());
       setIsReviewSheetOpen(false);
       setDiagnosisReviewDrafts({});
       setIsExitConfirmOpen(false);
@@ -811,6 +831,7 @@ export default function ExamReviewPage() {
   // 200ms e o viewport ainda não tem o overflow final, então o acompanhamento segue frame a frame até ela terminar.
   function handleMoreInformationOpenChange(open) {
     setIsMoreInformationOpen(open);
+    storeExamDataOpen(open);
     window.cancelAnimationFrame(moreInformationRevealFrameRef.current);
     if (!open) return;
 
