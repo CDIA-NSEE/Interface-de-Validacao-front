@@ -789,8 +789,9 @@ function DiagnosisCard({
     // originais são obrigatórios e marcá-los todos não destacaria nada.
     // Ritmo do cartão do dia: marcadores → título → 4px → Original → 12px → ações. O Original é o par do título (o médico
     // compara os dois), então fica colado a ele e separado das ações — antes ficava a 10px do título e a 8px dos botões,
-    // e se lia como parte da linha de decisão.
-    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", isPrimaryDaily && "gap-3 border-t-[3px] border-t-primary shadow-md shadow-elevation", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    // e se lia como parte da linha de decisão. Fundo e anel mudam juntos (marcando área, área em hover/selecionada no
+    // ECG): só com `transition-shadow` o anel entrava em 150ms e o fundo "info" trocava num quadro.
+    <Card className={cn("gap-2.5 overflow-visible transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none", isPrimaryDaily && "gap-3 border-t-[3px] border-t-primary shadow-md shadow-elevation", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
