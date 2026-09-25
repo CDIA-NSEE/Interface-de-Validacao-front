@@ -457,16 +457,23 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("66 kg")).toBeVisible();
     expect(screen.getByText("1,65 m")).toBeVisible();
     expect(screen.getByText("24,2 kg/m²")).toBeVisible();
-    expect(screen.queryByText("Data e hora")).not.toBeInTheDocument();
+    expect(screen.queryByText("Data")).not.toBeInTheDocument();
     expect(screen.queryByText("ECG 12 derivações")).not.toBeInTheDocument();
     expect(screen.queryByText("Ritmo regular no laudo original.")).not.toBeInTheDocument();
     expect(screen.queryByText("Traçado recebido sem intercorrências.")).not.toBeInTheDocument();
 
     await user.click(trigger);
 
-    expect(screen.getByText("Data e hora")).toBeVisible();
-    expect(screen.getByText("Data e hora").closest("dl")).toHaveClass("grid-cols-2");
-    expect(screen.getByText("26/08/2026 as 08:30")).toBeVisible();
+    const examGrid = screen.getByText("Data").closest("dl");
+    expect(examGrid).toHaveClass("grid-cols-2", "sm:grid-cols-3");
+    expect([...examGrid.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Data",
+      "Hora",
+      "Tipo",
+      "Notas",
+    ]);
+    expect(screen.getByText("26/08/2026")).toBeVisible();
+    expect(screen.getByText("08:30")).toBeVisible();
     expect(screen.getByText("ECG 12 derivações")).toBeVisible();
     expect(screen.getByText("Notas")).toBeVisible();
     expect(screen.getByText("Notas").closest("[data-slot='card-content']")).toHaveClass("py-3");

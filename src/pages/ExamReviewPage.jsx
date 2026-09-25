@@ -899,22 +899,27 @@ export default function ExamReviewPage() {
         </CardHeader>
         <CollapsibleContent>
           <Separator />
-          {/* Mesma lista de pares rótulo/valor dos "Dados clínicos", sem caixa por item. */}
+          {/* Mesma lista de pares rótulo/valor dos "Dados clínicos", sem caixa por item, e a mesma grade de 3 colunas:
+              Data · Hora · Tipo ficam alinhados com Idade · Sexo · Nascimento. "Data e hora" numa célula só não cabia na
+              coluna a 1536px. */}
           <CardContent className="py-3">
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
               <div className="min-w-0">
-                <dt className="text-xs font-medium text-muted-foreground">Data e hora</dt>
-                <dd className="mt-0.5 font-medium text-foreground tabular-nums">
-                  {formatDate(exam.exam_date)}
-                  {exam.exam_time ? ` as ${exam.exam_time}` : ""}
-                </dd>
+                <dt className="text-xs font-medium text-muted-foreground">Data</dt>
+                <dd className="mt-0.5 font-medium text-foreground tabular-nums">{formatDate(exam.exam_date)}</dd>
               </div>
+              {exam.exam_time ? (
+                <div className="min-w-0">
+                  <dt className="text-xs font-medium text-muted-foreground">Hora</dt>
+                  <dd className="mt-0.5 font-medium text-foreground tabular-nums">{exam.exam_time}</dd>
+                </div>
+              ) : null}
               <div className="min-w-0">
                 <dt className="text-xs font-medium text-muted-foreground">Tipo</dt>
                 <dd className="mt-0.5 font-medium text-foreground">{exam.exam_type}</dd>
               </div>
               {exam.comments || exam.source_notes ? (
-                <div className="col-span-2 min-w-0">
+                <div className="col-span-full min-w-0">
                   <dt className="text-xs font-medium text-muted-foreground">Notas</dt>
                   {/* pre-line: as notas vêm do laudo com quebras de linha (lista numerada "1. Ritmo… 2. Ativação…"); sem ele
                       viravam um parágrafo corrido. Texto como vem da API, também as quebras do PDF. */}
