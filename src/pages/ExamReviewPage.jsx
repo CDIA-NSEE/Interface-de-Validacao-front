@@ -895,34 +895,34 @@ export default function ExamReviewPage() {
         </CardHeader>
         <CollapsibleContent>
           <Separator />
-          <CardContent className="flex flex-col gap-3 py-3">
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-lg bg-muted/50 p-3">
+          {/* Mesma lista de pares rótulo/valor dos "Dados clínicos", sem caixa por item. */}
+          <CardContent className="py-3">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div className="min-w-0">
                 <dt className="text-xs font-medium text-muted-foreground">Data e hora</dt>
-                <dd className="mt-1 font-medium text-foreground">
+                <dd className="mt-0.5 font-medium text-foreground tabular-nums">
                   {formatDate(exam.exam_date)}
                   {exam.exam_time ? ` as ${exam.exam_time}` : ""}
                 </dd>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
+              <div className="min-w-0">
                 <dt className="text-xs font-medium text-muted-foreground">Tipo</dt>
-                <dd className="mt-1 font-medium text-foreground">{exam.exam_type}</dd>
+                <dd className="mt-0.5 font-medium text-foreground">{exam.exam_type}</dd>
               </div>
-            </dl>
-
-            {exam.comments || exam.source_notes ? (
-              <div className="rounded-lg bg-muted/50 p-3">
-                <strong className="text-xs font-medium text-muted-foreground">Notas</strong>
-                <div className="mt-1 flex flex-col gap-2">
-                  {exam.comments ? (
-                    <p className="break-words text-sm text-foreground">{exam.comments}</p>
-                  ) : null}
-                  {exam.source_notes ? (
-                    <p className="break-words text-sm text-foreground">{exam.source_notes}</p>
-                  ) : null}
+              {exam.comments || exam.source_notes ? (
+                <div className="col-span-2 min-w-0">
+                  <dt className="text-xs font-medium text-muted-foreground">Notas</dt>
+                  <dd className="mt-0.5 flex flex-col gap-2">
+                    {exam.comments ? (
+                      <p className="break-words text-sm text-foreground">{exam.comments}</p>
+                    ) : null}
+                    {exam.source_notes ? (
+                      <p className="break-words text-sm text-foreground">{exam.source_notes}</p>
+                    ) : null}
+                  </dd>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </dl>
           </CardContent>
         </CollapsibleContent>
       </Card>
