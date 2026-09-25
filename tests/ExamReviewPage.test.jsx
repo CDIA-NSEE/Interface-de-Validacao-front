@@ -165,6 +165,8 @@ describe("ExamReviewPage", () => {
     expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
+    expect(screen.getByTestId("current-status")).toHaveTextContent("Exame ECG-42");
+    expect(screen.getByTestId("current-status")).toHaveTextContent("Status atual:");
     expect(screen.getByText("Iniciar")).toBeVisible();
     expect(screen.getByRole("button", { name: "Salvar observações" })).toBeDisabled();
   });

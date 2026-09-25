@@ -997,12 +997,21 @@ export default function ExamReviewPage() {
     <div className="flex flex-col gap-3">
       <Card size="sm" variant="highlight">
         <CardHeader className="flex flex-row items-center justify-between gap-3" data-testid="current-status">
-          <CardTitle className="text-sm">Status atual</CardTitle>
-          <StatusBadge
-            status={exam.status_validation}
-            queueState={exam.queue_state}
-            reviewResult={exam.review_result}
-          />
+          {/* O código do exame (como na lista do início) no lugar do rótulo "Status atual": o selo já diz que é o status,
+              e o código, junto de Voltar e da primária, confirma a troca de exame e é o que o médico cita ao suporte.
+              "Status atual" segue para o leitor de tela, antes do selo. */}
+          <CardTitle className="text-sm">
+            <span className="text-muted-foreground">Exame</span>{" "}
+            <span className="font-semibold">{exam.exam_code}</span>
+          </CardTitle>
+          <div className="flex items-center">
+            <span className="sr-only">Status atual:</span>
+            <StatusBadge
+              status={exam.status_validation}
+              queueState={exam.queue_state}
+              reviewResult={exam.review_result}
+            />
+          </div>
         </CardHeader>
       </Card>
       {/* "Salvar observações" mora no próprio campo (ver Observações gerais): o rodapé fica com Voltar e a primária. */}
