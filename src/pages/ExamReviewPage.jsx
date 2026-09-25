@@ -873,25 +873,29 @@ export default function ExamReviewPage() {
     <Collapsible onOpenChange={setIsMoreInformationOpen} open={isMoreInformationOpen}>
       <Card className="gap-0 overflow-hidden py-0" size="sm">
         <CardHeader className="p-0">
-          <CollapsibleTrigger
-            render={
-              <Button
-                className="h-auto w-full justify-between border-x-0 px-3 py-3"
-                type="button"
-                variant="collapsible"
-              />
-            }
-          >
-            <ValidationPanelIconLabel icon={Info}>Mais informações</ValidationPanelIconLabel>
-            <span
-              aria-hidden="true"
-              className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"
+          {/* Botão dentro do h2 (padrão de acordeão do APG), como "Diagnósticos adicionais": a seção entra na navegação
+              por títulos junto de "Dados clínicos". */}
+          <h2>
+            <CollapsibleTrigger
+              render={
+                <Button
+                  className="h-auto w-full justify-between border-x-0 px-3 py-3"
+                  type="button"
+                  variant="collapsible"
+                />
+              }
             >
-              <ChevronDown
-                className={cn("text-muted-foreground transition-transform", isMoreInformationOpen && "rotate-180")}
-              />
-            </span>
-          </CollapsibleTrigger>
+              <ValidationPanelIconLabel icon={Info}>Mais informações</ValidationPanelIconLabel>
+              <span
+                aria-hidden="true"
+                className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"
+              >
+                <ChevronDown
+                  className={cn("text-muted-foreground transition-transform", isMoreInformationOpen && "rotate-180")}
+                />
+              </span>
+            </CollapsibleTrigger>
+          </h2>
         </CardHeader>
         <CollapsibleContent>
           <Separator />
