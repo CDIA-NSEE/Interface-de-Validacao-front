@@ -885,7 +885,7 @@ export default function ExamReviewPage() {
                 />
               }
             >
-              <ValidationPanelIconLabel icon={Info}>Mais informações</ValidationPanelIconLabel>
+              <ValidationPanelIconLabel icon={Info}>Dados do exame</ValidationPanelIconLabel>
               <span
                 aria-hidden="true"
                 className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4"

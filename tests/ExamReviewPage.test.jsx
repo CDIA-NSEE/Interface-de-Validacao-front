@@ -157,7 +157,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
     expect(container.querySelector("header dl")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mais informações" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Dados do exame" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("textbox", { name: "Observações gerais (opcional)" })).toBeVisible();
     const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
     expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
@@ -407,8 +407,8 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const trigger = await screen.findByRole("button", { name: "Mais informações" });
-    expect(screen.getByRole("heading", { level: 2, name: "Mais informações" })).toContainElement(trigger);
+    const trigger = await screen.findByRole("button", { name: "Dados do exame" });
+    expect(screen.getByRole("heading", { level: 2, name: "Dados do exame" })).toContainElement(trigger);
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
     expect(trigger).toHaveClass("border-x-0");
     expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted");

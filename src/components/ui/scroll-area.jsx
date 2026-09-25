@@ -16,7 +16,7 @@ function ScrollArea({
         data-slot="scroll-area-viewport"
         className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1">
         {/* Content observa o tamanho do CONTEÚDO (o viewport só observa o próprio): sem ele, o Base UI não recalcula o
-            overflow quando o conteúdo cresce sozinho — abrir um diagnóstico ou "Mais informações" deixava a área rolável
+            overflow quando o conteúdo cresce sozinho — abrir um diagnóstico ou "Dados do exame" deixava a área rolável
             sem barra nenhuma até o primeiro scroll (a nativa está desligada no viewport), que é justamente quando o sinal
             de "há mais abaixo" faz falta. */}
         <ScrollAreaPrimitive.Content data-slot="scroll-area-content">

@@ -761,7 +761,7 @@ function DiagnosisCard({
 
   return (
     // Diagnóstico do dia: filete superior na cor de destaque + elevação. Sem eles o cartão era um branco igual aos outros
-    // três do painel ("Diagnósticos adicionais", "Dados clínicos", "Mais informações") e só o badge o distinguia. O filete
+    // três do painel ("Diagnósticos adicionais", "Dados clínicos", "Dados do exame") e só o badge o distinguia. O filete
     // fica no eixo horizontal — o do item aberto da lista é lateral —, então os dois sinais não se confundem, e a sombra
     // soma profundidade à cor (sombra sozinha some em telas de baixo contraste). Só aqui: na revalidação geral todos os
     // originais são obrigatórios e marcá-los todos não destacaria nada.
