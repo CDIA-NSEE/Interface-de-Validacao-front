@@ -290,7 +290,7 @@
     <div class="grid">
       <article class="mini">
         <h3>Dados clínicos</h3>
-        <p>A API expõe Nascimento, Idade, Sexo, Peso, Altura e IMC. Sem idade na origem, a API calcula os anos completos entre o nascimento e a data do exame. O frontend filtra valores nulos, indefinidos, vazios ou zero e mostra os presentes numa lista de pares rótulo/valor, sem caixa por item, na ordem Idade · Sexo · Nascimento · Peso · Altura · IMC. Sem nenhum dado: “Nenhum dado clínico neste exame.”</p>
+        <p>A API expõe Nascimento, Idade, Sexo, Peso, Altura e IMC. Sem idade na origem, a API calcula os anos completos entre o nascimento e a data do exame e marca <code>age_calculated</code>; a tela mostra o rótulo “Idade (calculada)”. O frontend filtra valores nulos, indefinidos, vazios ou zero e mostra os presentes numa lista de pares rótulo/valor, sem caixa por item, na ordem Idade · Sexo · Nascimento · Peso · Altura · IMC. Sem nenhum dado: “Nenhum dado clínico neste exame.”</p>
         <ul>
           <li>Idade recebe “anos”.</li>
           <li>Peso recebe “kg”; IMC, “kg/m²”; números com vírgula decimal.</li>
@@ -301,7 +301,7 @@
       </article>
       <article class="mini">
         <h3>Dados do exame</h3>
-        <p>Começa recolhida e contém metadados somente de leitura:</p>
+        <p>Começa recolhida no primeiro uso; depois, abre como o médico a deixou no último exame (preferência do navegador). Contém metadados somente de leitura e, quando o exame tem notas do laudo (<code>comments</code>), a barra mostra a etiqueta “Notas do laudo”:</p>
         <ul>
           <li>Data e hora do exame, em campos separados (mesmas colunas dos dados clínicos).</li>
           <li>Tipo do exame.</li>
