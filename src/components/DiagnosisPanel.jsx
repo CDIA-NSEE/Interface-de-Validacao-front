@@ -254,9 +254,10 @@ function DiagnosisBadges({ aiModeEnabled, diagnosis, isRequired }) {
 // ANTERIOR" sob um título "parede inferior"), e hover/tooltip não é descobrível nem funciona em touch/leitor de tela.
 // Logo sob o título em todos os layouts (mesmo quando igual a ele: o médico vê o que o laudo dizia sem precisar
 // comparar). Em todo item com texto: no adicionado pelo médico é o nome escolhido (já padronizado), igual ao título — a
-// linha existe pela paridade com os originais da lista. No diário/plain é o primeiro filho de DiagnosisDetails; nos
-// adicionais fica na barra fixa do item, abaixo da divisória, abrindo o bloco da linha de ações (1–2 linhas nos textos
-// reais, máx. 106 caracteres). Texto simples, sem parada de Tab.
+// linha existe pela paridade com os originais da lista. No diário fica no cabeçalho, colada ao título (o par que o
+// médico compara); na revalidação geral é o primeiro filho de DiagnosisDetails; nos adicionais fica na barra fixa do
+// item, abaixo da divisória, abrindo o bloco da linha de ações (1–2 linhas nos textos reais, máx. 106 caracteres).
+// Texto simples, sem parada de Tab.
 function DiagnosisOriginalText({ className, diagnosis, layout }) {
   const styles = DETAILS_STYLES[layout];
   const originalText = diagnosis.original_text || diagnosis.name;
@@ -469,8 +470,9 @@ function DiagnosisDetails({
     }, 0);
   }
 
-  // Nos adicionais a linha "Original:" fica na barra fixa do item (DiagnosisPanel), abrindo o bloco abaixo da divisória.
-  const originalLine = !isAdditional ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
+  // Só na revalidação geral: no diário a linha "Original:" fica no cabeçalho do cartão (DiagnosisCard), colada ao título,
+  // e nos adicionais na barra fixa do item (DiagnosisPanel), abrindo o bloco abaixo da divisória.
+  const originalLine = isPlain ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
 
 
   const regionListContent = regions.length ? (
@@ -780,7 +782,10 @@ function DiagnosisCard({
     // fica no eixo horizontal — o do item aberto da lista é lateral —, então os dois sinais não se confundem, e a sombra
     // soma profundidade à cor (sombra sozinha some em telas de baixo contraste). Só aqui: na revalidação geral todos os
     // originais são obrigatórios e marcá-los todos não destacaria nada.
-    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", isPrimaryDaily && "border-t-[3px] border-t-primary shadow-md", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
+    // Ritmo do cartão do dia: marcadores → título → 4px → Original → 12px → ações. O Original é o par do título (o médico
+    // compara os dois), então fica colado a ele e separado das ações — antes ficava a 10px do título e a 8px dos botões,
+    // e se lia como parte da linha de decisão.
+    <Card className={cn("gap-2.5 overflow-visible transition-shadow duration-150 motion-reduce:transition-none", isPrimaryDaily && "gap-3 border-t-[3px] border-t-primary shadow-md", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
@@ -796,6 +801,8 @@ function DiagnosisCard({
           <span className={cn("min-w-0 break-words", isPrimaryDaily && "font-semibold")}>{standardText}</span>
           {!isPrimaryDaily ? <DiagnosisStatusBadge diagnosis={diagnosis} status={status} /> : null}
         </CardTitle>
+        {/* 4px sob o título (o gap do cabeçalho é 6px; o de cima continua reservando o "✓ Salvo" sob o status). */}
+        {isPrimaryDaily ? <DiagnosisOriginalText className="-mt-0.5" diagnosis={diagnosis} layout="daily" /> : null}
         {statusDescription ? <CardDescription>{statusDescription}</CardDescription> : null}
       </CardHeader>
       <CardContent>
