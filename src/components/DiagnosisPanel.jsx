@@ -1139,7 +1139,7 @@ export default function DiagnosisPanel({
                           // hover (ΔE OKLab ≈ 0,004 no claro e 0,012 no escuro; o muted também é azulado) e mais fraca que ele, então um
                           // vizinho em hover parecia o item aberto. O filete corre do topo da barra ao fim do conteúdo (áreas, justificativa)
                           // e para onde o item para; entra e sai em fade (150ms) para acompanhar a transição de altura.
-                          <AccordionItem className="px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className="px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky, que
                                 adere ao topo do viewport do painel enquanto o item rola (a lista não tem scroll próprio) — o
@@ -1217,8 +1217,10 @@ export default function DiagnosisPanel({
                                 </CollapsibleContent>
                               </Collapsible>
                             </div>
-                            {/* Sem detalhes (ex.: sem áreas nem justificativa — tudo está na barra), o painel não deixa uma faixa vazia. */}
-                            <AccordionContent className="flex flex-col gap-3 pt-2 [&:has(>:empty:only-child)]:py-0">
+                            {/* Sem detalhes (ex.: sem áreas nem justificativa — tudo está na barra), o painel não deixa uma faixa vazia.
+                                Como a barra: -mx-3 (no item) dá ao painel a largura toda e o px-3 devolve o recuo, para o overflow-hidden
+                                do painel não cortar nas laterais o anel de foco (3px) do que encosta na borda — o grupo da justificativa. */}
+                            <AccordionContent className="flex flex-col gap-3 px-3 pt-2 [&:has(>:empty:only-child)]:py-0">
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
                           </AccordionItem>
