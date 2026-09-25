@@ -80,9 +80,9 @@ const INLINE_DECISION_CONTROL_CLASS =
 const INLINE_DECISION_ROW_STYLES = {
   decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
-  markAreaButton: cn("ml-auto shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
+  markAreaButton: cn("ml-auto shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:not-aria-[haspopup]:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
   // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
-  markAreaButtonActive: "ml-auto h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:translate-y-0",
+  markAreaButtonActive: "ml-auto h-10 shrink-0 border-info/60 bg-info/10 text-info-subtle-foreground hover:bg-info/14 hover:text-info-subtle-foreground active:not-aria-[haspopup]:translate-y-0",
   // "Remover diagnóstico" no slot do veredito: a mesma borda neutra e o mesmo texto do "Marcar área" do outro extremo,
   // para a barra do item ter duas caixas delimitadas em repouso — não uma caixa e um texto solto. A tinta destrutiva
   // entra só no hover/foco: o hover acrescenta cor, não revela que ali havia um botão.
@@ -1283,7 +1283,7 @@ export default function DiagnosisPanel({
                       aria-controls={addDiagnosisContentId}
                       aria-expanded={false}
                       aria-label="Adicionar diagnóstico"
-                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:translate-y-0 motion-reduce:transition-none"
+                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                       onClick={() => handleAddDiagnosisToggle(true)}
                       ref={addDiagnosisTriggerRef}
                       type="button"
