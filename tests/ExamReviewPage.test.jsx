@@ -439,14 +439,22 @@ describe("ExamReviewPage", () => {
     [...clinicalGrid.children].forEach((clinicalItem) => {
       expect(clinicalItem).toHaveClass("rounded-lg", "border", "bg-muted/40");
     });
+    expect([...clinicalGrid.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Idade",
+      "Sexo",
+      "Nascimento",
+      "Peso",
+      "Altura",
+      "IMC",
+    ]);
     expect(clinicalGrid).toContainElement(screen.getByText("58 anos"));
     expect(clinicalGrid).toContainElement(screen.getByText("Feminino"));
     expect(screen.getByText("17/05/1968")).toBeVisible();
     expect(screen.getByText("58 anos")).toBeVisible();
     expect(screen.getByText("Feminino")).toBeVisible();
     expect(screen.getByText("66 kg")).toBeVisible();
-    expect(screen.getByText("1.65 m")).toBeVisible();
-    expect(screen.getByText("24,2")).toBeVisible();
+    expect(screen.getByText("1,65 m")).toBeVisible();
+    expect(screen.getByText("24,2 kg/m²")).toBeVisible();
     expect(screen.queryByText("Data e hora")).not.toBeInTheDocument();
     expect(screen.queryByText("ECG 12 derivações")).not.toBeInTheDocument();
     expect(screen.queryByText("Ritmo regular no laudo original.")).not.toBeInTheDocument();
