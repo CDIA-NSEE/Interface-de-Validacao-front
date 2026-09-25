@@ -1150,15 +1150,17 @@ export default function DiagnosisPanel({
                                 exatamente nela, então não há faixa que pareça gatilho e não seja. Irmã do painel (o overflow-hidden dele anularia
                                 o sticky); o bloco revelado vive num Collapsible controlado pelo item: abre e fecha com a mesma transição de altura
                                 do painel de baixo e desmonta ao fechar (nada de gatilho oculto nos fechados). Fundo opaco (card) para as linhas
-                                de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e à sua borda inferior (separador barra /
-                                conteúdo). */}
+                                de área rolarem por baixo sem vazar; -mx-3 dá largura total à barra e ao separador barra / conteúdo. */}
                             <div
                               className={cn(
-                                "sticky top-0 z-10 -mx-3 bg-card transition-[box-shadow] duration-150 motion-reduce:transition-none",
+                                "sticky top-0 z-10 -mx-3 bg-card transition-[box-shadow] duration-150 [container-type:scroll-state] motion-reduce:transition-none",
                                 // Aberta: o mesmo filete do item — a barra, opaca, cobre o dele.
-                                // O separador barra/conteúdo só existe quando o painel tem conteúdo (único filho vazio = só o DiagnosisDetails
-                                // sem nada a mostrar); do contrário encostaria na borda do item seguinte e viraria uma linha dupla.
-                                isOpen && "border-b shadow-[inset_3px_0_0_var(--primary)] [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
+                                // Separador barra/conteúdo só com a barra grudada no topo do painel (a linha vem do Collapsible abaixo, pelo
+                                // scroll-state da barra): em repouso sobrava — o cartão do dia não tem — e cortava o filete; grudada, é ela que
+                                // dá borda às áreas que rolam por baixo (sem ela a linha de área parecia cortada no ar). Sem suporte a
+                                // scroll-state (Firefox, Safari) fica o border-b fixo, só quando o painel tem conteúdo (único filho vazio = só o
+                                // DiagnosisDetails sem nada a mostrar); do contrário encostaria na borda do item seguinte e viraria linha dupla.
+                                isOpen && "border-b shadow-[inset_3px_0_0_var(--primary)] supports-[container-type:scroll-state]:border-b-0 [&:has(+[data-slot=accordion-content]>*>:empty:only-child)]:border-b-0",
                               )}
                               data-slot="diagnosis-item-bar"
                             >
@@ -1187,7 +1189,7 @@ export default function DiagnosisPanel({
                               </AccordionTrigger>
                               {/* Sempre montado (só o painel entra/sai) para a saída também animar: o Collapsible sem gatilho segue o item —
                                   altura e opacidade em 200ms, sincronizadas com o painel de baixo, e o conteúdo desmonta ao terminar de fechar. */}
-                              <Collapsible open={isOpen}>
+                              <Collapsible className="[@container_scroll-state(stuck:top)]:shadow-[0_1px_0_var(--border)]" open={isOpen}>
                                 <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
                                   {/* Tudo o que a abertura revela na barra, abaixo da divisória: marcadores, "Original:" e a linha de ações. A
                                       divisória fecha a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o
@@ -1219,8 +1221,10 @@ export default function DiagnosisPanel({
                             </div>
                             {/* Sem detalhes (ex.: sem áreas nem justificativa — tudo está na barra), o painel não deixa uma faixa vazia.
                                 Como a barra: -mx-3 (no item) dá ao painel a largura toda e o px-3 devolve o recuo, para o overflow-hidden
-                                do painel não cortar nas laterais o anel de foco (3px) do que encosta na borda — o grupo da justificativa. */}
-                            <AccordionContent className="flex flex-col gap-3 px-3 pt-2 [&:has(>:empty:only-child)]:py-0">
+                                do painel não cortar nas laterais o anel de foco (3px) do que encosta na borda — o grupo da justificativa.
+                                Sem o separador em repouso (scroll-state), o conteúdo começa logo abaixo dos 12px da barra; com o border-b fixo
+                                (sem suporte), o pt-2 afasta as áreas da linha. */}
+                            <AccordionContent className="flex flex-col gap-3 px-3 pt-2 supports-[container-type:scroll-state]:pt-0 [&:has(>:empty:only-child)]:py-0">
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
                           </AccordionItem>
