@@ -117,10 +117,11 @@ const JUSTIFICATION_PREVIEW_OUT_CLASS = "opacity-0 duration-100";
 // do acordeão. Usado pela lista de áreas e pelo bloco "Original + ações" da barra fixa do item adicional, para que tudo o
 // que se revela no cartão abra e feche com a mesma transição.
 const COLLAPSIBLE_PANEL_CLASS = "h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none";
-// Entrada e saída do grupo da justificativa (o Discordo o traz, o Concordo o tira) com a mesma transição: sem ela o
-// cartão crescia ~80px num quadro e tudo abaixo saltava. `overflow-clip` com 4px de margem no lugar do `hidden`: recorta
-// a altura animada sem cortar o anel de foco (3px) que o grupo acende em volta do campo.
-const JUSTIFICATION_PRESENCE_PANEL_CLASS = cn(COLLAPSIBLE_PANEL_CLASS, "overflow-clip [overflow-clip-margin:4px]");
+// Entrada e saída dos blocos do cartão que surgem e somem com o estado — o grupo de áreas (primeira área criada, última
+// removida), o aviso "Área obrigatória no ECG" e o grupo da justificativa (o Discordo o traz, o Concordo o tira) — com a
+// mesma transição: sem ela o cartão crescia ou encolhia ~80px num quadro e tudo abaixo saltava. `overflow-clip` com 4px
+// de margem no lugar do `hidden`: recorta a altura animada sem cortar o anel de foco (3px) dos grupos.
+const BLOCK_PRESENCE_PANEL_CLASS = cn(COLLAPSIBLE_PANEL_CLASS, "overflow-clip [overflow-clip-margin:4px]");
 
 // Estilos que variam por layout de DiagnosisDetails. "plain" é a revalidação geral,
 // "additional" o acordeão de diagnósticos adicionais e "daily" o cartão do diagnóstico do dia.
@@ -139,7 +140,7 @@ const REFINED_DETAILS_STYLES = {
   originalPreview: "text-foreground/75",
   enterAnimation: ENTER_ANIMATION_CLASS,
   justificationFade: "transition-opacity ease-out motion-reduce:transition-none",
-  justificationPresence: JUSTIFICATION_PRESENCE_PANEL_CLASS,
+  blockPresence: BLOCK_PRESENCE_PANEL_CLASS,
 };
 
 const DETAILS_STYLES = {
@@ -156,7 +157,7 @@ const DETAILS_STYLES = {
     originalPreview: "",
     enterAnimation: "",
     justificationFade: "",
-    justificationPresence: "",
+    blockPresence: "",
   },
   additional: REFINED_DETAILS_STYLES,
   daily: REFINED_DETAILS_STYLES,
@@ -367,6 +368,19 @@ function DiagnosisActionRow({
   );
 }
 
+// Um bloco do cartão que entra e sai com altura animada (ver BLOCK_PRESENCE_PANEL_CLASS). A raiz `contents` e o
+// `-mt-2` + `pt-2` fazem o gap-2 da coluna crescer junto com o painel, em vez de surgir inteiro no primeiro quadro; fechado,
+// o painel desmonta e não sobra espaço. Saindo, o bloco fica `inert`: ainda desenhado, mas fora do foco e dos cliques.
+function CardBlockPresence({ children, open, panelClassName }) {
+  return (
+    <Collapsible className="contents" open={open}>
+      <CollapsibleContent className={cn("-mt-2", panelClassName)}>
+        <div className="pt-2" inert={!open}>{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function DiagnosisDetails({
   activeRegionTarget,
   diagnosis,
@@ -395,6 +409,11 @@ function DiagnosisDetails({
   const isPlain = layout === "plain";
   const status = getDiagnosisReviewStatus(diagnosis);
   const regions = diagnosis.regions || [];
+  // Removida a última área, o grupo sai animado ainda com as áreas de antes (em vez de encolher vazio ou virar
+  // "0 áreas marcadas"); a próxima área criada volta a valer.
+  const [lastRegions, setLastRegions] = useState(regions);
+  if (regions.length && regions !== lastRegions) setLastRegions(regions);
+  const shownRegions = regions.length ? regions : lastRegions;
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
@@ -462,13 +481,16 @@ function DiagnosisDetails({
 
   async function handleRemoveRegionClick(region) {
     await onRemoveRegion(diagnosis.id, region.id);
-    // A linha desmonta com a área: foco no gatilho da lista ou, se era a última (a lista some junto), no "Marcar área",
-    // que segue no seu lugar na linha de ações. O botão é procurado no DOM do diagnóstico porque, nos adicionais, ele
-    // fica na barra fixa do item (fora daqui). Em falha a linha permanece e o foco segue no botão, então nada muda.
+    // A linha desmonta com a área: foco no gatilho da lista ou, se era a última (a lista sai junto, `inert` durante a
+    // saída), no "Marcar área", que segue no seu lugar na linha de ações. O botão é procurado no DOM do diagnóstico
+    // porque, nos adicionais, ele fica na barra fixa do item (fora daqui). Em falha a linha permanece e o foco segue no
+    // botão, então nada muda.
     window.setTimeout(() => {
-      if (document.activeElement !== document.body) return;
+      const active = document.activeElement;
+      if (active && active !== document.body && !active.closest("[inert]")) return;
       const markAreaButton = rootRef.current?.closest("[data-diagnosis-id]")?.querySelector('[data-diagnosis-action="mark-area"]');
-      (areaListTriggerRef.current ?? markAreaButton)?.focus();
+      const areaListTrigger = areaListTriggerRef.current?.closest("[inert]") ? null : areaListTriggerRef.current;
+      (areaListTrigger ?? markAreaButton)?.focus();
     }, 0);
   }
 
@@ -477,7 +499,7 @@ function DiagnosisDetails({
   const originalLine = isPlain ? <DiagnosisOriginalText diagnosis={diagnosis} layout={layout} /> : null;
 
 
-  const regionListContent = regions.length ? (
+  const regionListContent = shownRegions.length ? (
     // Um só contorno para o grupo inteiro (lista agrupada): fechado ele é só a barra; aberto, a mesma borda cresce até a
     // última área, então fica claro que todas as linhas pertencem a "N áreas marcadas". Antes a barra fechava a própria
     // borda e as linhas eram caixas soltas com o mesmo espaço entre si e até a barra — a cabeça lia como mais um irmão
@@ -494,7 +516,7 @@ function DiagnosisDetails({
           sobre a lista que ela acabou de abrir (tem de ser a mesma variante da regra do Button: `active:translate-y-0`
           tem seletor menos específico e não a vence). O ícone é o mesmo de "Marcar área": amarra a barra ao contexto de áreas do cartão. */}
       <CollapsibleTrigger
-        aria-label={markedRegionCountLabel(regions.length)}
+        aria-label={markedRegionCountLabel(shownRegions.length)}
         ref={areaListTriggerRef}
         render={
           <Button
@@ -507,7 +529,7 @@ function DiagnosisDetails({
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <MapPinned aria-hidden="true" />
-          <span className="truncate">{markedRegionCountLabel(regions.length)}</span>
+          <span className="truncate">{markedRegionCountLabel(shownRegions.length)}</span>
         </span>
         <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
           <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isAreaListOpen && "rotate-180")} />
@@ -517,7 +539,7 @@ function DiagnosisDetails({
       {/* Linhas coladas, separadas por filetes (sem espaço entre elas), dentro do contorno do grupo. O filete sob a barra
           fica dentro do painel para entrar na altura animada e sumir junto com ela. */}
       <div className="flex flex-col divide-y divide-border border-t border-border">
-      {regions.map((region, index) => {
+      {shownRegions.map((region, index) => {
         const regionReference = getRegionReference(diagnosisReference, index);
         const areaLabel = `Área ${index + 1}`;
         const accessibleAreaLabel = regionReference || areaLabel;
@@ -581,16 +603,19 @@ function DiagnosisDetails({
         </p>
       ) : null}
 
-      {regionListContent}
+      <CardBlockPresence open={Boolean(regions.length)} panelClassName={styles.blockPresence}>
+        {regionListContent}
+      </CardBlockPresence>
 
-      {!regions.length && diagnosis.region_required_missing ? (
-        // Só o aviso, numa linha: a ação é o "Marcar área" da linha de ações (o de sempre, no mesmo lugar) e o badge
-        // "Área necessária" já sinaliza no título. O ícone vai num span para não acionar o grid de duas linhas do Alert (has-[>svg]).
+      {/* Só o aviso, numa linha: a ação é o "Marcar área" da linha de ações (o de sempre, no mesmo lugar) e o badge
+          "Área necessária" já sinaliza no título. O ícone vai num span para não acionar o grid de duas linhas do Alert
+          (has-[>svg]). Criada a primeira área, ele sai enquanto o grupo de áreas entra no mesmo lugar. */}
+      <CardBlockPresence open={!regions.length && Boolean(diagnosis.region_required_missing)} panelClassName={styles.blockPresence}>
         <Alert className="grid-cols-[auto_minmax(0,1fr)] items-center gap-2" variant="warning">
           <span aria-hidden="true" className="flex size-4 items-center justify-center [&_svg]:size-4"><MapPinned /></span>
           <AlertTitle className="min-w-0">Área obrigatória no ECG</AlertTitle>
         </Alert>
-      ) : null}
+      </CardBlockPresence>
 
       {regionError ? <p className="text-xs text-destructive" role="alert">{regionError}</p> : null}
 
@@ -600,89 +625,83 @@ function DiagnosisDetails({
           barra recolhe o texto quando o médico não precisa mais dele. O campo é sempre o campo: clicou, escreveu — sem
           "Editar" nem "Adicionar justificativa", como em "Observações gerais". Recolhido, a barra mostra o começo do texto;
           vazio, a etiqueta "Opcional". O grupo nasce recolhido ao abrir o exame (como as áreas), abre com o Discordo e
-          continua aberto depois de salvar. Entra e sai por um painel de altura animada (ver
-          JUSTIFICATION_PRESENCE_PANEL_CLASS); a raiz `contents` e o `-mt-2` + `pt-2` deixam o gap-2 da coluna crescer
-          junto com o painel, em vez de surgir inteiro no primeiro quadro. */}
+          continua aberto depois de salvar. Entra e sai com altura animada (CardBlockPresence). */}
       {diagnosis.source !== "doctor_added" ? (
-        <Collapsible className="contents" open={hasJustificationGroup}>
-          <CollapsibleContent className={cn("-mt-2", styles.justificationPresence)}>
-            <div className="pt-2">
-              <Collapsible aria-label="Justificativa" className={cn(GROUP_OUTLINE_CLASS, JUSTIFICATION_FOCUS_CLASS)} data-slot="justification" onOpenChange={handleJustificationOpenChange} open={isDisagreementOpen} role="group">
-                <CollapsibleTrigger
-                  aria-describedby={isJustificationPreviewShown ? justificationPreviewId : undefined}
-                  aria-label={savedReviewNote ? "Justificativa" : "Justificativa (opcional)"}
-                  data-justification-action="toggle"
-                  render={<Button className={GROUP_BAR_CLASS} size="sm" type="button" variant="outline" />}
-                >
-                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <MessageSquareText aria-hidden="true" />
-                    {/* Rótulo e valor na mesma linha levam dois-pontos, como "Original:"; aberto, o rótulo fica acima do campo e
-                        os perde. */}
-                    <span className="shrink-0">
-                      Justificativa
-                      {savedReviewNote ? (
-                        <span aria-hidden="true" className={cn(styles.justificationFade, isJustificationPreviewShown ? JUSTIFICATION_PREVIEW_IN_CLASS : JUSTIFICATION_PREVIEW_OUT_CLASS)}>:</span>
-                      ) : null}
-                    </span>
-                    {/* Etiqueta e prévia dividem a mesma célula e só trocam de opacidade: nada anda na barra. Cada uma tem a sua
-                        forma — a etiqueta, fundo invertido (o `muted` dela sumia na barra `muted`: 1,00:1 no hover e aberta); a
-                        prévia, a letra do texto no campo (14px, `foreground`), para não se ler como parte do rótulo. A coluna
-                        `minmax(0,1fr)` tira a prévia da largura mínima do cartão: o conteúdo do ScrollArea do painel tem
-                        `min-width: fit-content`, e o texto sem quebra alargava o cartão em vez de cortar com "…". */}
-                    <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center text-left *:col-start-1 *:row-start-1">
-                      <OptionalTag className={cn("justify-self-start bg-card dark:bg-background", styles.justificationFade, "duration-150", savedReviewNote && "opacity-0")} />
-                      {savedReviewNote ? (
-                        <span
-                          aria-hidden={isJustificationPreviewShown ? undefined : "true"}
-                          className={cn("truncate text-sm font-normal text-foreground", styles.justificationFade, isJustificationPreviewShown ? JUSTIFICATION_PREVIEW_IN_CLASS : JUSTIFICATION_PREVIEW_OUT_CLASS)}
-                          data-slot="justification-preview"
-                          id={justificationPreviewId}
-                        >
-                          {savedReviewNote.replace(/\s+/g, " ")}
-                        </span>
-                      ) : null}
-                    </span>
-                  </span>
-                  <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
-                    <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isDisagreementOpen && "rotate-180")} />
-                  </span>
-                </CollapsibleTrigger>
-                <CollapsibleContent className={styles.areaPanel}>
-                  {/* Sem moldura própria (o contorno do grupo é a do campo; com foco, o grupo inteiro acende) e sem alça de
-                      redimensionar: o campo cresce com o texto (`field-sizing-content`). A divisória sob a barra é a da lista de áreas.
-                      `wrap-anywhere`: com `field-sizing-content`, a palavra mais longa vira a largura mínima do campo, e o conteúdo
-                      do ScrollArea do painel (`min-width: fit-content`) cresce junto — uma palavra longa sem espaço alargava o
-                      painel inteiro. Assim ela quebra dentro do campo e o campo só cresce para baixo. Começa com uma linha (uma
-                      segunda linha vazia lia como uma quebra digitada, que o médico tentaria apagar) e cresce até cinco (117px:
-                      5 × 20 de linha + 16 de padding + 1 da divisória); depois rola por dentro — sem teto, o campo empurrava o
-                      resto do painel para longe. Cinco linhas aqui comportam o mesmo texto que as duas das observações.
-                      Ctrl/Cmd+Enter salva; Enter quebra linha. */}
-                  <Textarea
-                    aria-keyshortcuts="Control+Enter Meta+Enter"
-                    aria-label="Justificativa (opcional)"
-                    className="subtle-scrollbar max-h-[117px] min-h-0 resize-none overflow-y-auto rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none wrap-anywhere focus-visible:border-border focus-visible:ring-0 dark:bg-background"
-                    id={`disagreement-note-${diagnosis.id}`}
-                    onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })}
-                    onKeyDown={handleJustificationKeyDown}
-                    placeholder="Registre o motivo da discordância"
-                    value={reviewNoteDraft}
-                  />
-                  {/* Só com alteração não salva. Dentro do contorno, no fim do campo (canto inferior direito), como ao editar
-                      uma mensagem: as ações pertencem ao texto, e o anel de foco do grupo as envolve. Dispensar à esquerda,
-                      confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com "Salvar" em cima, como o
-                      AlertDialogFooter. Só "Salvar", como nas observações: dentro do grupo, "justificativa" seria redundante; o
-                      nome acessível mantém o objeto ("Salvar justificativa"). */}
-                  {isReviewDraftDirty ? (
-                    <div className={cn("flex flex-col-reverse gap-2 bg-background px-2 pb-2 sm:flex-row sm:justify-end", styles.enterAnimation)}>
-                      <Button disabled={isBusy} onClick={discardJustificationChanges} size="sm" type="button" variant="outline">Cancelar</Button>
-                      <Button aria-label="Salvar justificativa" disabled={isBusy} onClick={() => submitJustification(normalizeReviewNote(reviewNoteDraft))} size="sm" type="button">Salvar</Button>
-                    </div>
+        <CardBlockPresence open={hasJustificationGroup} panelClassName={styles.blockPresence}>
+          <Collapsible aria-label="Justificativa" className={cn(GROUP_OUTLINE_CLASS, JUSTIFICATION_FOCUS_CLASS)} data-slot="justification" onOpenChange={handleJustificationOpenChange} open={isDisagreementOpen} role="group">
+            <CollapsibleTrigger
+              aria-describedby={isJustificationPreviewShown ? justificationPreviewId : undefined}
+              aria-label={savedReviewNote ? "Justificativa" : "Justificativa (opcional)"}
+              data-justification-action="toggle"
+              render={<Button className={GROUP_BAR_CLASS} size="sm" type="button" variant="outline" />}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <MessageSquareText aria-hidden="true" />
+                {/* Rótulo e valor na mesma linha levam dois-pontos, como "Original:"; aberto, o rótulo fica acima do campo e
+                    os perde. */}
+                <span className="shrink-0">
+                  Justificativa
+                  {savedReviewNote ? (
+                    <span aria-hidden="true" className={cn(styles.justificationFade, isJustificationPreviewShown ? JUSTIFICATION_PREVIEW_IN_CLASS : JUSTIFICATION_PREVIEW_OUT_CLASS)}>:</span>
                   ) : null}
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+                </span>
+                {/* Etiqueta e prévia dividem a mesma célula e só trocam de opacidade: nada anda na barra. Cada uma tem a sua
+                    forma — a etiqueta, fundo invertido (o `muted` dela sumia na barra `muted`: 1,00:1 no hover e aberta); a
+                    prévia, a letra do texto no campo (14px, `foreground`), para não se ler como parte do rótulo. A coluna
+                    `minmax(0,1fr)` tira a prévia da largura mínima do cartão: o conteúdo do ScrollArea do painel tem
+                    `min-width: fit-content`, e o texto sem quebra alargava o cartão em vez de cortar com "…". */}
+                <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center text-left *:col-start-1 *:row-start-1">
+                  <OptionalTag className={cn("justify-self-start bg-card dark:bg-background", styles.justificationFade, "duration-150", savedReviewNote && "opacity-0")} />
+                  {savedReviewNote ? (
+                    <span
+                      aria-hidden={isJustificationPreviewShown ? undefined : "true"}
+                      className={cn("truncate text-sm font-normal text-foreground", styles.justificationFade, isJustificationPreviewShown ? JUSTIFICATION_PREVIEW_IN_CLASS : JUSTIFICATION_PREVIEW_OUT_CLASS)}
+                      data-slot="justification-preview"
+                      id={justificationPreviewId}
+                    >
+                      {savedReviewNote.replace(/\s+/g, " ")}
+                    </span>
+                  ) : null}
+                </span>
+              </span>
+              <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center [&_svg]:size-4">
+                <ChevronDown className={cn("transition-transform duration-200 ease-out motion-reduce:transition-none", isDisagreementOpen && "rotate-180")} />
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className={styles.areaPanel}>
+              {/* Sem moldura própria (o contorno do grupo é a do campo; com foco, o grupo inteiro acende) e sem alça de
+                  redimensionar: o campo cresce com o texto (`field-sizing-content`). A divisória sob a barra é a da lista de áreas.
+                  `wrap-anywhere`: com `field-sizing-content`, a palavra mais longa vira a largura mínima do campo, e o conteúdo
+                  do ScrollArea do painel (`min-width: fit-content`) cresce junto — uma palavra longa sem espaço alargava o
+                  painel inteiro. Assim ela quebra dentro do campo e o campo só cresce para baixo. Começa com uma linha (uma
+                  segunda linha vazia lia como uma quebra digitada, que o médico tentaria apagar) e cresce até cinco (117px:
+                  5 × 20 de linha + 16 de padding + 1 da divisória); depois rola por dentro — sem teto, o campo empurrava o
+                  resto do painel para longe. Cinco linhas aqui comportam o mesmo texto que as duas das observações.
+                  Ctrl/Cmd+Enter salva; Enter quebra linha. */}
+              <Textarea
+                aria-keyshortcuts="Control+Enter Meta+Enter"
+                aria-label="Justificativa (opcional)"
+                className="subtle-scrollbar max-h-[117px] min-h-0 resize-none overflow-y-auto rounded-none border-0 border-t border-border bg-background px-2.5 py-2 text-foreground shadow-none wrap-anywhere focus-visible:border-border focus-visible:ring-0 dark:bg-background"
+                id={`disagreement-note-${diagnosis.id}`}
+                onChange={(event) => onReviewDraftChange?.(diagnosis.id, { isOpen: true, note: event.target.value })}
+                onKeyDown={handleJustificationKeyDown}
+                placeholder="Registre o motivo da discordância"
+                value={reviewNoteDraft}
+              />
+              {/* Só com alteração não salva. Dentro do contorno, no fim do campo (canto inferior direito), como ao editar
+                  uma mensagem: as ações pertencem ao texto, e o anel de foco do grupo as envolve. Dispensar à esquerda,
+                  confirmar à direita — a ordem dos diálogos e do rodapé; abaixo de `sm` empilha com "Salvar" em cima, como o
+                  AlertDialogFooter. Só "Salvar", como nas observações: dentro do grupo, "justificativa" seria redundante; o
+                  nome acessível mantém o objeto ("Salvar justificativa"). */}
+              {isReviewDraftDirty ? (
+                <div className={cn("flex flex-col-reverse gap-2 bg-background px-2 pb-2 sm:flex-row sm:justify-end", styles.enterAnimation)}>
+                  <Button disabled={isBusy} onClick={discardJustificationChanges} size="sm" type="button" variant="outline">Cancelar</Button>
+                  <Button aria-label="Salvar justificativa" disabled={isBusy} onClick={() => submitJustification(normalizeReviewNote(reviewNoteDraft))} size="sm" type="button">Salvar</Button>
+                </div>
+              ) : null}
+            </CollapsibleContent>
+          </Collapsible>
+        </CardBlockPresence>
       ) : null}
     </div>
   );
@@ -1281,10 +1300,11 @@ export default function DiagnosisPanel({
                                 Como a barra: -mx-3 (no item) dá ao painel a largura toda e o px-3 devolve o recuo, para o overflow-hidden
                                 do painel não cortar nas laterais o anel de foco (3px) do que encosta na borda — o grupo da justificativa.
                                 Sem o separador em repouso (scroll-state), o conteúdo começa logo abaixo dos 12px da barra; com o border-b fixo
-                                (sem suporte), o pt-2 afasta as áreas da linha. "Vazio" inclui os detalhes cujo único filho é a raiz
-                                (vazia) da presença da justificativa, que fica montada para ela poder sair animada; o padding anima junto
-                                com ela, para a faixa de baixo não surgir nem sumir de uma vez. */}
-                            <AccordionContent className="flex flex-col gap-3 px-3 pt-2 transition-[padding] duration-200 ease-out supports-[container-type:scroll-state]:pt-0 motion-reduce:transition-none [&:has(>:empty:only-child,>:only-child>:empty:only-child)]:py-0">
+                                (sem suporte), o pt-2 afasta as áreas da linha. "Vazio" = nenhum filho dos detalhes com conteúdo: as
+                                raízes dos blocos que entram e saem (CardBlockPresence: áreas, aviso de área, justificativa) ficam
+                                montadas, vazias, para os blocos poderem sair animados; o padding anima junto com eles, para a faixa de
+                                baixo não surgir nem sumir de uma vez. */}
+                            <AccordionContent className="flex flex-col gap-3 px-3 pt-2 transition-[padding] duration-200 ease-out supports-[container-type:scroll-state]:pt-0 motion-reduce:transition-none [&:not(:has(>*>:not(:empty)))]:py-0">
                               <DiagnosisDetails {...sharedCardProps} isAdditional decisionFeedback={decisionFeedbacks[diagnosisId]} diagnosis={diagnosis} diagnosisReference={diagnosisReference} hoveredRegionKey={hoveredRegionKey} isAreaListOpen={openAreaDiagnosisIds.has(diagnosisId)} onAreaListOpenChange={(open) => handleAreaListOpenChange(diagnosis.id, open)} regionError={regionErrors[diagnosisId]} reviewDraft={reviewDrafts[diagnosisId]} selectedRegionKey={selectedRegionKey} />
                             </AccordionContent>
                           </AccordionItem>
