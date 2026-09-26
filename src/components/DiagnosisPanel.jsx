@@ -122,6 +122,14 @@ const COLLAPSIBLE_PANEL_CLASS = "h-(--collapsible-panel-height) overflow-hidden 
 // mesma transição: sem ela o cartão crescia ou encolhia ~80px num quadro e tudo abaixo saltava. `overflow-clip` com 4px
 // de margem no lugar do `hidden`: recorta a altura animada sem cortar o anel de foco (3px) dos grupos.
 const BLOCK_PRESENCE_PANEL_CLASS = cn(COLLAPSIBLE_PANEL_CLASS, "overflow-clip [overflow-clip-margin:4px]");
+// Linha de um diagnóstico recém-adicionado: entra de altura 0 e opacidade 0 (`@starting-style`) até a altura natural, em
+// 200ms ease-out — antes surgia inteira (48px num quadro) e só depois abria. `interpolate-size` deixa a transição chegar a
+// `auto` e acompanhar o item, que abre ao mesmo tempo; sem suporte (Firefox, Safari), só a opacidade anima. `overflow-clip`
+// (não hidden) não cria contêiner de rolagem, então a barra fixa do item continua aderindo ao painel — e por isso não zera
+// o `min-height: auto` do item flex (a lista é flex em coluna), que prendia a altura no conteúdo: `min-h-0` é o que deixa a
+// transição partir de 0 (medido: sem ele, a linha nascia com 48px).
+const ENTERING_ITEM_CLASS =
+  "min-h-0 overflow-clip [interpolate-size:allow-keywords] transition-[height,opacity,box-shadow] duration-200 ease-out starting:h-0 starting:opacity-0 motion-reduce:transition-none";
 
 // Item adicional cujo conteúdo abre com o grupo da justificativa (sem áreas, sem aviso de área nem erro antes dele),
 // visto do AccordionItem (`group/item`). O anel de foco do grupo (3px, por fora) caía sobre a barra fixa — opaca e pintada
@@ -940,6 +948,9 @@ export default function DiagnosisPanel({
   // Diagnóstico adicionado que o médico acabou de remover: continua desenhado no mesmo lugar (com a referência Dn de
   // antes), `inert`, enquanto recolhe — ver o efeito de saída abaixo.
   const [leavingSecondary, setLeavingSecondary] = useState(null);
+  // Diagnóstico que o médico acabou de adicionar: a linha entra crescendo (ver ENTERING_ITEM_CLASS). Só ele — nada anima
+  // ao carregar o exame.
+  const [enteringSecondaryId, setEnteringSecondaryId] = useState(null);
   const addDiagnosisTriggerRef = useRef(null);
   const addDiagnosisSelectRef = useRef(null);
   const addDiagnosisAnchorRef = useRef(null);
@@ -1169,6 +1180,8 @@ export default function DiagnosisPanel({
       setName("");
       setIsAddDiagnosisOpen(false);
       setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
+      setEnteringSecondaryId(String(addedDiagnosis.id));
+      window.setTimeout(() => setEnteringSecondaryId((current) => current === String(addedDiagnosis.id) ? null : current), 400);
     }
   }
 
@@ -1289,7 +1302,7 @@ export default function DiagnosisPanel({
                           // hover (ΔE OKLab ≈ 0,004 no claro e 0,012 no escuro; o muted também é azulado) e mais fraca que ele, então um
                           // vizinho em hover parecia o item aberto. O filete corre do topo da barra ao fim do conteúdo (áreas, justificativa)
                           // e para onde o item para; entra e sai em fade (150ms) para acompanhar a transição de altura.
-                          <AccordionItem className="group/item px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3" data-diagnosis-id={diagnosis.id} inert={isLeaving} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className={cn("group/item px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3", enteringSecondaryId === diagnosisId && ENTERING_ITEM_CLASS)} data-diagnosis-id={diagnosis.id} inert={isLeaving} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky, que
                                 adere ao topo do viewport do painel enquanto o item rola (a lista não tem scroll próprio) — o
@@ -1388,11 +1401,17 @@ export default function DiagnosisPanel({
                 )}
                 </CardContent>
               </CollapsibleContent>
-              ) : (
-                <CardContent className="border-t px-3 py-2.5">
-                  <p className="text-sm text-muted-foreground">Nenhum diagnóstico adicional neste ECG.</p>
-                </CardContent>
-              )}
+              ) : null}
+              {/* Sai recolhendo quando entra o primeiro diagnóstico (enquanto ele cresce) e volta do mesmo jeito depois que o
+                  último sai — a troca frase ↔ lista não salta. Aberta desde o início quando o exame chega sem adicionais
+                  (o Collapsible do Base UI não anima o que já nasce aberto). */}
+              <Collapsible open={!hasSecondaryDiagnoses}>
+                <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
+                  <CardContent className="border-t px-3 py-2.5">
+                    <p className="text-sm text-muted-foreground">Nenhum diagnóstico adicional neste ECG.</p>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
               {/* Rodapé fixo (fora do conteúdo recolhível): a ação fica sempre visível e o seletor abre no mesmo lugar do botão. */}
               {availableOptions.length ? (
                 // Rodapé persistente: border-t e altura ficam no contêiner, que não é remontado ao alternar botão ↔ campo.
