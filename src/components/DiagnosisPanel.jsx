@@ -1010,22 +1010,54 @@ export default function DiagnosisPanel({
     if (!isSecondaryOpen) onSecondaryToggle?.(true);
   }, [isSecondaryOpen, onSecondaryToggle, secondaryDiagnosisIds]);
 
-  const scrollDiagnosisIntoView = useCallback((diagnosisId) => {
+  // `collapsingId`: o item que fecha ao mesmo tempo (troca de item aberto). Se ele fica acima do item novo, o encolhimento
+  // dele empurrava o item clicado para cima, sob o cursor (medido: 252px a 1536×730 com o painel rolado); a rolagem
+  // desce o mesmo tanto a cada quadro e o item fica onde foi clicado. Com a rolagem no topo não há o que compensar.
+  const scrollDiagnosisIntoView = useCallback((diagnosisId, { collapsingId = null } = {}) => {
     let frame = 0;
-    // Teto de segurança para o acompanhamento (a transição da barra e a rolagem suave duram 200ms cada).
-    const deadline = performance.now() + 450;
-    // Rolagem suave: a posição segue uma curva ease-out de 200ms entre a de partida e o alvo — que é recalculado a cada
-    // quadro, porque a barra ainda cresce. Antes o painel saltava (0 → 41px num quadro ao selecionar uma área no ECG).
+    // Teto de segurança para o acompanhamento (a transição da barra, o fechamento do outro item e a rolagem suave duram
+    // 200ms cada, em paralelo).
+    const deadline = performance.now() + 500;
+    // Rolagem suave: anda uma curva ease-out de 200ms até revelar a barra — a distância é recalculada a cada quadro,
+    // porque a barra ainda cresce. Antes o painel saltava (0 → 41px num quadro ao selecionar uma área no ECG). Os dois
+    // movimentos (compensação e revelação) são relativos e contam só o que a rolagem de fato andou, então se somam sem
+    // brigar e não acumulam erro quando ela bate no limite.
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    let startTop = null;
-    let startTime = 0;
-    let targetTop = null;
+    let startTime = null;
+    let revealed = 0;
+    let revealTotal = null;
+    let collapsingItem;
+    let collapsingHeight = 0;
+    const scrollBy = (viewport, amount) => {
+      const before = viewport.scrollTop;
+      viewport.scrollTop = before + amount;
+      return viewport.scrollTop - before;
+    };
     const reveal = () => {
       // A barra (título + linha de ações): revelar só o gatilho podia deixar a linha cortada abaixo do viewport.
       const header = secondaryListRef.current?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="diagnosis-item-bar"]`);
       // A lista não tem scroll próprio: o viewport é o do painel (ScrollArea da página no desktop, do Sheet no compacto).
       const viewport = header?.closest('[data-slot="scroll-area-viewport"]');
       if (!header || !viewport) return;
+      const now = performance.now();
+      if (startTime === null) startTime = now;
+      // Compensação: só o que fecha ACIMA do item novo o empurra.
+      if (collapsingItem === undefined) {
+        const item = collapsingId ? secondaryListRef.current?.querySelector(`[data-diagnosis-id="${collapsingId}"]`) : null;
+        const precedes = item && item !== header.closest("[data-diagnosis-id]")
+          && Boolean(item.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING);
+        collapsingItem = precedes ? item : null;
+        if (collapsingItem) collapsingHeight = collapsingItem.getBoundingClientRect().height;
+      }
+      let isCollapsing = false;
+      if (collapsingItem) {
+        const height = collapsingItem.getBoundingClientRect().height;
+        if (height < collapsingHeight - 0.5) {
+          scrollBy(viewport, height - collapsingHeight);
+          isCollapsing = true;
+        }
+        collapsingHeight = height;
+      }
       const bounds = viewport.getBoundingClientRect();
       const target = header.getBoundingClientRect();
       // O bloco "Original + ações" da barra abre em transição de altura: mede pela altura final (com overflow-hidden,
@@ -1037,20 +1069,17 @@ export default function DiagnosisPanel({
       let delta = 0;
       if (target.top < bounds.top) delta = target.top - bounds.top;
       else if (targetBottom > bounds.bottom) delta = Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
-      const now = performance.now();
-      if (startTop === null) {
-        startTop = viewport.scrollTop;
-        startTime = now;
-      }
+      // Com a barra já visível (delta 0) vale a última distância calculada — senão a curva voltaria para o início.
+      if (delta !== 0) revealTotal = Math.round(revealed + delta);
       const progress = reducedMotion ? 1 : Math.min(1, (now - startTime) / 200);
-      const eased = 1 - (1 - progress) ** 3;
-      // Alvo absoluto (não depende da rolagem atual); com a barra já visível (delta 0) vale o último calculado — senão a
-      // curva puxaria a rolagem de volta para o início.
-      if (delta !== 0) targetTop = Math.round(viewport.scrollTop + delta);
-      if (targetTop !== null) viewport.scrollTop = progress >= 1 ? targetTop : startTop + (targetTop - startTop) * eased;
+      if (revealTotal !== null) {
+        const next = progress >= 1 ? revealTotal : revealTotal * (1 - (1 - progress) ** 3);
+        revealed += scrollBy(viewport, next - revealed);
+      }
+      if (progress >= 1 && !isCollapsing) viewport.scrollTop = Math.round(viewport.scrollTop);
       // Enquanto a barra cresce o viewport ainda não tem esse overflow (o scrollTop é limitado ao conteúdo atual), então
-      // o acompanhamento segue frame a frame até a transição e a curva terminarem — sem salto no fim.
-      if ((pendingBarHeight > 0.5 || progress < 1) && now < deadline) frame = window.requestAnimationFrame(reveal);
+      // o acompanhamento segue frame a frame até a barra, o fechamento e a curva terminarem — sem salto no fim.
+      if ((pendingBarHeight > 0.5 || progress < 1 || isCollapsing) && now < deadline) frame = window.requestAnimationFrame(reveal);
     };
     const scrollTimer = window.setTimeout(reveal, 0);
     return () => {
@@ -1214,7 +1243,8 @@ export default function DiagnosisPanel({
     const nextDiagnosisId = values.at(-1) || null;
     if (isInteractionBlocked(nextDiagnosisId)) return;
     setExpandedDiagnosisId(nextDiagnosisId);
-    if (nextDiagnosisId) scrollDiagnosisIntoView(nextDiagnosisId);
+    // O item que estava aberto fecha junto: se ele está acima, a rolagem compensa o encolhimento (ver scrollDiagnosisIntoView).
+    if (nextDiagnosisId) scrollDiagnosisIntoView(nextDiagnosisId, { collapsingId: openSecondaryDiagnosisKey });
   }
 
   function handleAreaListOpenChange(diagnosisId, open) {
