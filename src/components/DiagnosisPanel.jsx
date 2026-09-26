@@ -1085,13 +1085,17 @@ export default function DiagnosisPanel({
     return wasRemoved;
   }
 
-  // A troca botão ↔ campo é um morph (View Transition): o rótulo vira o placeholder e o "+" vira a lupa no lugar.
+  // A troca botão ↔ campo é um morph (View Transition): o rótulo vira o placeholder e o "+" vira a lupa no lugar. Só
+  // com a seção aberta: recolhida, ela se expande junto e o rodapé desce — a transição fixa o rodapé na posição inicial
+  // e ele saltaria no fim. Aí a troca é direta, e o movimento fica com a abertura da seção.
   function handleAddDiagnosisToggle(open) {
     if (open && isInteractionBlocked()) return;
-    runViewTransition(() => {
+    const update = () => {
       setIsAddDiagnosisOpen(open);
       if (open && !isSecondaryOpen) onSecondaryToggle?.(true);
-    });
+    };
+    if (isSecondaryOpen || !hasSecondaryDiagnoses) runViewTransition(update);
+    else update();
     if (!open) window.setTimeout(() => addDiagnosisTriggerRef.current?.focus(), 0);
   }
 
@@ -1107,12 +1111,12 @@ export default function DiagnosisPanel({
       region_width: null,
       region_height: null,
     });
+    // Sem View Transition: a lista cresce com o item novo e o painel rola até ele, e o rodapé (congelado pela transição
+    // na posição inicial) saltaria no fim. O campo volta a botão na hora; o movimento é o do item novo entrando.
     if (addedDiagnosis) {
-      runViewTransition(() => {
-        setName("");
-        setIsAddDiagnosisOpen(false);
-        setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
-      });
+      setName("");
+      setIsAddDiagnosisOpen(false);
+      setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
     }
   }
 
@@ -1343,8 +1347,9 @@ export default function DiagnosisPanel({
                 // e movia o anchor do popup; a troca é um morph via View Transition (handleAddDiagnosisToggle).
                 // rounded-[inherit] rounded-t-none: cantos inferiores do card (o rodapé é o último filho), topo reto na border-t —
                 // hover, anel de foco e tinta seguem o formato da região. Aberto: tinta do item aberto do acordeão (bg-muted/40),
-                // continuando o hover do botão no momento do clique.
-                <div className={cn("flex h-10 items-center rounded-[inherit] rounded-t-none border-t", isAddDiagnosisOpen && "bg-muted/40")} id={addDiagnosisContentId}>
+                // continuando o hover do botão no momento do clique. Nome de View Transition próprio: só esta linha (e o ícone)
+                // faz crossfade na troca botão ↔ campo; o resto da página não entra na transição (ver global.css).
+                <div className={cn("flex h-10 items-center rounded-[inherit] rounded-t-none border-t [view-transition-name:add-diagnosis-row]", isAddDiagnosisOpen && "bg-muted/40")} id={addDiagnosisContentId}>
                   {isAddDiagnosisOpen ? (
                     // aria-label em vez de <label>: com a lista aberta o Base UI marca o resto da página como aria-hidden e um label externo deixaria o campo sem nome.
                     <Combobox autoHighlight defaultOpen disabled={isBusy} items={availableOptions} locale="pt-BR" onValueChange={handleSelectDiagnosis} value={name || null}>

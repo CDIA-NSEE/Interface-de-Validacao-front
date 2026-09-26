@@ -156,6 +156,17 @@
   animation-duration: 150ms;
 }
 
+/* Só o rodapé e o ícone (que têm nome próprio) fazem crossfade; a página em si troca na hora. O crossfade da raiz
+   misturava a página inteira: com a lista mudando de altura e o painel rolando, as duas versões dela apareciam
+   sobrepostas por 150ms. Sem a imagem antiga, a nova raiz é o DOM vivo, e as animações CSS seguem normalmente. */
+::view-transition-old(root) {
+  display: none;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
 ::view-transition-old(add-diagnosis-icon),
 ::view-transition-new(add-diagnosis-icon) {
   animation: 150ms cubic-bezier(0, 0, 0.2, 1) both;
