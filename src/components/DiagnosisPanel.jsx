@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ClipboardList, MapPinned, MessageSquareText, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   Accordion,
@@ -937,6 +937,9 @@ export default function DiagnosisPanel({
   const [expandedDiagnosisId, setExpandedDiagnosisId] = useState(null);
   const [pendingExpandedDiagnosisId, setPendingExpandedDiagnosisId] = useState(null);
   const [openAreaDiagnosisIds, setOpenAreaDiagnosisIds] = useState(() => new Set());
+  // Diagnóstico adicionado que o médico acabou de remover: continua desenhado no mesmo lugar (com a referência Dn de
+  // antes), `inert`, enquanto recolhe — ver o efeito de saída abaixo.
+  const [leavingSecondary, setLeavingSecondary] = useState(null);
   const addDiagnosisTriggerRef = useRef(null);
   const addDiagnosisSelectRef = useRef(null);
   const addDiagnosisAnchorRef = useRef(null);
@@ -950,7 +953,16 @@ export default function DiagnosisPanel({
     () => [...optionalDiagnoses, ...doctorDiagnoses],
     [doctorDiagnoses, optionalDiagnoses],
   );
-  const hasSecondaryDiagnoses = secondaryDiagnoses.length > 0;
+  // A lista desenhada inclui o item que está saindo, na posição que ele ocupava.
+  const renderedSecondaryDiagnoses = useMemo(() => {
+    if (!leavingSecondary || secondaryDiagnoses.some((diagnosis) => diagnosis.id === leavingSecondary.diagnosis.id)) {
+      return secondaryDiagnoses;
+    }
+    const next = [...secondaryDiagnoses];
+    next.splice(Math.min(leavingSecondary.index, next.length), 0, leavingSecondary.diagnosis);
+    return next;
+  }, [leavingSecondary, secondaryDiagnoses]);
+  const hasSecondaryDiagnoses = renderedSecondaryDiagnoses.length > 0;
   const secondaryDiagnosisIds = useMemo(
     () => new Set(secondaryDiagnoses.map((diagnosis) => String(diagnosis.id))),
     [secondaryDiagnoses],
@@ -1059,6 +1071,37 @@ export default function DiagnosisPanel({
     return revealSelectedRegion(selectedRegionKey.split(":")[0]);
   }, [selectedRegionKey]);
 
+  // Saída do item removido: recolhe da altura atual a 0, com opacidade, em 200ms ease-out (a curva dos painéis) — antes
+  // a lista encolhia de uma vez (138px num quadro com o item aberto). Ao terminar, sai da lista desenhada.
+  useLayoutEffect(() => {
+    if (!leavingSecondary) return undefined;
+    const item = secondaryListRef.current?.querySelector(`[data-diagnosis-id="${leavingSecondary.diagnosis.id}"]`);
+    if (!item || typeof item.animate !== "function") {
+      setLeavingSecondary(null);
+      return undefined;
+    }
+    const animation = item.animate(
+      [
+        { height: `${item.getBoundingClientRect().height}px`, opacity: 1, overflow: "clip" },
+        { height: "0px", opacity: 0, overflow: "clip" },
+      ],
+      // `forwards`: segura o fim (altura 0) até o React tirar o item — sem ele, o item voltava inteiro por um quadro.
+      { duration: 200, easing: "cubic-bezier(0, 0, 0.2, 1)", fill: "forwards" },
+    );
+    // Parada na altura cheia e solta dois quadros depois: a página re-renderiza logo após a remoção (tarefa longa de
+    // ~50ms medida) e, começando já, a animação perdia o começo da curva — o item saltava de 138 para 58px.
+    animation.pause();
+    let frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => animation.play());
+    });
+    animation.onfinish = () => setLeavingSecondary(null);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      animation.onfinish = null;
+      animation.cancel();
+    };
+  }, [leavingSecondary]);
+
   useEffect(() => {
     if (!isAddDiagnosisOpen) return undefined;
     addDiagnosisSelectRef.current?.focus();
@@ -1077,11 +1120,20 @@ export default function DiagnosisPanel({
     onReviewDraftChange?.(diagnosisId, draft);
   }
 
-  // O gatilho "Remover diagnóstico" desmonta junto com o item; o foco segue para "Adicionar diagnóstico"
-  // (o diagnóstico removido volta às opções, então o botão existe) em vez de cair no body.
+  // O gatilho "Remover diagnóstico" sai junto com o item; o foco segue para "Adicionar diagnóstico"
+  // (o diagnóstico removido volta às opções, então o botão existe) em vez de cair no body. Removido, o item sai animado
+  // (retrato de antes da remoção; com movimento reduzido, some na hora).
   async function handlePanelRemove(diagnosisId) {
+    const index = secondaryDiagnoses.findIndex((diagnosis) => String(diagnosis.id) === String(diagnosisId));
+    const snapshot = index >= 0
+      ? { diagnosis: secondaryDiagnoses[index], index, reference: getDiagnosisReference(diagnosisReferences, secondaryDiagnoses[index].id) }
+      : null;
     const wasRemoved = await onRemove(diagnosisId);
-    if (wasRemoved) window.setTimeout(() => addDiagnosisTriggerRef.current?.focus(), 0);
+    if (wasRemoved) {
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      if (snapshot && !reducedMotion) setLeavingSecondary(snapshot);
+      window.setTimeout(() => addDiagnosisTriggerRef.current?.focus(), 0);
+    }
     return wasRemoved;
   }
 
@@ -1223,9 +1275,10 @@ export default function DiagnosisPanel({
                     ref={secondaryListRef}
                     value={openSecondaryDiagnosisKey ? [openSecondaryDiagnosisKey] : []}
                   >
-                      {secondaryDiagnoses.map((diagnosis) => {
+                      {renderedSecondaryDiagnoses.map((diagnosis) => {
                         const diagnosisId = String(diagnosis.id);
-                        const diagnosisReference = getDiagnosisReference(diagnosisReferences, diagnosis.id);
+                        const isLeaving = leavingSecondary?.diagnosis.id === diagnosis.id;
+                        const diagnosisReference = isLeaving ? leavingSecondary.reference : getDiagnosisReference(diagnosisReferences, diagnosis.id);
                         const status = getDiagnosisReviewStatus(diagnosis);
                         const standardText = diagnosis.standard_text || diagnosis.name;
                         const isOpen = openSecondaryDiagnosisKey === diagnosisId;
@@ -1236,7 +1289,7 @@ export default function DiagnosisPanel({
                           // hover (ΔE OKLab ≈ 0,004 no claro e 0,012 no escuro; o muted também é azulado) e mais fraca que ele, então um
                           // vizinho em hover parecia o item aberto. O filete corre do topo da barra ao fim do conteúdo (áreas, justificativa)
                           // e para onde o item para; entra e sai em fade (150ms) para acompanhar a transição de altura.
-                          <AccordionItem className="group/item px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3" data-diagnosis-id={diagnosis.id} key={diagnosis.id} value={diagnosisId}>
+                          <AccordionItem className="group/item px-3 transition-[box-shadow] duration-150 data-open:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none [&>[data-slot=accordion-content]]:-mx-3" data-diagnosis-id={diagnosis.id} inert={isLeaving} key={diagnosis.id} value={diagnosisId}>
                             {/* Barra fixa do item: título + "Original:" + linha de ações do diagnóstico inteiro (Concordo |
                                 Discordo nos originais, "Remover diagnóstico" nos adicionados, "Marcar área" em ambos) num só bloco sticky, que
                                 adere ao topo do viewport do painel enquanto o item rola (a lista não tem scroll próprio) — o
