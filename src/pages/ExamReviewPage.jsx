@@ -1197,7 +1197,9 @@ export default function ExamReviewPage() {
 
           {isCompactLayout ? (
             <Sheet open={isReviewSheetOpen} onOpenChange={setIsReviewSheetOpen}>
-              <div className="fixed inset-x-0 bottom-0 flex justify-center border-t bg-background/95 p-3 backdrop-blur">
+              {/* Começa depois do trilho de navegação (w-16): na largura toda, a barra cobria o "Sair da sessão" no pé do
+                  trilho e o toque nele abria "Diagnósticos e ações". O conteúdo principal já reserva a altura da barra. */}
+              <div className="fixed right-0 bottom-0 left-16 flex justify-center border-t bg-background/95 p-3 backdrop-blur">
                 <SheetTrigger render={<Button className="w-full max-w-sm" size="lg" type="button" />}>
                   <PanelRightOpen aria-hidden="true" data-icon="inline-start" />
                   Diagnósticos e ações
