@@ -725,6 +725,25 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByRole("combobox", { name: "Adicionar diagnóstico" })).toBeVisible();
   });
 
+  it("destaca nas opções da busca o trecho digitado, ignorando acentos e caixa como a própria busca", async () => {
+    const user = userEvent.setup();
+    render(
+      <DiagnosisPanelHarness
+        {...createProps({ options: ["ÁREA ELETRICAMENTE INATIVA SEPTAL", "Onda T invertida parede inferior"] })}
+        dailyStandardDiagnosis="Ritmo sinusal"
+        diagnoses={[originalDiagnosis(1, "Ritmo sinusal")]}
+        isGeneralReviewDay={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar diagnóstico" }));
+    await user.type(screen.getByRole("combobox", { name: "Adicionar diagnóstico" }), "area");
+
+    const option = await screen.findByRole("option", { name: "ÁREA ELETRICAMENTE INATIVA SEPTAL" });
+    expect(option.querySelector(".font-semibold")).toHaveTextContent(/^ÁREA$/);
+    expect(screen.queryByRole("option", { name: /Onda T/ })).not.toBeInTheDocument();
+  });
+
   it("comunica a decisão pelo badge padronizado e pelo botão selecionado", () => {
     render(
       <DiagnosisPanelHarness

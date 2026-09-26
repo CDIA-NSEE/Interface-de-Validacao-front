@@ -390,6 +390,29 @@ function DiagnosisActionRow({
   );
 }
 
+// O mesmo critério da busca do Combobox (Base UI `contains`: Intl.Collator pt-BR, sensibilidade "base", sem pontuação,
+// janela do tamanho do texto digitado): o trecho destacado é exatamente o que casou — "onda" marca "Onda", "area" marca
+// "ÁREA".
+const SEARCH_COLLATOR = new Intl.Collator("pt-BR", { usage: "search", sensitivity: "base", ignorePunctuation: true });
+
+// Opção da busca com o trecho digitado em peso 600: ajuda a varrer a lista e a ver por que cada opção apareceu. Sem
+// casar (ou sem texto), a opção fica como está. O nome acessível continua o texto inteiro.
+function SearchOptionLabel({ query, text }) {
+  if (!query) return text;
+  for (let index = 0; index <= text.length - query.length; index += 1) {
+    if (SEARCH_COLLATOR.compare(text.slice(index, index + query.length), query) === 0) {
+      return (
+        <>
+          {text.slice(0, index)}
+          <span className="font-semibold">{text.slice(index, index + query.length)}</span>
+          {text.slice(index + query.length)}
+        </>
+      );
+    }
+  }
+  return text;
+}
+
 // Um bloco do cartão que entra e sai com altura animada (ver BLOCK_PRESENCE_PANEL_CLASS). A raiz `contents` e o
 // `-mt-2` + `pt-2` fazem o gap-2 da coluna crescer junto com o painel, em vez de surgir inteiro no primeiro quadro; fechado,
 // o painel desmonta e não sobra espaço. Saindo, o bloco fica `inert`: ainda desenhado, mas fora do foco e dos cliques.
@@ -943,6 +966,8 @@ export default function DiagnosisPanel({
 }) {
   const addDiagnosisContentId = useId();
   const [name, setName] = useState("");
+  // Texto digitado na busca de "Adicionar diagnóstico" (só para destacar o trecho nas opções).
+  const [searchQuery, setSearchQuery] = useState("");
   const [isAddDiagnosisOpen, setIsAddDiagnosisOpen] = useState(false);
   const [expandedDiagnosisId, setExpandedDiagnosisId] = useState(null);
   const [pendingExpandedDiagnosisId, setPendingExpandedDiagnosisId] = useState(null);
@@ -1204,6 +1229,7 @@ export default function DiagnosisPanel({
     if (open && isInteractionBlocked()) return;
     const update = () => {
       setIsAddDiagnosisOpen(open);
+      setSearchQuery("");
       if (open && !isSecondaryOpen) onSecondaryToggle?.(true);
     };
     if (isSecondaryOpen || !hasSecondaryDiagnoses) runViewTransition(update);
@@ -1227,6 +1253,7 @@ export default function DiagnosisPanel({
     // na posição inicial) saltaria no fim. O campo volta a botão na hora; o movimento é o do item novo entrando.
     if (addedDiagnosis) {
       setName("");
+      setSearchQuery("");
       setIsAddDiagnosisOpen(false);
       setPendingExpandedDiagnosisId(String(addedDiagnosis.id));
       setEnteringSecondaryId(String(addedDiagnosis.id));
@@ -1476,7 +1503,7 @@ export default function DiagnosisPanel({
                 <div className={cn("flex h-10 items-center rounded-[inherit] rounded-t-none border-t [view-transition-name:add-diagnosis-row]", isAddDiagnosisOpen && "bg-muted/40")} id={addDiagnosisContentId}>
                   {isAddDiagnosisOpen ? (
                     // aria-label em vez de <label>: com a lista aberta o Base UI marca o resto da página como aria-hidden e um label externo deixaria o campo sem nome.
-                    <Combobox autoHighlight defaultOpen disabled={isBusy} items={availableOptions} locale="pt-BR" onValueChange={handleSelectDiagnosis} value={name || null}>
+                    <Combobox autoHighlight defaultOpen disabled={isBusy} items={availableOptions} locale="pt-BR" onInputValueChange={(value) => setSearchQuery(value)} onValueChange={handleSelectDiagnosis} value={name || null}>
                       {/* Campo full-bleed: assume a linha do botão com as mesmas colunas (lupa no lugar do "+", texto na coluna do rótulo,
                           X na coluna dos chevrons). Anel de foco interno como os gatilhos do card; o grupo tem a largura do card, então
                           o anel contorna a linha inteira e o popup (largura do anchor) alinha às bordas do card. */}
@@ -1499,7 +1526,7 @@ export default function DiagnosisPanel({
                       <ComboboxContent anchor={addDiagnosisAnchorRef}>
                         <ComboboxEmpty>Nenhum diagnóstico encontrado.</ComboboxEmpty>
                         <ComboboxList className="subtle-scrollbar max-h-[min(40svh,18rem)]">
-                          {(option) => <ComboboxItem className="whitespace-normal break-words" key={option} value={option}>{option}</ComboboxItem>}
+                          {(option) => <ComboboxItem className="whitespace-normal break-words" key={option} value={option}><SearchOptionLabel query={searchQuery} text={option} /></ComboboxItem>}
                         </ComboboxList>
                       </ComboboxContent>
                     </Combobox>
