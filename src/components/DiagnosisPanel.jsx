@@ -1370,8 +1370,10 @@ export default function DiagnosisPanel({
                                 </span>
                               </AccordionTrigger>
                               {/* Sempre montado (só o painel entra/sai) para a saída também animar: o Collapsible sem gatilho segue o item —
-                                  altura e opacidade em 200ms, sincronizadas com o painel de baixo, e o conteúdo desmonta ao terminar de fechar. */}
-                              <Collapsible className="[@container_scroll-state(stuck:top)]:shadow-[0_1px_0_var(--border)]" open={isOpen}>
+                                  altura e opacidade em 200ms, sincronizadas com o painel de baixo, e o conteúdo desmonta ao terminar de fechar.
+                                  A linha da barra grudada entra e sai em fade de 150ms (como a borda da barra de navegação do iOS ao rolar),
+                                  em vez de aparecer num quadro. */}
+                              <Collapsible className="transition-[box-shadow] duration-150 ease-out motion-reduce:transition-none [@container_scroll-state(stuck:top)]:shadow-[0_1px_0_var(--border)]" open={isOpen}>
                                 <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
                                   {/* Tudo o que a abertura revela na barra, abaixo da divisória: marcadores, "Original:" e a linha de ações. A
                                       divisória fecha a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o
