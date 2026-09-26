@@ -1464,9 +1464,11 @@ export default function DiagnosisPanel({
                           <Button aria-label="Cancelar adição" onClick={() => handleAddDiagnosisToggle(false)} size="icon-sm" title="Cancelar" type="button" variant="ghost"><X aria-hidden="true" /></Button>
                         </InputGroupAddon>
                       </ComboboxInput>
+                      {/* Barra de rolagem da lista: a mesma dos campos e do painel (subtle-scrollbar), não a padrão do Windows — 15px,
+                          cinza e com setas dentro do popup arredondado. */}
                       <ComboboxContent anchor={addDiagnosisAnchorRef}>
                         <ComboboxEmpty>Nenhum diagnóstico encontrado.</ComboboxEmpty>
-                        <ComboboxList className="max-h-[min(40svh,18rem)]">
+                        <ComboboxList className="subtle-scrollbar max-h-[min(40svh,18rem)]">
                           {(option) => <ComboboxItem className="whitespace-normal break-words" key={option} value={option}>{option}</ComboboxItem>}
                         </ComboboxList>
                       </ComboboxContent>
