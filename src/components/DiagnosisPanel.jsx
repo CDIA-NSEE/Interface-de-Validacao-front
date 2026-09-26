@@ -1010,8 +1010,14 @@ export default function DiagnosisPanel({
 
   const scrollDiagnosisIntoView = useCallback((diagnosisId) => {
     let frame = 0;
-    // Teto de segurança para o acompanhamento (a transição da barra dura 200ms).
-    const deadline = performance.now() + 400;
+    // Teto de segurança para o acompanhamento (a transição da barra e a rolagem suave duram 200ms cada).
+    const deadline = performance.now() + 450;
+    // Rolagem suave: a posição segue uma curva ease-out de 200ms entre a de partida e o alvo — que é recalculado a cada
+    // quadro, porque a barra ainda cresce. Antes o painel saltava (0 → 41px num quadro ao selecionar uma área no ECG).
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    let startTop = null;
+    let startTime = 0;
+    let targetTop = null;
     const reveal = () => {
       // A barra (título + linha de ações): revelar só o gatilho podia deixar a linha cortada abaixo do viewport.
       const header = secondaryListRef.current?.querySelector(`[data-diagnosis-id="${diagnosisId}"] [data-slot="diagnosis-item-bar"]`);
@@ -1026,11 +1032,23 @@ export default function DiagnosisPanel({
       const pendingBarHeight = barPanel ? Math.max(0, barPanel.scrollHeight - barPanel.getBoundingClientRect().height) : 0;
       const targetBottom = target.bottom + pendingBarHeight;
       // Rola o painel só o necessário para revelar a barra cortada (nunca a página).
-      if (target.top < bounds.top) viewport.scrollTop += target.top - bounds.top;
-      else if (targetBottom > bounds.bottom) viewport.scrollTop += Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
+      let delta = 0;
+      if (target.top < bounds.top) delta = target.top - bounds.top;
+      else if (targetBottom > bounds.bottom) delta = Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
+      const now = performance.now();
+      if (startTop === null) {
+        startTop = viewport.scrollTop;
+        startTime = now;
+      }
+      const progress = reducedMotion ? 1 : Math.min(1, (now - startTime) / 200);
+      const eased = 1 - (1 - progress) ** 3;
+      // Alvo absoluto (não depende da rolagem atual); com a barra já visível (delta 0) vale o último calculado — senão a
+      // curva puxaria a rolagem de volta para o início.
+      if (delta !== 0) targetTop = Math.round(viewport.scrollTop + delta);
+      if (targetTop !== null) viewport.scrollTop = progress >= 1 ? targetTop : startTop + (targetTop - startTop) * eased;
       // Enquanto a barra cresce o viewport ainda não tem esse overflow (o scrollTop é limitado ao conteúdo atual), então
-      // o acompanhamento segue frame a frame até a transição terminar — a lista rola junto com a barra, sem salto no fim.
-      if (pendingBarHeight > 0.5 && performance.now() < deadline) frame = window.requestAnimationFrame(reveal);
+      // o acompanhamento segue frame a frame até a transição e a curva terminarem — sem salto no fim.
+      if ((pendingBarHeight > 0.5 || progress < 1) && now < deadline) frame = window.requestAnimationFrame(reveal);
     };
     const scrollTimer = window.setTimeout(reveal, 0);
     return () => {

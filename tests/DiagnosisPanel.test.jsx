@@ -212,7 +212,8 @@ describe("DiagnosisPanel", () => {
     // O que é revelado é a barra fixa do item (título + linha de ações), não só o gatilho.
     const itemBar = header.closest('[data-slot="diagnosis-item-bar"]');
     const bounds = vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue({ top: 100, bottom: 400 });
-    const target = vi.spyOn(itemBar, "getBoundingClientRect").mockReturnValue({ top: 420, bottom: 480 });
+    // A barra sobe conforme o painel rola, como no navegador: a rolagem suave recalcula o alvo a cada quadro.
+    const target = vi.spyOn(itemBar, "getBoundingClientRect").mockImplementation(() => ({ top: 420 - viewport.scrollTop, bottom: 480 - viewport.scrollTop }));
     fireEvent.click(header);
     await waitFor(() => expect(viewport.scrollTop).toBe(80));
     target.mockReturnValue({ top: 100, bottom: 160 });
