@@ -218,7 +218,9 @@ function reviewBadgeVariant(status) {
 
 // Status neutro (nada a decidir nem a corrigir): texto cinza, sem pílula. A pílula fica para o que carrega informação de
 // decisão (Concordo/Discordo) ou pede atenção (Área necessária) — uma coluna de pílulas iguais não destacaria nada.
-const NEUTRAL_STATUS_CLASS = "border-transparent bg-transparent font-normal text-muted-foreground";
+// Sem o recuo direito nem a borda da pílula: o texto termina na borda da coluna, onde terminam as pílulas vizinhas — com
+// eles, "Pendente" e "Adicionado" acabavam 9px antes (x 432 × 441 a 1536px) e a coluna ficava serrilhada.
+const NEUTRAL_STATUS_CLASS = "border-0 border-transparent bg-transparent pr-0 font-normal text-muted-foreground";
 
 // `compact` encurta o pendente para "Pendente" nas linhas da lista (libera ~75px para o título); o nome acessível segue completo.
 function DiagnosisStatusBadge({ compact = false, diagnosis, status, useRefinedLayout = false }) {
