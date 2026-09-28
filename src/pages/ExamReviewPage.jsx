@@ -1086,7 +1086,7 @@ export default function ExamReviewPage() {
 
   const reviewFooter = (
     <div className="flex flex-col gap-3">
-      <Card size="sm" variant="highlight">
+      <Card size="sm">
         <CardHeader className="flex flex-row items-center justify-between gap-3" data-testid="current-status">
           {/* O código do exame (como na lista do início) no lugar do rótulo "Status atual": o selo já diz que é o status,
               e o código, junto de Voltar e da primária, confirma a troca de exame e é o que o médico cita ao suporte.
