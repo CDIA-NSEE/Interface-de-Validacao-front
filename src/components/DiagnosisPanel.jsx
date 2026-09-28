@@ -1456,18 +1456,20 @@ export default function DiagnosisPanel({
                                 <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
                                   {/* Tudo o que a abertura revela na barra, abaixo da divisória: marcadores, "Original:" e a linha de ações. A
                                       divisória fecha a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o
-                                      mouse ou clicar no texto original não mexe no item, como em qualquer outro conteúdo revelado. Ordem e respiro
-                                      iguais aos do Diagnóstico do dia (marcadores → título → Original → ações, gap-2 de 8px): o contexto vem antes
-                                      da decisão — "Agrupado" explica por que o título difere do Original e ficava abaixo de Concordo/Discordo.
-                                      Sem marcadores, DiagnosisBadges não renderiza nada. py-3 dá os mesmos 12px da linha de ações para
-                                      as duas divisórias. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
+                                      mouse ou clicar no texto original não mexe no item, como em qualquer outro conteúdo revelado. Ordem igual à
+                                      do Diagnóstico do dia (marcadores → título → Original → ações): o contexto vem antes da decisão — "Agrupado"
+                                      explica por que o título difere do Original e ficava abaixo de Concordo/Discordo. Sem marcadores,
+                                      DiagnosisBadges não renderiza nada. Respiro: divisória → 8px → Original → 12px → ações (pt-2 + gap-2 + mt-1),
+                                      como o Original → 12px → ações do cartão do dia — o Original é o par do título e fica mais perto dele do que
+                                      dos botões (com 12px em cima e 8px embaixo, se lia como parte da linha de decisão). pb-3: os 12px sob a
+                                      linha de ações. Todos os controles da linha têm h-10 (toggles, Marcar área, Remover); min-h-10 garante o
                                       slot, então a barra tem a mesma altura nos dois tipos. O px-3 também guarda o anel de foco (3px) dos
                                       controles do overflow-hidden do painel. */}
-                                  <div className={cn("flex flex-col gap-2 border-t px-3 py-3", ITEM_BAR_BLOCK_PADDING_CLASS)}>
+                                  <div className={cn("flex flex-col gap-2 border-t px-3 pt-2 pb-3", ITEM_BAR_BLOCK_PADDING_CLASS)}>
                                     <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={false} />
                                     <DiagnosisOriginalText diagnosis={diagnosis} layout="additional" />
                                     <DiagnosisActionRow
-                                      className="min-h-10"
+                                      className="mt-1 min-h-10"
                                       diagnosis={diagnosis}
                                       isBusy={isBusy}
                                       isRegionTarget={activeRegionTarget?.diagnosisId === diagnosis.id}
