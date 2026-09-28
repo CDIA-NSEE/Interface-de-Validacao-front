@@ -1,5 +1,9 @@
 const REQUIRED_REGION_COLOR = "#0f7490";
-const REGION_COLORS = ["#4338ca", "#7c3aed", "#a21caf", "#0369a1", "#6b21a8", "#475569"];
+// Marrom, violeta, azul, oliva e magenta, nesta ordem (D2…D6): fora do vermelho, âmbar e verde (papéis clínicos) e
+// do petróleo do D1; escuras o bastante para o texto branco da etiqueta Dn.i (≥ 4,6:1). Validadas em todos os pares,
+// com o D1: ΔE OKLab ≥ 8 em protanopia/deuteranopia e ≥ 15 em visão normal. A anterior, quase toda roxa, tinha pares
+// indistinguíveis (azul × fúcsia 2,5 em deuteranopia; azul × petróleo 4,9 em visão normal).
+const REGION_COLORS = ["#7b3c09", "#6a59f2", "#113fbb", "#747812", "#821287"];
 
 export function getDiagnosisReviewStatus(diagnosis) {
   const status = diagnosis?.validation_status || diagnosis?.review_status;

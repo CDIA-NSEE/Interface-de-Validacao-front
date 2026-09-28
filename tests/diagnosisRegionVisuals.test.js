@@ -41,8 +41,8 @@ test("uses teal for the required D1 diagnosis", () => {
   assert.equal(visual.color, "#0f7490");
 });
 
-test("assigns the palette in reference order, without repeating a color among D1–D7", () => {
-  const colors = [1, 2, 3, 4, 5, 6, 7].map((position) =>
+test("assigns the palette in reference order, without repeating a color among D1–D6", () => {
+  const colors = [1, 2, 3, 4, 5, 6].map((position) =>
     // Ids iguais: a cor vem da referência, não da identidade.
     getDiagnosisRegionVisual({ id: 42 }, null, { diagnosisReference: `D${position}` }).color);
 
