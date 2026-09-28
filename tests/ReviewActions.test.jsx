@@ -85,6 +85,10 @@ describe("ReviewActions", () => {
     expect(onValidate).toHaveBeenCalledOnce();
     // Com dois botões eles dividem a linha: a primária não ocupa as duas colunas.
     expect(screen.getByRole("button", { name: "Validar exame" })).not.toHaveClass("@min-[18rem]/actions:col-span-2");
+    // E o texto não desce para 12px: isso é só para caberem três botões numa linha.
+    screen.getAllByRole("button").forEach((button) => {
+      expect(button).not.toHaveClass("@min-[24rem]/actions:text-xs");
+    });
 
     rerender(
       <ReviewActions

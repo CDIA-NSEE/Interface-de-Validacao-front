@@ -5,7 +5,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const ACTION_CLASS_NAME =
-  "h-[42px] w-full min-w-0 @min-[24rem]/actions:text-xs disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none";
+  "h-[42px] w-full min-w-0 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none";
+// 12px só com três botões na mesma linha (a partir de 24rem), para os rótulos caberem. Com dois, o texto fica nos 14px
+// dos outros botões do painel — antes a ação principal da página tinha letra menor que "Concordo".
+const THREE_ACTIONS_TEXT_CLASS_NAME = "@min-[24rem]/actions:text-xs";
 
 // Com três botões no grid de duas colunas (18–24rem, ex.: a gaveta compacta) a primária sobrava sozinha no canto inferior
 // esquerdo com metade da largura; ocupando a linha inteira ela fica onde a ação principal sempre está: por último, larga.
@@ -24,9 +27,10 @@ export default function ReviewActions({
   primaryLabel = "Validar",
 }) {
   const primarySlotClassName = onSave ? PRIMARY_SLOT_CLASS_NAME : undefined;
+  const actionClassName = cn(ACTION_CLASS_NAME, onSave && THREE_ACTIONS_TEXT_CLASS_NAME);
   const primaryButton = (
     <Button
-      className={cn(ACTION_CLASS_NAME, primarySlotClassName)}
+      className={cn(actionClassName, primarySlotClassName)}
       disabled={isBusy || isValid || !canValidate}
       onClick={onValidate}
       type="button"
@@ -49,7 +53,7 @@ export default function ReviewActions({
         role="group"
       >
         <Button
-          className={ACTION_CLASS_NAME}
+          className={actionClassName}
           disabled={isBusy}
           onClick={onBack}
           type="button"
@@ -60,7 +64,7 @@ export default function ReviewActions({
         </Button>
         {onSave ? (
           <Button
-            className={ACTION_CLASS_NAME}
+            className={actionClassName}
             disabled={isBusy || saveDisabled}
             onClick={onSave}
             type="button"
