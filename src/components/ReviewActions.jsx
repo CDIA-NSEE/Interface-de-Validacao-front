@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const ACTION_CLASS_NAME =
-  "h-[42px] w-full min-w-0 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none";
+  "h-10 w-full min-w-0 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none";
 // 12px só com três botões na mesma linha (a partir de 24rem), para os rótulos caberem. Com dois, o texto fica nos 14px
 // dos outros botões do painel — antes a ação principal da página tinha letra menor que "Concordo".
 const THREE_ACTIONS_TEXT_CLASS_NAME = "@min-[24rem]/actions:text-xs";

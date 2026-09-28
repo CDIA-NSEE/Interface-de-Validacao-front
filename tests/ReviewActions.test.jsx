@@ -26,7 +26,7 @@ describe("ReviewActions", () => {
     expect(buttons).toHaveLength(3);
     expect(actions).toHaveClass("@min-[24rem]/actions:grid-cols-3");
     buttons.forEach((button) => {
-      expect(button).toHaveClass("h-[42px]", "w-full", "@min-[24rem]/actions:text-xs");
+      expect(button).toHaveClass("h-10", "w-full", "@min-[24rem]/actions:text-xs");
       expect(button.querySelector("svg")).toBeInTheDocument();
     });
     expect(actions).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
