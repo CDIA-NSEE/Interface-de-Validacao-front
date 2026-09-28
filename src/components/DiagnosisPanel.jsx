@@ -466,8 +466,8 @@ function DiagnosisDetails({
   const [lastRegions, setLastRegions] = useState(regions);
   if (regions.length && regions !== lastRegions) setLastRegions(regions);
   const shownRegions = regions.length ? regions : lastRegions;
-  // A cor das áreas deste diagnóstico no traçado — a mesma conta da página (D1 na cor fixa do diagnóstico do dia).
-  const regionColor = getDiagnosisRegionVisual(diagnosis, null, { isRequired: diagnosisReference === "D1" }).color;
+  // A cor das áreas deste diagnóstico no traçado — a mesma conta da página (pela referência Dn).
+  const regionColor = getDiagnosisRegionVisual(diagnosis, null, { diagnosisReference }).color;
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";

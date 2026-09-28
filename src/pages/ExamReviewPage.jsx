@@ -759,7 +759,7 @@ export default function ExamReviewPage() {
             ...getDiagnosisRegionVisual(
               diagnosis,
               diagnosisReviewDrafts[String(diagnosis.id)]?.isOpen ? "rejected" : null,
-              { isRequired: diagnosisReference === "D1" },
+              { diagnosisReference },
             ),
             regionKey,
             diagnosisId: diagnosis.id,
@@ -791,7 +791,7 @@ export default function ExamReviewPage() {
     ? getDiagnosisRegionVisual(
         activeRegionDiagnosis,
         diagnosisReviewDrafts[String(activeRegionDiagnosis.id)]?.isOpen ? "rejected" : null,
-        { isRequired: getDiagnosisReference(diagnosisReferences, activeRegionDiagnosis.id) === "D1" },
+        { diagnosisReference: getDiagnosisReference(diagnosisReferences, activeRegionDiagnosis.id) },
       )
     : null;
   const activeRegionReference = useMemo(() => {

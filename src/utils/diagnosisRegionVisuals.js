@@ -29,13 +29,19 @@ function stablePaletteIndex(value, paletteSize) {
   return hash % paletteSize;
 }
 
-export function getDiagnosisRegionVisual(diagnosis, previewStatus = null, { isRequired = false } = {}) {
+// A cor segue a referência Dn: D1 na cor fixa do diagnóstico do dia e D2, D3… na ordem da paleta, então dois
+// diagnósticos do exame só repetem cor depois de a paleta acabar. Por hash do id, dois diagnósticos do mesmo exame
+// caíam na mesma cor com frequência (com 3 adicionais com área, ~44% dos exames).
+export function getDiagnosisRegionVisual(diagnosis, previewStatus = null, { diagnosisReference = null } = {}) {
   const status = getDiagnosisVisualStatus(diagnosis, previewStatus);
+  const position = Number(/^D(\d+)$/.exec(diagnosisReference ?? "")?.[1]);
   const identity =
     diagnosis?.id ?? diagnosis?.metadata_id ?? diagnosis?.standard_text ?? diagnosis?.name ?? "diagnosis";
-  const color = isRequired
+  const color = position === 1
     ? REQUIRED_REGION_COLOR
-    : REGION_COLORS[stablePaletteIndex(identity, REGION_COLORS.length)];
+    : position > 1
+      ? REGION_COLORS[(position - 2) % REGION_COLORS.length]
+      : REGION_COLORS[stablePaletteIndex(identity, REGION_COLORS.length)];
 
   return {
     status,
