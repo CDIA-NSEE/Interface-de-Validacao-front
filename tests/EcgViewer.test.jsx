@@ -93,6 +93,32 @@ describe("EcgViewer", () => {
     });
   });
 
+  it("sem o traçado, mostra o carregamento no lugar dele, sem áreas nem controles", () => {
+    renderWithTooltips(
+      <EcgViewer regions={[{ id: 1, x: 10, y: 10, width: 20, height: 20, regionReference: "D2.1" }]} />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Carregando traçado do ECG…");
+    expect(screen.queryByRole("img", { name: "Traçado do ECG" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "D2.1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("toolbar", { name: "Controles do ECG" })).not.toBeInTheDocument();
+  });
+
+  it("na falha do traçado, explica o bloqueio e oferece tentar de novo", () => {
+    const onImageRetry = vi.fn();
+    renderWithTooltips(
+      <EcgViewer imageError="Não foi possível carregar o traçado do ECG." onImageRetry={onImageRetry} />,
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Não foi possível carregar o traçado do ECG.");
+    expect(alert).toHaveTextContent("As decisões ficam bloqueadas até o traçado aparecer.");
+    expect(screen.queryByRole("img", { name: "Traçado do ECG" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    expect(onImageRetry).toHaveBeenCalledTimes(1);
+  });
+
   it("preserva a faixa de zoom de 0,6 a 2,4 e o passo de 0,15", () => {
     renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
 

@@ -7,6 +7,7 @@ import {
   addDiagnosisRegion,
   getDiagnosisOptions,
   getExamById,
+  getExamImage,
   removeDiagnosisRegion,
   saveExamDraft,
 } from "../src/services/examsService.js";
@@ -23,10 +24,16 @@ beforeAll(() => {
     configurable: true,
     value: () => [],
   });
+  // jsdom não implementa object URLs; a página libera a do traçado ao trocar de exame e ao desmontar.
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
 });
 
 afterAll(() => {
   delete Element.prototype.getAnimations;
+  delete URL.revokeObjectURL;
 });
 
 afterEach(() => {
@@ -55,6 +62,7 @@ vi.mock("../src/services/examsService.js", () => ({
   addDiagnosisRegion: vi.fn(),
   getDiagnosisOptions: vi.fn(),
   getExamById: vi.fn(),
+  getExamImage: vi.fn(),
   removeDiagnosis: vi.fn(),
   removeDiagnosisRegion: vi.fn(),
   saveExamDraft: vi.fn(),
@@ -124,6 +132,8 @@ beforeEach(() => {
     disconnect() {}
   });
   getExamById.mockResolvedValue(exam);
+  getExamImage.mockReset();
+  getExamImage.mockResolvedValue("blob:ecg-42");
   getDiagnosisOptions.mockResolvedValue(["Fibrilação atrial"]);
   getValidationContext.mockResolvedValue({
     active_standard_diagnosis: "Ritmo sinusal",
@@ -212,6 +222,55 @@ describe("ExamReviewPage", () => {
         "Defina Concordo ou Discordo para continuar.",
       );
     });
+  });
+
+  it("abre o exame só com o traçado real, baixado junto com os dados", async () => {
+    stubViewport(false);
+    let resolveImage;
+    getExamImage.mockReturnValue(new Promise((resolve) => { resolveImage = resolve; }));
+    const { container } = render(<ExamReviewPage />);
+
+    expect(getExamImage).toHaveBeenCalledWith("42", { signal: expect.any(AbortSignal) });
+    await waitFor(() => expect(getExamById).toHaveBeenCalledWith("42"));
+    await act(async () => {});
+    expect(screen.getByText("Abrindo exame...")).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Exame ECG-42" })).not.toBeInTheDocument();
+
+    await act(async () => resolveImage("blob:ecg-42"));
+
+    expect(await screen.findByRole("heading", { name: "Exame ECG-42" })).toBeVisible();
+    expect(screen.getByRole("img", { name: "Traçado do ECG" })).toHaveAttribute("src", "blob:ecg-42");
+    expect(container.querySelector('img[src*="sample-ecg"]')).not.toBeInTheDocument();
+  });
+
+  it("mostra a falha no lugar do traçado, sem ECG de exemplo, e tenta de novo", async () => {
+    stubViewport(false);
+    const user = userEvent.setup();
+    getExamImage
+      .mockRejectedValueOnce(new Error("timeout of 60000ms exceeded"))
+      .mockResolvedValueOnce("blob:ecg-42");
+    const { container } = render(<ExamReviewPage />);
+
+    expect(await screen.findByText("Não foi possível carregar o traçado do ECG.")).toBeVisible();
+    expect(screen.getByText("As decisões ficam bloqueadas até o traçado aparecer.")).toBeVisible();
+    expect(screen.queryByRole("img", { name: "Traçado do ECG" })).not.toBeInTheDocument();
+    expect(container.querySelector('img[src*="sample-ecg"]')).not.toBeInTheDocument();
+    expect(screen.queryByRole("toolbar", { name: "Controles do ECG" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+    expect(await screen.findByRole("img", { name: "Traçado do ECG" })).toHaveAttribute("src", "blob:ecg-42");
+    expect(screen.queryByText("Não foi possível carregar o traçado do ECG.")).not.toBeInTheDocument();
+    expect(getExamImage).toHaveBeenCalledTimes(2);
+  });
+
+  it("avisa quando o exame não tem imagem do ECG", async () => {
+    stubViewport(false);
+    getExamImage.mockRejectedValueOnce({ response: { status: 404 } });
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByText("Imagem do ECG não encontrada.")).toBeVisible();
+    expect(screen.queryByRole("img", { name: "Traçado do ECG" })).not.toBeInTheDocument();
   });
 
   it("explica quando falta uma região obrigatória", async () => {

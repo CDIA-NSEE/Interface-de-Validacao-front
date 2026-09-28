@@ -52,6 +52,7 @@ import {
   addDiagnosisRegion,
   getDiagnosisOptions,
   getExamById,
+  getExamImage,
   removeDiagnosis,
   removeDiagnosisRegion,
   saveExamDraft,
@@ -105,6 +106,15 @@ function regionLabelFor(diagnosis) {
 
 function savedRegionKey(diagnosisId, region, index) {
   return `${diagnosisId}:${region.id ?? `legacy-${index}`}`;
+}
+
+// Traçado do ECG: `src` só existe quando a imagem já está decodificada; sem `src` e sem `error`, está carregando.
+const ECG_IMAGE_LOADING = { src: null, error: "" };
+
+function getEcgImageErrorMessage(requestError) {
+  return requestError?.response?.status === 404
+    ? "Imagem do ECG não encontrada."
+    : "Não foi possível carregar o traçado do ECG.";
 }
 
 // Só indica "ocupado" se a requisição passar do limiar: pedidos rápidos (dezenas de ms) não chegam a desabilitar
@@ -212,6 +222,9 @@ export default function ExamReviewPage() {
   const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
+  const [ecgImage, setEcgImage] = useState(ECG_IMAGE_LOADING);
+  const ecgImageRequestRef = useRef(null);
+  const loadRequestRef = useRef(0);
   const [sidebarWidth, setSidebarWidth] = useState(null);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -221,16 +234,46 @@ export default function ExamReviewPage() {
     notesSaveTimerRef.current = null;
   }, []);
 
+  // Um pedido do traçado por vez: trocar de exame, tentar de novo ou sair da página cancela o anterior e descarta a
+  // resposta dele — o ECG na tela é sempre o do exame aberto. Nunca rejeita: a falha vira `ecgImage.error`.
+  const requestEcgImage = useCallback(() => {
+    ecgImageRequestRef.current?.abort();
+    const controller = new AbortController();
+    ecgImageRequestRef.current = controller;
+    setEcgImage(ECG_IMAGE_LOADING);
+    return getExamImage(id, { signal: controller.signal }).then(
+      (src) => {
+        if (controller.signal.aborted) URL.revokeObjectURL(src);
+        else setEcgImage({ src, error: "" });
+      },
+      (requestError) => {
+        if (!controller.signal.aborted) setEcgImage({ src: null, error: getEcgImageErrorMessage(requestError) });
+      },
+    );
+  }, [id]);
+
+  const ecgImageSrc = ecgImage.src;
+  useEffect(() => () => {
+    if (ecgImageSrc) URL.revokeObjectURL(ecgImageSrc);
+  }, [ecgImageSrc]);
+
   const loadExam = useCallback(async () => {
+    // Só o carregamento mais recente mexe no estado: a resposta de um exame anterior nunca se mistura ao atual.
+    const loadRequest = loadRequestRef.current + 1;
+    loadRequestRef.current = loadRequest;
+    const isCurrentLoad = () => loadRequestRef.current === loadRequest;
     clearNotesSaveTimer();
     setIsLoading(true);
     setError("");
+    // O traçado vem em paralelo com os dados, e a página só aparece com ele na tela (ou com o erro dele).
+    const ecgImageRequest = requestEcgImage();
     try {
       const [examData, options, contextData] = await Promise.all([
         getExamById(id),
         getDiagnosisOptions(),
         getValidationContext(),
       ]);
+      if (!isCurrentLoad()) return;
       setDiagnosisOptions(options);
       setValidationContext(contextData);
       latestNotesRef.current = examData.draft_notes || "";
@@ -250,23 +293,27 @@ export default function ExamReviewPage() {
       setSelectedRegionKey(null);
       if (examData.status_validation === "nao_validado") {
         const updatedExam = await updateExamStatus(id, "em_validacao");
+        if (!isCurrentLoad()) return;
         setExam(updatedExam);
       } else {
         setExam(examData);
       }
+      await ecgImageRequest;
     } catch (requestError) {
+      if (!isCurrentLoad()) return;
       setError(
         requestError?.response?.data?.detail ||
           "Não foi possível carregar o exame selecionado.",
       );
     } finally {
-      setIsLoading(false);
+      if (isCurrentLoad()) setIsLoading(false);
     }
-  }, [clearNotesSaveTimer, id]);
+  }, [clearNotesSaveTimer, id, requestEcgImage]);
 
   useEffect(() => () => {
     decisionFeedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     decisionFeedbackTimersRef.current.clear();
+    ecgImageRequestRef.current?.abort();
     clearNotesSaveTimer();
     window.cancelAnimationFrame(moreInformationRevealFrameRef.current);
   }, [clearNotesSaveTimer]);
@@ -1110,8 +1157,10 @@ export default function ExamReviewPage() {
             >
               <div className="flex min-h-full w-full flex-col gap-2">
                 <EcgViewer
-                  imageUrl={exam.image_endpoint || exam.image_url}
+                  imageError={ecgImage.error}
+                  imageUrl={ecgImage.src}
                   onImageAspectRatioChange={setImageAspectRatio}
+                  onImageRetry={requestEcgImage}
                   onRegionCancel={handleCancelRegionSelection}
                   selectedRegion={selectedRegion}
                   onRegionChange={handleRegionChange}

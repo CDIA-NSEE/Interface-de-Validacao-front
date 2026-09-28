@@ -2,9 +2,10 @@ import { Eye, EyeOff, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TooltipIconButton from "@/components/TooltipIconButton.jsx";
-import api from "../services/api.js";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
 const MIN_ZOOM = 0.6;
@@ -47,9 +48,40 @@ function hasOpenDialog() {
   return Boolean(document.querySelector("[role='dialog'][data-open], [role='alertdialog'][data-open]"));
 }
 
+// Ocupa o lugar do traçado, no mesmo tamanho: a página não salta quando o ECG chega.
+function EcgImageUnavailable({ error, onRetry }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center rounded-lg bg-muted/50 p-6">
+      {error ? (
+        <div className="flex max-w-sm flex-col items-center gap-3 text-center">
+          <div className="flex flex-col gap-1" role="alert">
+            <p className="text-sm font-medium text-destructive">{error}</p>
+            <p className="text-sm text-muted-foreground">As decisões ficam bloqueadas até o traçado aparecer.</p>
+          </div>
+          {onRetry ? (
+            <Button onClick={onRetry} size="sm" type="button" variant="outline">
+              <RotateCcw aria-hidden="true" data-icon="inline-start" />
+              Tentar novamente
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+          <Spinner aria-hidden="true" />
+          Carregando traçado do ECG…
+        </div>
+      )}
+    </div>
+  );
+}
+
+// `imageUrl` só chega pronto para exibir (a página baixa e decodifica o traçado). Sem ele, o viewer mostra o carregamento
+// ou o `imageError` no lugar do traçado — nunca um ECG de exemplo, que o médico poderia tomar pelo do paciente.
 export default function EcgViewer({
+  imageError,
   imageUrl,
   onImageAspectRatioChange,
+  onImageRetry,
   onRegionCancel,
   onRegionChange,
   onRegionHover,
@@ -68,7 +100,6 @@ export default function EcgViewer({
   const [draftRegion, setDraftRegion] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
-  const [resolvedSource, setResolvedSource] = useState("/sample-ecg.svg");
   const canvasRef = useRef(null);
   const stageRef = useRef(null);
   const viewerRef = useRef(null);
@@ -77,7 +108,7 @@ export default function EcgViewer({
   const draftFrameRef = useRef(null);
   const draftPointRef = useRef(null);
   const zoomAnchorRef = useRef(null);
-  const source = useMemo(() => imageUrl || "/sample-ecg.svg", [imageUrl]);
+  const isImageReady = Boolean(imageUrl);
   const isSelectionActive = Boolean(selectionLabel);
   const isEditing = isSelectionActive && Boolean(selectedRegion);
   const activeRegion = draftRegion || selectedRegion;
@@ -102,34 +133,6 @@ export default function EcgViewer({
         height: `${fittedSize.height * zoom}px`,
       }
     : { width: `${Number((zoom * 100).toFixed(2))}%` };
-
-  useEffect(() => {
-    let objectUrl = null;
-    let isCurrent = true;
-
-    if (!source.startsWith("/exams/")) {
-      setResolvedSource(source);
-      return undefined;
-    }
-
-    api
-      .get(source, { responseType: "blob" })
-      .then((response) => {
-        if (!isCurrent) return;
-        objectUrl = URL.createObjectURL(response.data);
-        setResolvedSource(objectUrl);
-      })
-      .catch(() => {
-        if (isCurrent) setResolvedSource("/sample-ecg.svg");
-      });
-
-    return () => {
-      isCurrent = false;
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [source]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -233,7 +236,7 @@ export default function EcgViewer({
   }
 
   function handlePointerDown(event) {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || !isImageReady) return;
     if (!isSelectionActive) {
       if (event.target.closest?.(".saved-region-box")) return;
       onRegionSelect?.(null);
@@ -315,7 +318,7 @@ export default function EcgViewer({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return undefined;
+    if (!canvas || !isImageReady) return undefined;
 
     function handleWheel(event) {
       event.preventDefault();
@@ -324,11 +327,13 @@ export default function EcgViewer({
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [changeZoom]);
+  }, [changeZoom, isImageReady]);
 
   useEffect(() => () => cancelDraftFrame(), [cancelDraftFrame]);
 
   useEffect(() => {
+    if (!isImageReady) return undefined;
+
     function handleShortcut(event) {
       const isEscape = event.key === "Escape";
       if (isTextEntryElement(event.target) && !(isEscape && isSelectionActive)) return;
@@ -361,7 +366,7 @@ export default function EcgViewer({
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [changeZoom, clearSelection, hasSelectedSavedRegion, isSelectionActive, resetView, selectedRegion]);
+  }, [changeZoom, clearSelection, hasSelectedSavedRegion, isImageReady, isSelectionActive, resetView, selectedRegion]);
 
   const cleanViewTooltip = isSelectionActive
     ? isEditing
@@ -445,7 +450,7 @@ export default function EcgViewer({
       >
         <div className="ecg-canvas" ref={canvasRef}>
           <div
-            className={`ecg-image-stage ${isSelectionActive ? "touch-none cursor-crosshair" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`ecg-image-stage ${!isImageReady ? "" : isSelectionActive ? "touch-none cursor-crosshair" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -453,13 +458,17 @@ export default function EcgViewer({
             ref={stageRef}
             style={{ ...stageStyle, aspectRatio: imageAspectRatio }}
           >
-          <img
-            src={resolvedSource}
-            alt="Traçado do ECG"
-            draggable="false"
-            onLoad={handleImageLoad}
-          />
-          {!isCleanView ? visibleRegions.map((region, index) => (
+          {isImageReady ? (
+            <img
+              src={imageUrl}
+              alt="Traçado do ECG"
+              draggable="false"
+              onLoad={handleImageLoad}
+            />
+          ) : (
+            <EcgImageUnavailable error={imageError} onRetry={onImageRetry} />
+          )}
+          {isImageReady && !isCleanView ? visibleRegions.map((region, index) => (
             <button
               aria-label={region.label || region.regionReference || "Área vinculada"}
               aria-pressed={Boolean(region.isSelected)}
@@ -488,7 +497,7 @@ export default function EcgViewer({
               ) : null}
             </button>
           )) : null}
-          {!isCleanView && activeRegion ? (
+          {isImageReady && !isCleanView && activeRegion ? (
             <span
               className={`selection-box active-selection-box ${draftRegion ? "is-draft" : ""}`}
               style={{
@@ -529,7 +538,7 @@ export default function EcgViewer({
             </TooltipIconButton>
           </Badge>
         ) : null}
-        {controls}
+        {isImageReady ? controls : null}
       </div>
     </TooltipProvider>
   );

@@ -1,5 +1,8 @@
 import api from "./api.js";
 
+// O traçado pesa ~0,7 MB (gzip) e passaria do timeout global de 12 s, pensado para JSON, em rede lenta.
+const EXAM_IMAGE_TIMEOUT_MS = 60000;
+
 function cleanFilters(filters = {}) {
   return Object.fromEntries(
     Object.entries(filters).filter(([, value]) => value && value !== "all"),
@@ -16,6 +19,26 @@ export async function getExams(filters) {
 export async function getExamById(id) {
   const { data } = await api.get(`/exams/${id}`);
   return data;
+}
+
+// Baixa com o token e só devolve a URL depois de decodificar: o traçado pinta assim que é exibido, e um arquivo
+// corrompido vira erro em vez de imagem quebrada. Quem recebe a URL a libera com URL.revokeObjectURL.
+export async function getExamImage(id, { signal } = {}) {
+  const { data } = await api.get(`/exams/${id}/image`, {
+    responseType: "blob",
+    signal,
+    timeout: EXAM_IMAGE_TIMEOUT_MS,
+  });
+  const src = URL.createObjectURL(data);
+  try {
+    const image = new Image();
+    image.src = src;
+    await image.decode();
+    return src;
+  } catch (error) {
+    URL.revokeObjectURL(src);
+    throw error;
+  }
 }
 
 export async function getDiagnosisOptions() {
