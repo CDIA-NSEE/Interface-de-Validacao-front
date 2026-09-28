@@ -337,7 +337,7 @@ export default function ValidationSidebar({
           finalFocus={false}
           onPointerEnter={keepOpen}
           onPointerLeave={scheduleClose}
-          overlayClassName="bg-black/25"
+          overlayClassName="bg-scrim/28"
           showCloseButton={false}
           side="left"
         >
