@@ -1425,8 +1425,11 @@ export default function DiagnosisPanel({
                                 // numa linha) e o que a abertura revela começa depois da divisória. Sem troca de padding também não há o
                                 // solavanco de 4px no primeiro frame que a transição antiga precisava compensar.
                                 "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
-                                hoveredRegionKey?.startsWith(`${diagnosis.id}:`) && !selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-accent/60",
-                                selectedRegionKey?.startsWith(`${diagnosis.id}:`) && "bg-muted/40 ring-1 ring-inset ring-ring/30",
+                                // Ligado ao ECG (uma área dele em hover ou selecionada): a mesma tinta nos dois estados, sem anel — o
+                                // selecionado era mais fraco que o hover (ΔE 0,021 × 0,048) e o anel de 1px em volta só do título tinha a forma
+                                // do anel de foco. O anel fica na linha da área selecionada, que é o que está selecionado. `hover:` repete a
+                                // tinta para ela não cair para o hover comum (mais fraco) com o ponteiro sobre o título.
+                                [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`)) && "bg-accent/60 hover:bg-accent/60",
                                 // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
                                 activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
                               )}>
