@@ -151,8 +151,11 @@ const REFINED_DETAILS_STYLES = {
   areaCollapsible: "",
   areaPanel: COLLAPSIBLE_PANEL_CLASS,
   areaRow: "bg-background p-1.5 duration-150 motion-reduce:transition-none",
-  areaRowHovered: "bg-info/5",
-  areaRowSelected: "bg-info/10 ring-1 ring-inset ring-info/70",
+  // Tinta "info" misturada ao fundo da própria linha (`background`), não translúcida: `bg-info/5` substituía o
+  // `bg-background` e pintava sobre o cartão branco — branco + 5% de info dava o próprio fundo azulado (ΔE OKLab 0,006 no
+  // claro, hover invisível; no escuro a linha só clareava para o tom do cartão).
+  areaRowHovered: "bg-[color-mix(in_oklab,var(--info)_8%,var(--background))]",
+  areaRowSelected: "bg-[color-mix(in_oklab,var(--info)_14%,var(--background))] ring-1 ring-inset ring-info/70",
   areaSelectButton: "min-h-7 cursor-pointer rounded-md font-medium focus-visible:ring-2 focus-visible:ring-ring/50",
   areaReferenceBadge: "border-info/30 bg-info/10 text-info-subtle-foreground",
   areaActions: "border-l border-border pl-1.5",
