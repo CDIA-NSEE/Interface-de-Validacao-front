@@ -150,7 +150,8 @@ const REFINED_DETAILS_STYLES = {
   // aqui somaria uma segunda horizontal a poucos pixels dele.
   areaCollapsible: "",
   areaPanel: COLLAPSIBLE_PANEL_CLASS,
-  areaRow: "bg-background p-1.5 duration-150 motion-reduce:transition-none",
+  // O anel da linha selecionada entra junto com a tinta (só `transition-colors`, ele aparecia num quadro).
+  areaRow: "bg-background p-1.5 transition-[color,background-color,box-shadow] duration-150 motion-reduce:transition-none",
   // Tinta "info" misturada ao fundo da própria linha (`background`), não translúcida: `bg-info/5` substituía o
   // `bg-background` e pintava sobre o cartão branco — branco + 5% de info dava o próprio fundo azulado (ΔE OKLab 0,006 no
   // claro, hover invisível; no escuro a linha só clareava para o tom do cartão).
@@ -1424,7 +1425,8 @@ export default function DiagnosisPanel({
                                 // O padding não muda com o estado: o cabeçalho tem a mesma caixa aberto e fechado (8+6+20+6+8 = 48px com o título
                                 // numa linha) e o que a abertura revela começa depois da divisória. Sem troca de padding também não há o
                                 // solavanco de 4px no primeiro frame que a transição antiga precisava compensar.
-                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-colors duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                // `box-shadow` na transição: o anel (marcando área, foco) entra com o fundo, não num quadro antes dele.
+                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                                 // Ligado ao ECG (uma área dele em hover ou selecionada): a mesma tinta nos dois estados, sem anel — o
                                 // selecionado era mais fraco que o hover (ΔE 0,021 × 0,048) e o anel de 1px em volta só do título tinha a forma
                                 // do anel de foco. O anel fica na linha da área selecionada, que é o que está selecionado. `hover:` repete a
