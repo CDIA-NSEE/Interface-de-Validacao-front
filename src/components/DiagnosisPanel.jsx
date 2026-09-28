@@ -68,8 +68,9 @@ const AI_AGREEMENT_DESCRIPTION =
 
 // Altura e superfície partilhadas pelos toggles de decisão e pelo "Marcar área" na mesma linha (todos os layouts).
 // `disabled:opacity-100` evita o "apagão" da linha durante o salvamento; o pointer-events-none continua bloqueando duplo envio.
+// Com o painel travado (sem o traçado na tela), o desabilitado volta a aparecer: não é uma espera curta.
 const INLINE_DECISION_CONTROL_CLASS =
-  "h-10 bg-card transition-colors duration-150 disabled:opacity-100 motion-reduce:transition-none dark:bg-card";
+  "h-10 bg-card transition-colors duration-150 disabled:opacity-100 [[data-decisions-locked]_&]:disabled:opacity-50 motion-reduce:transition-none dark:bg-card";
 
 // Linha única "Concordo | Discordo | Marcar área" (DiagnosisActionRow), a mesma no diagnóstico do dia, na revalidação
 // geral e nos adicionais, para que a decisão tenha a mesma forma, o mesmo lugar e o mesmo alvo em todos os cartões.
@@ -955,8 +956,9 @@ export default function DiagnosisPanel({
   dailyStandardDiagnosis,
   diagnoses = [],
   diagnosisReferences = {},
-  isBusy,
+  isBusy: isBusyProp,
   isGeneralReviewDay,
+  isLocked = false,
   isSecondaryOpen,
   onAdd,
   onEditRegion,
@@ -976,6 +978,9 @@ export default function DiagnosisPanel({
   hoveredRegionKey = null,
   selectedRegionKey = null,
 }) {
+  // Travado (sem o traçado na tela) bloqueia os mesmos controles do "ocupado", mas dura: ali a linha de decisão aparece
+  // desabilitada (`data-decisions-locked`, ver INLINE_DECISION_CONTROL_CLASS) em vez de parecer clicável.
+  const isBusy = isBusyProp || isLocked;
   const addDiagnosisContentId = useId();
   const [name, setName] = useState("");
   // Texto digitado na busca de "Adicionar diagnóstico" (só para destacar o trecho nas opções).
@@ -1325,7 +1330,7 @@ export default function DiagnosisPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" data-decisions-locked={isLocked || undefined}>
       <section aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"} className="flex flex-col gap-2" role="region">
         {isGeneralReviewDay ? (
           <div className="px-0.5">
@@ -1568,6 +1573,7 @@ export default function DiagnosisPanel({
                       aria-expanded={false}
                       aria-label="Adicionar diagnóstico"
                       className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                      disabled={isBusy}
                       onClick={() => handleAddDiagnosisToggle(true)}
                       ref={addDiagnosisTriggerRef}
                       type="button"

@@ -836,7 +836,11 @@ export default function ExamReviewPage() {
   const hasUnsavedNotes = notes !== (exam?.draft_notes || "");
   const hasUnsavedChanges = hasUnsavedNotes || hasUnsavedDiagnosisReview;
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
-  const primaryDisabledReason = usesDailyFlow && !requiredDecisionComplete
+  // Sem o traçado na tela não há decisão: o painel e a ação primária ficam travados até ele aparecer.
+  const isEcgUnavailable = !ecgImage.src;
+  const primaryDisabledReason = isEcgUnavailable
+    ? "Carregue o traçado do ECG para continuar."
+    : usesDailyFlow && !requiredDecisionComplete
     ? requiredDiagnoses.some(
       (diagnosis) =>
         getDiagnosisReviewStatus(diagnosis) !== "pending" && diagnosis.region_required_missing,
@@ -951,6 +955,7 @@ export default function ExamReviewPage() {
       onStartRegion={handleStartRegion}
       isBusy={isBusyIndicated}
       isGeneralReviewDay={validationContext?.is_general_review_day}
+      isLocked={isEcgUnavailable}
       isSecondaryOpen={isSecondaryPanelOpen}
       onSecondaryToggle={setIsSecondaryPanelOpen}
     />
@@ -1104,7 +1109,7 @@ export default function ExamReviewPage() {
       <ReviewActions
         onBack={handleReturnHome}
         onValidate={handlePrimaryAction}
-        canValidate={requiredDecisionComplete}
+        canValidate={requiredDecisionComplete && !isEcgUnavailable}
         isBusy={isBusyIndicated}
         isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
         primaryDisabledReason={primaryDisabledReason}

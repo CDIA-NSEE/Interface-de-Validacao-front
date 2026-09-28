@@ -264,6 +264,43 @@ describe("ExamReviewPage", () => {
     expect(getExamImage).toHaveBeenCalledTimes(2);
   });
 
+  it("trava as decisões enquanto o traçado não está na tela", async () => {
+    stubViewport(false);
+    const user = userEvent.setup();
+    getExamImage
+      .mockRejectedValueOnce(new Error("Network Error"))
+      .mockResolvedValueOnce("blob:ecg-42");
+    render(<ExamReviewPage />);
+
+    await screen.findByText("Não foi possível carregar o traçado do ECG.");
+    // Travado aparece desabilitado (o "ocupado" curto mantém a aparência plena).
+    expect(screen.getByRole("button", { name: "Concordo" }).closest("[data-decisions-locked]")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Concordo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Discordo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Marcar área" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toBeDisabled();
+    const primaryButton = screen.getByRole("button", { name: "Salvar e próximo" });
+    expect(primaryButton).toBeDisabled();
+    expect(primaryButton.parentElement).toHaveAttribute(
+      "aria-label",
+      "Salvar e próximo indisponível: Carregue o traçado do ECG para continuar.",
+    );
+    // Observações são rascunho, não decisão: continuam livres.
+    expect(screen.getByRole("textbox", { name: "Observações gerais (opcional)" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
+
+    await screen.findByRole("img", { name: "Traçado do ECG" });
+    expect(screen.getByRole("button", { name: "Concordo" }).closest("[data-decisions-locked]")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Concordo" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Marcar área" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Adicionar diagnóstico" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Salvar e próximo" }).parentElement).toHaveAttribute(
+      "aria-label",
+      "Salvar e próximo indisponível: Defina Concordo ou Discordo para continuar.",
+    );
+  });
+
   it("avisa quando o exame não tem imagem do ECG", async () => {
     stubViewport(false);
     getExamImage.mockRejectedValueOnce({ response: { status: 404 } });
