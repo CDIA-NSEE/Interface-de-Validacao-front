@@ -45,7 +45,7 @@ import { InputGroupAddon } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { getDiagnosisReviewStatus, getDiagnosisVisualStatus } from "../utils/diagnosisRegionVisuals.js";
+import { getDiagnosisRegionVisual, getDiagnosisReviewStatus, getDiagnosisVisualStatus } from "../utils/diagnosisRegionVisuals.js";
 import { normalizeReviewNote } from "../utils/disagreementReview.js";
 import {
   getDiagnosisDisplayGroups,
@@ -465,6 +465,8 @@ function DiagnosisDetails({
   const [lastRegions, setLastRegions] = useState(regions);
   if (regions.length && regions !== lastRegions) setLastRegions(regions);
   const shownRegions = regions.length ? regions : lastRegions;
+  // A cor das áreas deste diagnóstico no traçado — a mesma conta da página (D1 na cor fixa do diagnóstico do dia).
+  const regionColor = getDiagnosisRegionVisual(diagnosis, null, { isRequired: diagnosisReference === "D1" }).color;
   const isRegionTarget = activeRegionTarget?.diagnosisId === diagnosis.id;
   const isDisagreementOpen = Boolean(reviewDraft?.isOpen);
   const reviewNoteDraft = reviewDraft?.note ?? diagnosis.review_notes ?? "";
@@ -620,7 +622,13 @@ function DiagnosisDetails({
               type="button"
             >
               {regionReference ? <Badge className={cn("rounded-md", styles.areaReferenceBadge)} variant="outline">{regionReference}</Badge> : null}
-              <span>{areaLabel}</span>
+              {/* Chave de cor, como a legenda de um gráfico: o quadrado tem a cor das áreas do diagnóstico no traçado (a das
+                  etiquetas Dn.i), o único elo visual entre a linha e a caixa no ECG — a etiqueta da lista é `info` para todo
+                  diagnóstico. Decorativo: o nome continua o da referência. */}
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden="true" className="size-2 shrink-0 rounded-xs" data-slot="region-color-key" style={{ backgroundColor: regionColor }} />
+                {areaLabel}
+              </span>
             </button>
             <div className={cn("flex shrink-0 items-center gap-1", styles.areaActions)}>
               <Button aria-label={`Editar ${accessibleAreaLabel}`} disabled={isBusy} onClick={() => onEditRegion(diagnosis, region)} size="icon-sm" title={`Editar ${accessibleAreaLabel}`} type="button" variant="ghost"><Pencil aria-hidden="true" /></Button>
