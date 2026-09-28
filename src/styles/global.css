@@ -333,7 +333,9 @@
   border: 1px solid color-mix(in oklab, var(--background) 90%, transparent);
   border-radius: 0.375rem;
   padding-inline: 0.375rem;
-  color: var(--primary-foreground);
+  /* Texto claro nos dois temas: a cor da área não muda com o tema (o traçado é papel branco). O `primary-foreground`
+     do escuro é quase preto e ficava a ~2,5:1 sobre as cores das áreas. */
+  color: oklch(0.985 0.006 220);
   background: var(--region-color, var(--primary));
   font-size: 0.72rem;
   font-weight: 800;
