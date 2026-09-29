@@ -11,6 +11,7 @@ import { useEffect, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge.jsx";
 import { Button } from "@/components/ui/button.jsx";
+import { Separator } from "@/components/ui/separator.jsx";
 import {
   Sheet,
   SheetContent,
@@ -155,6 +156,7 @@ function NavigationPanel({
     <div className="flex h-full w-72 flex-col">
       <NavigationHeader compact={compact} />
 
+      {/* Destino no topo; ajuda, preferência e conta embaixo (como Material e Carbon separam destinos de utilidades). */}
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         <div className="flex flex-col">
           <NavigationAction
@@ -165,6 +167,9 @@ function NavigationPanel({
             label="Início"
             onClick={onHome}
           />
+        </div>
+
+        <div className="mt-auto flex flex-col">
           <NavigationAction
             compact={compact}
             icon={HelpCircle}
@@ -186,9 +191,12 @@ function NavigationPanel({
             label={isDark ? "Modo claro" : "Modo escuro"}
             onClick={onTheme}
           />
-        </div>
-
-        <div className="mt-auto flex flex-col">
+          <Separator
+            className={cn(
+              "mx-3 my-2 bg-brand-foreground/15",
+              compact ? "data-horizontal:w-10" : "data-horizontal:w-auto",
+            )}
+          />
           <AccountIdentity compact={compact} doctorName={doctorName} doctorRole={doctorRole} />
           <NavigationAction
             compact={compact}
