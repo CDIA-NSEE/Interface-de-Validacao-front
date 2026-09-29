@@ -78,6 +78,12 @@ const INLINE_DECISION_CONTROL_CLASS =
 // da decisão. Regra de posição da tela inteira: à esquerda a identidade/o veredito, à direita a ação — por isso
 // "Marcar área" fecha a linha (`ml-auto`), no mesmo x em qualquer tipo de diagnóstico, e é um slot fixo: o mesmo
 // botão, no mesmo lugar, com 0 ou N áreas e com área obrigatória pendente.
+// Linha estreita (abaixo de 328px, ~1320px de janela): Concordo, Discordo e "Remover diagnóstico" ficam só com o ícone.
+// Com texto, cada toggle pede 98px e a linha, 328px; abaixo disso o texto passava da borda e, no adicionado pelo médico,
+// a linha alargava o painel inteiro (rolagem horizontal). O texto segue no DOM (`sr-only`): o nome acessível e o
+// vocabulário não mudam. A query é da própria linha (`@container/action-row`), não da janela: a largura do painel sai da
+// proporção do ECG. "Marcar área" mantém o texto — o ícone sozinho não se explica — e cabe mesmo a 225px.
+const ACTION_ROW_COMPACT_LABEL_CLASS = "@max-[20.5rem]/action-row:sr-only";
 const INLINE_DECISION_ROW_STYLES = {
   decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
@@ -91,8 +97,9 @@ const INLINE_DECISION_ROW_STYLES = {
   // está aberto e pintaria bg-muted/text-foreground por baixo do overlay — a caixa não pode trocar de cor durante a
   // confirmação. A constante vem por último no `cn()`: é o que garante h-10, bg-card e disabled:opacity-100 vencendo a
   // variante (inverter a ordem quebra o dark mode em silêncio).
+  // Só ícone na linha estreita: quadrado de 40px, a altura da linha.
   removeButton: cn(
-    "shrink-0 border-border text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive aria-expanded:bg-card aria-expanded:text-muted-foreground dark:hover:bg-destructive/20",
+    "shrink-0 border-border text-muted-foreground @max-[20.5rem]/action-row:w-10 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive aria-expanded:bg-card aria-expanded:text-muted-foreground dark:hover:bg-destructive/20",
     INLINE_DECISION_CONTROL_CLASS,
   ),
 };
@@ -382,13 +389,13 @@ function DiagnosisActionRow({
 
   const decisionToggle = diagnosis.source !== "doctor_added" ? (
     <ToggleGroup aria-label={`Revisão de ${standardText}`} className="grid w-full min-w-0 flex-1 grid-cols-2" disabled={isBusy} onValueChange={handleDecisionChange} size="lg" spacing={2} value={decisionValue}>
-      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", INLINE_DECISION_ROW_STYLES.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" />Concordo</ToggleGroupItem>
-      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", INLINE_DECISION_ROW_STYLES.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" />Discordo</ToggleGroupItem>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", INLINE_DECISION_ROW_STYLES.decisionItem)} value="confirmed" variant="decisionSuccess"><Check aria-hidden="true" data-icon="inline-start" /><span className={ACTION_ROW_COMPACT_LABEL_CLASS}>Concordo</span></ToggleGroupItem>
+      <ToggleGroupItem className={cn("w-full min-w-0 px-1.5", INLINE_DECISION_ROW_STYLES.decisionItem)} value="rejected" variant="decisionDestructive"><X aria-hidden="true" data-icon="inline-start" /><span className={ACTION_ROW_COMPACT_LABEL_CLASS}>Discordo</span></ToggleGroupItem>
     </ToggleGroup>
   ) : null;
 
   return (
-    <div className={cn("flex items-center gap-2", className)} data-slot="diagnosis-action-row">
+    <div className={cn("@container/action-row flex items-center gap-2", className)} data-slot="diagnosis-action-row">
       {decisionToggle ?? leading}
       <MarkAreaButton diagnosis={diagnosis} isBusy={isBusy} isRegionTarget={isRegionTarget} onStartRegion={onStartRegion} />
     </div>
@@ -784,7 +791,7 @@ function RemoveDiagnosisAction({ diagnosis, isBusy, onRemove }) {
     <AlertDialog onOpenChange={setIsRemoveDialogOpen} open={isRemoveDialogOpen}>
       <AlertDialogTrigger render={<Button className={INLINE_DECISION_ROW_STYLES.removeButton} disabled={isBusy} size="lg" type="button" variant="outline" />}>
         <Trash2 aria-hidden="true" data-icon="inline-start" />
-        Remover diagnóstico
+        <span className={ACTION_ROW_COMPACT_LABEL_CLASS}>Remover diagnóstico</span>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
