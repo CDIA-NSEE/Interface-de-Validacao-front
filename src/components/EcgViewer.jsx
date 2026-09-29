@@ -14,6 +14,8 @@ const MAX_ZOOM = 2.4;
 // Passo multiplicativo: cada "+" amplia 25% do que está na tela, do começo ao fim da faixa (1 → 1,25 → 1,56 → 1,95 →
 // 2,4). O passo fixo de 0,15 valia +25% no começo e +6% no fim.
 const ZOOM_FACTOR = 1.25;
+// Até 3px entre apertar e soltar ainda é clique, não arrasto (a mão treme um pouco no clique).
+const CLICK_TOLERANCE = 3;
 const TOOLBAR_LEFT_TOOLTIP_PROPS = { side: "left", sideOffset: 8 };
 const TOOLBAR_RIGHT_TOOLTIP_PROPS = { side: "left", sideOffset: 48 };
 
@@ -268,11 +270,12 @@ export default function EcgViewer({
     if (event.button !== 0 || !isImageReady) return;
     if (!isSelectionActive) {
       if (event.target.closest?.(".saved-region-box")) return;
-      onRegionSelect?.(null);
+      // Desmarcar a área fica para o soltar, e só num clique: arrastar para mover o traçado mantém a seleção.
       const canvas = canvasRef.current;
       panStartRef.current = {
         clientX: event.clientX,
         clientY: event.clientY,
+        moved: false,
         scrollLeft: canvas?.scrollLeft || 0,
         scrollTop: canvas?.scrollTop || 0,
       };
@@ -290,10 +293,14 @@ export default function EcgViewer({
 
   function handlePointerMove(event) {
     if (panStartRef.current && !isSelectionActive) {
+      const panStart = panStartRef.current;
+      const deltaX = event.clientX - panStart.clientX;
+      const deltaY = event.clientY - panStart.clientY;
+      if (Math.hypot(deltaX, deltaY) >= CLICK_TOLERANCE) panStart.moved = true;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      canvas.scrollLeft = panStartRef.current.scrollLeft - (event.clientX - panStartRef.current.clientX);
-      canvas.scrollTop = panStartRef.current.scrollTop - (event.clientY - panStartRef.current.clientY);
+      canvas.scrollLeft = panStart.scrollLeft - deltaX;
+      canvas.scrollTop = panStart.scrollTop - deltaY;
       return;
     }
     if (!selectionStart) return;
@@ -309,8 +316,10 @@ export default function EcgViewer({
 
   function handlePointerUp(event) {
     if (panStartRef.current) {
+      const { moved } = panStartRef.current;
       panStartRef.current = null;
       setIsPanning(false);
+      if (!moved) onRegionSelect?.(null);
       return;
     }
     if (!selectionStart) return;

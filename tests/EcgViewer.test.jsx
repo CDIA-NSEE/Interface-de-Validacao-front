@@ -451,6 +451,31 @@ describe("EcgViewer", () => {
     expect(onRegionChange).toHaveBeenLastCalledWith({ x: 10, y: 10, width: 30, height: 30 });
   });
 
+  it("desmarca a área só no clique no vazio, não ao arrastar o traçado", () => {
+    const onRegionSelect = vi.fn();
+    const { container } = renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        onRegionSelect={onRegionSelect}
+        regions={[{ id: 9, x: 10, y: 10, width: 20, height: 20, label: "D1.1", isSelected: true }]}
+      />,
+    );
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+
+    fireEvent.pointerDown(stage, { button: 0, clientX: 300, clientY: 200, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 260, clientY: 190, pointerId: 1 });
+    fireEvent.pointerUp(stage, { button: 0, clientX: 260, clientY: 190, pointerId: 1 });
+    expect(onRegionSelect).not.toHaveBeenCalled();
+
+    // Um tremor de até 3px ainda é clique.
+    fireEvent.pointerDown(stage, { button: 0, clientX: 300, clientY: 200, pointerId: 2 });
+    fireEvent.pointerMove(stage, { clientX: 302, clientY: 201, pointerId: 2 });
+    fireEvent.pointerUp(stage, { button: 0, clientX: 302, clientY: 201, pointerId: 2 });
+    expect(onRegionSelect).toHaveBeenCalledOnce();
+    expect(onRegionSelect).toHaveBeenCalledWith(null);
+  });
+
   it("sincroniza hover, foco e seleção das regiões salvas", () => {
     const onRegionHover = vi.fn();
     const onRegionSelect = vi.fn();
