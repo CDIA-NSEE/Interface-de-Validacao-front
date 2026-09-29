@@ -17,7 +17,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet.jsx";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
 import { cn } from "@/lib/utils.js";
@@ -46,15 +45,7 @@ function getUserRoleLabel(user) {
   return roleLabels[user?.role] || user?.role || "Médico avaliador";
 }
 
-function CompactTooltip({ children, label }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger render={children} />
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
+// Sem tooltip no trilho recolhido: o menu abre com os nomes logo em seguida, e a dica só piscava antes de ser coberta.
 function NavigationAction({
   compact,
   disabled,
@@ -63,35 +54,27 @@ function NavigationAction({
   label,
   onClick,
 }) {
-  const button = (
-    <Button
-      aria-label={label}
-      className={cn(
-        "mx-2 grid h-full grid-cols-[3rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
-        compact ? "w-12" : "w-[calc(100%-1rem)]",
-      )}
-      disabled={disabled}
-      onClick={onClick}
-      size="icon"
-      type="button"
-      variant={itemKey === "logout" ? "brandNavigationDestructive" : "brandNavigation"}
-    >
-      <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
-      {compact ? null : (
-        <span className="min-w-0 truncate pr-4 pl-2 transition-opacity duration-150">
-          {label}
-        </span>
-      )}
-    </Button>
-  );
-
-  const control = compact ? (
-    <CompactTooltip label={label}>{button}</CompactTooltip>
-  ) : button;
-
   return (
     <div className="flex h-13 items-center" data-navigation-item={itemKey}>
-      {control}
+      <Button
+        aria-label={label}
+        className={cn(
+          "mx-2 grid h-full grid-cols-[3rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
+          compact ? "w-12" : "w-[calc(100%-1rem)]",
+        )}
+        disabled={disabled}
+        onClick={onClick}
+        size="icon"
+        type="button"
+        variant={itemKey === "logout" ? "brandNavigationDestructive" : "brandNavigation"}
+      >
+        <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
+        {compact ? null : (
+          <span className="min-w-0 truncate pr-4 pl-2 transition-opacity duration-150">
+            {label}
+          </span>
+        )}
+      </Button>
     </div>
   );
 }
@@ -125,7 +108,7 @@ function NavigationHeader({ compact }) {
 }
 
 function AccountIdentity({ compact, doctorName, doctorRole }) {
-  const identity = (
+  return (
     <div
       aria-label={compact ? doctorName : undefined}
       className="grid h-16 grid-cols-[4rem_minmax(0,1fr)] items-center"
@@ -147,10 +130,6 @@ function AccountIdentity({ compact, doctorName, doctorRole }) {
       )}
     </div>
   );
-
-  return compact ? (
-    <CompactTooltip label={doctorName}>{identity}</CompactTooltip>
-  ) : identity;
 }
 
 function NavigationPanel({

@@ -366,6 +366,8 @@ describe("ExamReviewPage", () => {
         (item) => item.dataset.navigationItem,
       ),
     ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
+    // Sem dica no trilho: o menu abre com os nomes, e a dica só piscava antes de ser coberta.
+    expect(collapsedNavigation.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
 
     vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation);
