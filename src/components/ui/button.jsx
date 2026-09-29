@@ -18,7 +18,7 @@ const buttonVariants = cva(
         collapsible:
           "rounded-xl hover:bg-muted hover:text-foreground aria-expanded:rounded-b-none dark:hover:bg-muted/50",
         brandGhost:
-          "text-brand-foreground hover:bg-brand-foreground/12 hover:text-brand-foreground aria-expanded:bg-brand-foreground/12 aria-expanded:text-brand-foreground",
+          "text-brand-foreground hover:bg-brand-foreground/12 hover:text-brand-foreground focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-brand-foreground focus-visible:ring-inset aria-expanded:bg-brand-foreground/12 aria-expanded:text-brand-foreground",
         brandNavigation:
           "text-brand-foreground transition-colors duration-10 ease-out motion-reduce:transition-none hover:bg-brand-foreground/16 hover:text-brand-foreground focus-visible:ring-2 focus-visible:ring-brand-foreground focus-visible:ring-inset aria-expanded:bg-brand-foreground/16 aria-expanded:text-brand-foreground [&_svg:not([class*='size-'])]:size-5",
         brandNavigationDestructive:
