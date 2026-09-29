@@ -234,8 +234,9 @@ function reviewBadgeVariant(status) {
 // Status neutro (nada a decidir nem a corrigir): texto cinza, sem pílula. A pílula fica para o que carrega informação de
 // decisão (Concordo/Discordo) ou pede atenção (Área necessária) — uma coluna de pílulas iguais não destacaria nada.
 // Sem o recuo direito nem a borda da pílula: o texto termina na borda da coluna, onde terminam as pílulas vizinhas — com
-// eles, "Pendente" e "Adicionado" acabavam 9px antes (x 432 × 441 a 1536px) e a coluna ficava serrilhada.
-const NEUTRAL_STATUS_CLASS = "border-0 border-transparent bg-transparent pr-0 font-normal text-muted-foreground";
+// eles, "Pendente" e "Adicionado" acabavam 9px antes (x 432 × 441 a 1536px) e a coluna ficava serrilhada. No gatilho
+// estreito dos adicionais o status fica abaixo do título, alinhado à esquerda: aí sai o recuo esquerdo, pelo mesmo motivo.
+const NEUTRAL_STATUS_CLASS = "border-0 border-transparent bg-transparent pr-0 font-normal text-muted-foreground @max-[18rem]/item-trigger:pl-0";
 
 // `compact` encurta o pendente para "Pendente" nas linhas da lista (libera ~75px para o título); o nome acessível segue completo.
 function DiagnosisStatusBadge({ compact = false, diagnosis, status, useRefinedLayout = false }) {
@@ -843,8 +844,10 @@ function DiagnosisStatusSummary({ className, compact = false, diagnosis, status,
       {/* `flex` tira o badge da baseline do texto (evitava um desvio de ~1px em relação ao título). */}
       <span className="relative flex animate-in fade-in-0 duration-200 motion-reduce:animate-none" key={status}>
         <DiagnosisStatusBadge compact={compact} diagnosis={diagnosis} status={status} useRefinedLayout />
-        {/* Posicionado sob o badge e centralizado na largura dele; a folga lateral evita truncar "Falha ao salvar". */}
-        <span className="absolute top-full -inset-x-6 mt-0.5 h-3 truncate text-center text-xs leading-3 font-normal text-muted-foreground">
+        {/* Posicionado sob o badge e centralizado na largura dele; a folga lateral evita truncar "Falha ao salvar". No
+            gatilho estreito dos adicionais o status fica sob o título e, embaixo dele, o feedback encostava na divisória:
+            ali ele vai ao lado do badge, na linha do status, que tem espaço livre à direita. */}
+        <span className="absolute top-full -inset-x-6 mt-0.5 h-3 truncate text-center text-xs leading-3 font-normal text-muted-foreground @max-[18rem]/item-trigger:top-1/2 @max-[18rem]/item-trigger:right-auto @max-[18rem]/item-trigger:left-full @max-[18rem]/item-trigger:mt-0 @max-[18rem]/item-trigger:ml-1.5 @max-[18rem]/item-trigger:-translate-y-1/2">
           {feedback?.type === "error" ? (
             // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
             <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
@@ -1453,7 +1456,8 @@ export default function DiagnosisPanel({
                                 // numa linha) e o que a abertura revela começa depois da divisória. Sem troca de padding também não há o
                                 // solavanco de 4px no primeiro frame que a transição antiga precisava compensar.
                                 // `box-shadow` na transição: o anel (marcando área, foco) entra com o fundo, não num quadro antes dele.
-                                "cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                // `@container/item-trigger`: a linha estreita (ver o grid do título abaixo) segue a largura do gatilho.
+                                "@container/item-trigger cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                                 // Ligado ao ECG (uma área dele em hover ou selecionada): a mesma tinta nos dois estados, sem anel — o
                                 // selecionado era mais fraco que o hover (ΔE 0,021 × 0,048) e o anel de 1px em volta só do título tinha a forma
                                 // do anel de foco. O anel fica na linha da área selecionada, que é o que está selecionado. `hover:` repete a
@@ -1464,15 +1468,20 @@ export default function DiagnosisPanel({
                               )}>
                                 {/* py-1.5 em vez de min-h-8: o respiro do título é padding fixo (6px), não a folga da centralização — que
                                     some quando o título quebra em 2–3 linhas e encostava o título na divisória. Com 1 linha a caixa
-                                    segue 32px (6+20+6) e a linha fechada, 48px; com mais linhas o item cresce 12px e ganha o mesmo respiro. */}
-                                <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5">
+                                    segue 32px (6+20+6) e a linha fechada, 48px; com mais linhas o item cresce 12px e ganha o mesmo respiro.
+                                    Gatilho estreito (conteúdo < 288px, ~1220px de janela): o status desce para baixo do título (4px abaixo,
+                                    alinhado a ele). Ao lado, a coluna do título caía para 73–112px e as palavras longas dos laudos
+                                    (104–129px: "ATRIOVENTRICULAR", "SUPRAVENTRICULAR") quebravam no meio ("ATRIOVENT|RICULAR"); embaixo,
+                                    ela ganha a largura do status (149–209px). Custa 24px por item fechado, só nessa faixa. A hifenização (`hyphens: auto`) foi testada e não resolve: o Chrome não
+                                    hifeniza pt-BR. */}
+                                <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5 @max-[18rem]/item-trigger:grid-cols-[auto_minmax(0,1fr)] @max-[18rem]/item-trigger:gap-y-1">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
                                   {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
                                       Aberto: sem clamp, mesmo peso (o item aberto já se distingue pelo filete, pelo chevron e pelo que revela;
                                       engrossar o texto refluía o título e "gritava" em CAIXA ALTA). Sem `title`: repetiria o visível e o
                                       tooltip nativo cobria o que vem logo abaixo (divisória e linha "Original:"). */}
                                   <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
-                                  <DiagnosisStatusSummary className="pb-0" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
+                                  <DiagnosisStatusSummary className="pb-0 @max-[18rem]/item-trigger:col-start-2 @max-[18rem]/item-trigger:items-start" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                                 </span>
                               </AccordionTrigger>
                               {/* Sempre montado (só o painel entra/sai) para a saída também animar: o Collapsible sem gatilho segue o item —
