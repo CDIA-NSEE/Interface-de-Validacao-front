@@ -365,7 +365,7 @@ describe("ExamReviewPage", () => {
       [...collapsedNavigation.querySelectorAll("[data-navigation-item]")].map(
         (item) => item.dataset.navigationItem,
       ),
-    ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
+    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "theme", "account", "logout"]);
     // Sem dica no trilho: o menu abre com os nomes, e a dica só piscava antes de ser coberta.
     expect(collapsedNavigation.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
     // "Dra." é título, não nome: as iniciais de "Dra. Ana" são "A".
@@ -407,7 +407,7 @@ describe("ExamReviewPage", () => {
       [...expandedNavigation.querySelectorAll("[data-navigation-item]")].map(
         (item) => item.dataset.navigationItem,
       ),
-    ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
+    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "theme", "account", "logout"]);
     const expandedBrand = expandedNavigation.querySelector('[data-navigation-item="brand"]');
     expect(expandedBrand).toHaveAttribute("aria-hidden", "true");
     expect(expandedBrand.tagName).toBe("DIV");
@@ -481,6 +481,24 @@ describe("ExamReviewPage", () => {
     expect(expandedNavigation).toHaveAttribute("data-open");
     act(() => vi.advanceTimersByTime(1));
     expect(expandedNavigation).toHaveAttribute("data-closed");
+  });
+
+  it("abre pelo menu lateral a lista de atalhos de teclado", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    screen.getByRole("button", { name: "Atalhos de teclado" }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    await user.click(expandedNavigation.querySelector('button[aria-label="Atalhos de teclado"]'));
+
+    const shortcuts = await screen.findByRole("dialog", { name: "Atalhos de teclado" });
+    expect(screen.getByRole("region", { name: "Traçado do ECG" })).toHaveTextContent("Aumentar zoom+");
+    expect(screen.getByRole("region", { name: "Campos de texto" })).toHaveTextContent(
+      "Salvar observações ou justificativaCtrl+Enter",
+    );
+    expect(shortcuts).toHaveTextContent("Ocultar ou mostrar marcaçõesV");
   });
 
   it("mantém expansão por teclado e fecha com Escape", async () => {

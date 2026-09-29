@@ -2,6 +2,7 @@ import {
   Activity,
   HelpCircle,
   House,
+  Keyboard,
   LifeBuoy,
   LogOut,
   Moon,
@@ -157,6 +158,7 @@ function NavigationPanel({
   isDark,
   onHome,
   onLogout,
+  onShortcuts,
   onSupport,
   onTheme,
   onTutorial,
@@ -185,6 +187,13 @@ function NavigationPanel({
             itemKey="tutorial"
             label="Tutorial rápido"
             onClick={onTutorial}
+          />
+          <NavigationAction
+            compact={compact}
+            icon={Keyboard}
+            itemKey="shortcuts"
+            label="Atalhos de teclado"
+            onClick={onShortcuts}
           />
           <NavigationAction
             compact={compact}
@@ -229,6 +238,7 @@ export default function ValidationSidebar({
   onHome,
   onLogout,
   onOpenChange,
+  onShortcuts,
   onSupport,
   onTutorial,
   triggerRef,
@@ -362,6 +372,7 @@ export default function ValidationSidebar({
           isDark={isDark}
           onHome={onHome}
           onLogout={onLogout}
+          onShortcuts={onShortcuts}
           onSupport={onSupport}
           onTheme={toggleTheme}
           onTutorial={onTutorial}
@@ -389,6 +400,7 @@ export default function ValidationSidebar({
             isDark={isDark}
             onHome={() => closeThen(onHome)}
             onLogout={() => closeThen(onLogout)}
+            onShortcuts={() => closeThen(onShortcuts)}
             onSupport={() => closeThen(onSupport)}
             onTheme={toggleTheme}
             onTutorial={() => closeThen(onTutorial)}

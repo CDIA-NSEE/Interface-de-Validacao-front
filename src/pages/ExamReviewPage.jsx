@@ -13,6 +13,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DiagnosisPanel from "../components/DiagnosisPanel.jsx";
 import EcgViewer from "../components/EcgViewer.jsx";
 import EmptyState from "../components/EmptyState.jsx";
+import KeyboardShortcutsModal from "../components/KeyboardShortcutsModal.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import OptionalTag from "../components/OptionalTag.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
@@ -203,6 +204,7 @@ export default function ExamReviewPage() {
   const [supportContact, setSupportContact] = useState(null);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
   const [isMoreInformationOpen, setIsMoreInformationOpen] = useState(readExamDataOpen);
   const [isReviewSheetOpen, setIsReviewSheetOpen] = useState(false);
@@ -1143,6 +1145,7 @@ export default function ExamReviewPage() {
           onHome={handleReturnHome}
           onLogout={handleLogout}
           onOpenChange={handleSidebarOpenChange}
+          onShortcuts={() => setIsShortcutsOpen(true)}
           onSupport={openSupport}
           onTutorial={() => setIsTutorialOpen(true)}
           triggerRef={sidebarTriggerRef}
@@ -1302,6 +1305,7 @@ export default function ExamReviewPage() {
           onClose={() => setIsSupportOpen(false)}
         />
         <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+        <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
         <UnsavedChangesModal
           intent={exitIntent}
           isOpen={isExitConfirmOpen}
