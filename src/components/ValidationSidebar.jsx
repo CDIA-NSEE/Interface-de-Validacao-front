@@ -74,7 +74,7 @@ function NavigationAction({
         onClick={onClick}
         size="icon"
         type="button"
-        variant={itemKey === "logout" ? "brandNavigationDestructive" : "brandNavigation"}
+        variant="brandNavigation"
       >
         <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
         {compact ? null : (
