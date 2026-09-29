@@ -230,6 +230,8 @@ export default function ValidationSidebar({
   const { isDark, toggleTheme } = useTheme();
   const openTimerRef = useRef(null);
   const closeTimerRef = useRef(null);
+  const popupRef = useRef(null);
+  const focusedItemKeyRef = useRef(null);
   const doctorName = user?.full_name || "Usuário";
   const doctorRole = getUserRoleLabel(user);
 
@@ -261,6 +263,8 @@ export default function ValidationSidebar({
     clearOpenTimer();
     clearCloseTimer();
     rememberTrigger(event);
+    focusedItemKeyRef.current =
+      event.target.closest?.("[data-navigation-item]")?.dataset.navigationItem ?? null;
     onOpenChange(true);
   }
 
@@ -272,6 +276,7 @@ export default function ValidationSidebar({
     rememberTrigger(event);
     openTimerRef.current = window.setTimeout(() => {
       openTimerRef.current = null;
+      focusedItemKeyRef.current = null;
       onOpenChange(true);
     }, SIDEBAR_OPEN_DELAY_MS);
   }
@@ -298,6 +303,16 @@ export default function ValidationSidebar({
     clearOpenTimer();
     clearCloseTimer();
     onOpenChange(open);
+  }
+
+  // Aberto pelo mouse, o foco fica no próprio painel: focar "Início" o destacava (anel de foco, se a última interação
+  // foi de teclado) e deixava Enter pronto para sair do exame. Aberto pelo teclado, segue o item que recebeu o foco.
+  function getInitialFocus() {
+    const popup = popupRef.current;
+    const itemKey = focusedItemKeyRef.current;
+    if (!itemKey) return popup ?? true;
+
+    return popup?.querySelector(`[data-navigation-item="${itemKey}"] button:not(:disabled)`) ?? true;
   }
 
   function closeThen(action) {
@@ -333,11 +348,13 @@ export default function ValidationSidebar({
       <Sheet open={expanded} onOpenChange={handleSheetOpenChange}>
         {/* Fundo só escurecido, sem desfoque (o DESIGN.md recusa blur de fundo; o overlay base do Sheet também não tem). */}
         <SheetContent
-          className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
+          className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground outline-none transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
           finalFocus={false}
+          initialFocus={getInitialFocus}
           onPointerEnter={keepOpen}
           onPointerLeave={scheduleClose}
           overlayClassName="bg-scrim/28"
+          ref={popupRef}
           showCloseButton={false}
           side="left"
         >

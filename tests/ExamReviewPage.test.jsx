@@ -455,6 +455,33 @@ describe("ExamReviewPage", () => {
     expect(agreeButton).toHaveFocus();
   });
 
+  it("abre a navegação pelo mouse com o foco no painel, sem destacar Início", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    agreeButton.focus();
+    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
+
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    await waitFor(() => expect(expandedNavigation).toHaveFocus());
+    expect(expandedNavigation.querySelector('button[aria-label="Início"]')).not.toHaveFocus();
+  });
+
+  it("abre a navegação pelo teclado no item que recebeu o foco", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const agreeButton = await screen.findByRole("button", { name: "Concordo" });
+    agreeButton.focus();
+    screen.getByRole("button", { name: "Sair da sessão" }).focus();
+
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    await waitFor(() => {
+      expect(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]')).toHaveFocus();
+    });
+  });
+
   it("permanece recolhida após restaurar o foco ao clicar fora da navegação", async () => {
     const user = userEvent.setup();
     stubViewport(false);
