@@ -38,9 +38,6 @@ export default function TutorialModal({ isOpen, onClose }) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="pr-10">
-          <span className="text-xs font-medium tracking-wide text-primary uppercase">
-            Tutorial rápido
-          </span>
           <DialogTitle>Validação de ECG</DialogTitle>
           <DialogDescription>
             Três passos para revisar a fila com segurança.

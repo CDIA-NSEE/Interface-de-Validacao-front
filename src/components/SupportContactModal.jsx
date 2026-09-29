@@ -30,9 +30,6 @@ export default function SupportContactModal({ contact, isOpen, onClose }) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="pr-10">
-          <span className="text-xs font-medium tracking-wide text-primary uppercase">
-            Contato direto
-          </span>
           <DialogTitle>{contact?.title || "Contato BP/NSEE"}</DialogTitle>
           {contact?.description ? (
             <DialogDescription>{contact.description}</DialogDescription>
