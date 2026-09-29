@@ -84,8 +84,10 @@ const INLINE_DECISION_CONTROL_CLASS =
 // vocabulário não mudam. A query é da própria linha (`@container/action-row`), não da janela: a largura do painel sai da
 // proporção do ECG. "Marcar área" mantém o texto — o ícone sozinho não se explica — e cabe mesmo a 225px.
 const ACTION_ROW_COMPACT_LABEL_CLASS = "@max-[20.5rem]/action-row:sr-only";
+// Só com o ícone, o recuo direito iguala o esquerdo (o `pl-2` de `has-data-[icon=inline-start]`) e o ícone fica no centro.
+const ACTION_ROW_COMPACT_ICON_CLASS = "@max-[20.5rem]/action-row:pr-2";
 const INLINE_DECISION_ROW_STYLES = {
-  decisionItem: cn("gap-1.5 border-input", INLINE_DECISION_CONTROL_CLASS),
+  decisionItem: cn("gap-1.5 border-input", ACTION_ROW_COMPACT_ICON_CLASS, INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
   markAreaButton: cn("ml-auto shrink-0 border-border text-muted-foreground hover:border-input hover:text-foreground active:not-aria-[haspopup]:translate-y-0", INLINE_DECISION_CONTROL_CLASS),
   // Marcando área: mesma tinta "info" que o cartão recebe, mantendo a borda para não mudar de forma.
@@ -100,6 +102,7 @@ const INLINE_DECISION_ROW_STYLES = {
   // Só ícone na linha estreita: quadrado de 40px, a altura da linha.
   removeButton: cn(
     "shrink-0 border-border text-muted-foreground @max-[20.5rem]/action-row:w-10 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive aria-expanded:bg-card aria-expanded:text-muted-foreground dark:hover:bg-destructive/20",
+    ACTION_ROW_COMPACT_ICON_CLASS,
     INLINE_DECISION_CONTROL_CLASS,
   ),
 };
