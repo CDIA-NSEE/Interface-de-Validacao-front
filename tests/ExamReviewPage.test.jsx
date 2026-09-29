@@ -409,7 +409,8 @@ describe("ExamReviewPage", () => {
     expect(screen.queryByRole("button", { name: "Recolher navegação" })).not.toBeInTheDocument();
     expect(screen.getByText("Início")).toBeVisible();
     expect(screen.getByText("Tutorial rápido")).toBeVisible();
-    expect(screen.getByText("Central de ajuda / Contato")).toBeVisible();
+    expect(screen.getByText("Contato e suporte")).toBeVisible();
+    expect(screen.queryByText("Central de ajuda / Contato")).not.toBeInTheDocument();
     expect(screen.getByText("Modo escuro")).toBeVisible();
     expect(screen.getByText("Dra. Ana")).toBeVisible();
     expect(screen.getByText("Médico avaliador")).toBeVisible();

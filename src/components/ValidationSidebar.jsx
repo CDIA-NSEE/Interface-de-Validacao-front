@@ -182,7 +182,7 @@ function NavigationPanel({
             compact={compact}
             icon={LifeBuoy}
             itemKey="support"
-            label="Central de ajuda / Contato"
+            label="Contato e suporte"
             onClick={onSupport}
           />
           <NavigationAction
