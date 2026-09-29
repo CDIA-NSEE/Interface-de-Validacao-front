@@ -321,7 +321,7 @@ describe("EcgViewer", () => {
         imageUrl="/ecg-real.png"
         onRegionCancel={onRegionCancel}
         selectionLabel="Marcando área para D2"
-        selectionDescription="Arraste sobre o ECG · Esc para cancelar"
+        selectionDescription="Arraste ou clique em dois cantos · Esc para cancelar"
       />,
     );
 
@@ -610,6 +610,46 @@ describe("EcgViewer", () => {
     fireEvent.pointerUp(stage, { button: 0, clientX: 302, clientY: 201, pointerId: 2 });
     expect(onRegionSelect).toHaveBeenCalledOnce();
     expect(onRegionSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("marca a área também com dois cliques, sem arrastar", () => {
+    const onRegionChange = vi.fn();
+    const { container, rerender } = renderWithTooltips(
+      <EcgViewer imageUrl="/ecg-real.png" onRegionChange={onRegionChange} selectionLabel="Marcando área para D2" />,
+    );
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    vi.spyOn(stage, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 100 });
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback();
+      return 1;
+    });
+    const click = (x, y, pointerId) => {
+      fireEvent.pointerDown(stage, { button: 0, clientX: x, clientY: y, pointerId });
+      fireEvent.pointerUp(stage, { button: 0, clientX: x + 1, clientY: y, pointerId });
+    };
+
+    // Primeiro canto: nada salvo; o rascunho segue o ponteiro até o segundo clique.
+    click(10, 20, 1);
+    expect(onRegionChange).not.toHaveBeenCalled();
+    fireEvent.pointerMove(stage, { clientX: 30, clientY: 50 });
+    expect(container.querySelector(".active-selection-box.is-draft")).toHaveStyle({
+      left: "10%",
+      top: "20%",
+      width: "20%",
+      height: "30%",
+    });
+
+    click(40, 60, 2);
+    expect(onRegionChange).toHaveBeenCalledWith({ x: 10, y: 20, width: 31, height: 40 });
+    expect(container.querySelector(".active-selection-box")).not.toBeInTheDocument();
+
+    // Um canto pendente some ao sair da marcação.
+    click(50, 50, 3);
+    expect(container.querySelector(".active-selection-box.is-draft")).toBeInTheDocument();
+    rerender(<TooltipProvider><EcgViewer imageUrl="/ecg-real.png" onRegionChange={onRegionChange} /></TooltipProvider>);
+    expect(container.querySelector(".active-selection-box")).not.toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 
   it("sincroniza hover, foco e seleção das regiões salvas", () => {

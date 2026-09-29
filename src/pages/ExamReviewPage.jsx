@@ -841,7 +841,7 @@ export default function ExamReviewPage() {
     : "";
   const activeSelectionDescription = activeRegionTarget?.regionId
     ? "Ajuste a região · Esc para cancelar"
-    : "Arraste sobre o ECG · Esc para cancelar";
+    : "Arraste ou clique em dois cantos · Esc para cancelar";
   const requiredDecisionComplete =
     !validationContext?.is_configured ||
     requiredDiagnoses.some(

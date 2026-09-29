@@ -128,6 +128,8 @@ export default function EcgViewer({
   const [isPanning, setIsPanning] = useState(false);
   const [isSpaceHeld, setIsSpaceHeld] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
+  // Primeiro canto de uma marcação por dois cliques, à espera do canto oposto.
+  const [firstCorner, setFirstCorner] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
@@ -136,6 +138,7 @@ export default function EcgViewer({
   const viewerRef = useRef(null);
   const isPointerInsideRef = useRef(false);
   const panStartRef = useRef(null);
+  const drawPressRef = useRef(null);
   const draftFrameRef = useRef(null);
   const draftPointRef = useRef(null);
   const zoomAnchorRef = useRef(null);
@@ -308,8 +311,11 @@ export default function EcgViewer({
     // Prevent native dragging of selected page content from cancelling the gesture.
     event.preventDefault();
     const point = getPoint(event);
-    setSelectionStart(point);
-    setDraftRegion({ x: point.x, y: point.y, width: 0, height: 0 });
+    // Com o primeiro canto já clicado, este gesto fecha o retângulo a partir dele.
+    const start = firstCorner || point;
+    drawPressRef.current = { clientX: event.clientX, clientY: event.clientY };
+    setSelectionStart(start);
+    setDraftRegion(regionFromPoints(start, point));
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -325,13 +331,15 @@ export default function EcgViewer({
       canvas.scrollTop = panStart.scrollTop - deltaY;
       return;
     }
-    if (!selectionStart) return;
+    // Arrastando, ou entre os dois cliques: o rascunho segue o ponteiro a partir do primeiro canto.
+    const start = selectionStart || firstCorner;
+    if (!start) return;
     draftPointRef.current = getPoint(event);
     if (draftFrameRef.current !== null) return;
     draftFrameRef.current = window.requestAnimationFrame(() => {
       draftFrameRef.current = null;
       if (draftPointRef.current) {
-        setDraftRegion(regionFromPoints(selectionStart, draftPointRef.current));
+        setDraftRegion(regionFromPoints(start, draftPointRef.current));
       }
     });
   }
@@ -347,11 +355,24 @@ export default function EcgViewer({
     if (!selectionStart) return;
 
     cancelDraftFrame();
+    const press = drawPressRef.current;
+    drawPressRef.current = null;
+    const isClick = Boolean(press)
+      && Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) < CLICK_TOLERANCE;
+    // Um clique sem arrastar marca o primeiro canto; o próximo clique (ou arrasto) marca o oposto. É a alternativa ao
+    // arrasto para quem não consegue manter o botão apertado (WCAG 2.5.7).
+    if (isClick && !firstCorner) {
+      setFirstCorner(selectionStart);
+      setSelectionStart(null);
+      return;
+    }
+
     const region = roundRegion(regionFromPoints(selectionStart, getPoint(event)));
     if (region.width >= 0.8 && region.height >= 0.8) {
       onRegionChange?.(region);
     }
 
+    setFirstCorner(null);
     setSelectionStart(null);
     setDraftRegion(null);
   }
@@ -359,7 +380,9 @@ export default function EcgViewer({
   function handlePointerCancel() {
     cancelDraftFrame();
     panStartRef.current = null;
+    drawPressRef.current = null;
     setIsPanning(false);
+    setFirstCorner(null);
     setSelectionStart(null);
     setDraftRegion(null);
   }
@@ -373,8 +396,16 @@ export default function EcgViewer({
   }, [isSelectionActive, onRegionCancel, onRegionChange, onRegionSelect, selectedRegion]);
 
   useEffect(() => {
-    if (isSelectionActive) setIsCleanView(false);
-  }, [isSelectionActive]);
+    if (isSelectionActive) {
+      setIsCleanView(false);
+      return;
+    }
+    // Saindo da marcação (Esc, cancelar, salvar), some o canto pendente e o rascunho dele.
+    cancelDraftFrame();
+    setFirstCorner(null);
+    setSelectionStart(null);
+    setDraftRegion(null);
+  }, [cancelDraftFrame, isSelectionActive]);
 
   useEffect(() => {
     if (!isImageReady || !isSelectionActive || !canPan) {
