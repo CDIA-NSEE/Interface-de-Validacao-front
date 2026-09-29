@@ -21,8 +21,11 @@ import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
 import { cn } from "@/lib/utils.js";
 
-const SIDEBAR_OPEN_DELAY_MS = 100;
-const SIDEBAR_CLOSE_DELAY_MS = 150;
+// O menu abre quando o ponteiro PARA no trilho (tempo contado do último deslocamento além da tolerância), não quando
+// só passa por ele a caminho do painel — passar 120ms já abria, escurecia e travava a tela (NN/g: 0,3–0,5s parado).
+const SIDEBAR_OPEN_DELAY_MS = 200;
+const SIDEBAR_HOVER_TOLERANCE_PX = 6;
+const SIDEBAR_CLOSE_DELAY_MS = 300;
 
 // Títulos não são nome: "Dra. Maria Souza" vira "MS", não "DM".
 const NAME_TITLES = new Set(["dr", "dra", "prof", "profa"]);
@@ -217,6 +220,7 @@ export default function ValidationSidebar({
   const closeTimerRef = useRef(null);
   const popupRef = useRef(null);
   const focusedItemKeyRef = useRef(null);
+  const hoverOriginRef = useRef(null);
   const doctorName = user?.full_name || "Usuário";
   const doctorRole = getUserRoleLabel(user);
 
@@ -259,11 +263,20 @@ export default function ValidationSidebar({
     clearOpenTimer();
     clearCloseTimer();
     rememberTrigger(event);
+    hoverOriginRef.current = { x: event.clientX, y: event.clientY };
     openTimerRef.current = window.setTimeout(() => {
       openTimerRef.current = null;
       focusedItemKeyRef.current = null;
       onOpenChange(true);
     }, SIDEBAR_OPEN_DELAY_MS);
+  }
+
+  function restartOpenWhileMoving(event) {
+    if (expanded || openTimerRef.current === null) return;
+
+    const origin = hoverOriginRef.current;
+    const distance = origin ? Math.hypot(event.clientX - origin.x, event.clientY - origin.y) : Infinity;
+    if (distance > SIDEBAR_HOVER_TOLERANCE_PX) scheduleOpen(event);
   }
 
   function cancelScheduledOpen() {
@@ -315,6 +328,7 @@ export default function ValidationSidebar({
         onFocusCapture={openImmediately}
         onPointerEnter={scheduleOpen}
         onPointerLeave={cancelScheduledOpen}
+        onPointerMove={restartOpenWhileMoving}
       >
         <NavigationPanel
           compact

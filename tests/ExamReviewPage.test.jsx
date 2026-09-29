@@ -372,17 +372,24 @@ describe("ExamReviewPage", () => {
     expect(collapsedNavigation.querySelector('[data-navigation-item="account"]')).toHaveTextContent(/^A$/);
 
     vi.useFakeTimers();
-    fireEvent.pointerEnter(collapsedNavigation);
+    fireEvent.pointerEnter(collapsedNavigation, { clientX: 32, clientY: 300 });
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
     expect(document.querySelector('[data-slot="sheet-overlay"]')).not.toBeInTheDocument();
 
-    act(() => vi.advanceTimersByTime(99));
+    // Só passar pelo trilho a caminho do painel não abre o menu.
+    act(() => vi.advanceTimersByTime(199));
     fireEvent.pointerLeave(collapsedNavigation);
-    act(() => vi.advanceTimersByTime(100));
+    act(() => vi.advanceTimersByTime(200));
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
 
-    fireEvent.pointerEnter(collapsedNavigation);
-    act(() => vi.advanceTimersByTime(99));
+    // Andar pelo trilho recomeça a contagem; um tremor dentro da tolerância não.
+    fireEvent.pointerEnter(collapsedNavigation, { clientX: 32, clientY: 300 });
+    act(() => vi.advanceTimersByTime(150));
+    fireEvent.pointerMove(collapsedNavigation, { clientX: 32, clientY: 360 });
+    act(() => vi.advanceTimersByTime(150));
+    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    fireEvent.pointerMove(collapsedNavigation, { clientX: 34, clientY: 363 });
+    act(() => vi.advanceTimersByTime(49));
     expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(1));
@@ -422,11 +429,11 @@ describe("ExamReviewPage", () => {
     expect(document.querySelector('[data-slot="sheet-overlay"]')).toBeInTheDocument();
 
     fireEvent.pointerEnter(expandedNavigation);
-    act(() => vi.advanceTimersByTime(300));
+    act(() => vi.advanceTimersByTime(400));
     expect(expandedNavigation).toBeVisible();
 
     fireEvent.pointerLeave(expandedNavigation);
-    act(() => vi.advanceTimersByTime(149));
+    act(() => vi.advanceTimersByTime(299));
     expect(expandedNavigation).toBeVisible();
 
     fireEvent.pointerEnter(expandedNavigation);
@@ -434,7 +441,7 @@ describe("ExamReviewPage", () => {
     expect(expandedNavigation).toBeVisible();
 
     fireEvent.pointerLeave(expandedNavigation);
-    act(() => vi.advanceTimersByTime(150));
+    act(() => vi.advanceTimersByTime(300));
     expect(expandedNavigation).toHaveAttribute("data-closed");
     expect(expandedNavigation).not.toHaveAttribute("data-open");
     act(() => vi.advanceTimersByTime(0));
