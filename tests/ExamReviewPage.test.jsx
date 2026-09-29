@@ -684,6 +684,27 @@ describe("ExamReviewPage", () => {
     expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
   });
 
+  it("executa a ação do ícone do trilho mesmo quando a abertura por hover cai no meio do clique", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+    const railTutorial = collapsedNavigation.querySelector('button[aria-label="Tutorial rápido"]');
+
+    vi.useFakeTimers();
+    fireEvent.pointerEnter(collapsedNavigation);
+    act(() => vi.advanceTimersByTime(150));
+    // Apertar é clique: se o menu abrisse aos 200ms, antes de soltar, o soltar cairia nele e o clique no ícone se perdia.
+    fireEvent.pointerDown(railTutorial);
+    act(() => vi.advanceTimersByTime(100));
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
+
+    fireEvent.click(railTutorial);
+    vi.useRealTimers();
+    expect(await screen.findByRole("dialog", { name: "Tutorial rápido" })).toBeInTheDocument();
+  });
+
   it("no trilho, o primeiro clique em Sair só abre o menu; o segundo, no menu, sai", async () => {
     const user = userEvent.setup();
     stubViewport(false);

@@ -371,6 +371,12 @@ export default function ValidationSidebar({
     if (expanded && !enteredMenu) scheduleClose();
   }
 
+  // Apertar um ícone do trilho é clique, não intenção de abrir o menu. Se a abertura por hover caísse entre o apertar e o
+  // soltar, o menu cobria o trilho, o soltar caía nele e o navegador não gerava o clique no ícone: a ação se perdia.
+  function cancelOpenOnPress() {
+    clearOpenTimer();
+  }
+
   function keepOpen() {
     clearCloseTimer();
   }
@@ -459,6 +465,7 @@ export default function ValidationSidebar({
         aria-label="Navegação principal"
         className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand-foreground/10 bg-brand text-brand-foreground"
         onFocusCapture={openImmediately}
+        onPointerDown={cancelOpenOnPress}
         onPointerEnter={scheduleOpen}
         onPointerLeave={handleRailPointerLeave}
         onPointerOver={trackRailPointer}
