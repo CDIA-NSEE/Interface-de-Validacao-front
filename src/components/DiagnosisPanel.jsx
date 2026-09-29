@@ -162,7 +162,7 @@ const REFINED_DETAILS_STYLES = {
   areaCollapsible: "",
   areaPanel: COLLAPSIBLE_PANEL_CLASS,
   // O anel da linha selecionada entra junto com a tinta (só `transition-colors`, ele aparecia num quadro).
-  areaRow: "bg-background p-1.5 transition-[color,background-color,box-shadow] duration-150 motion-reduce:transition-none",
+  areaRow: "bg-background p-1.5 transition-[color,background-color,box-shadow] motion-reduce:transition-none",
   // Tinta "info" misturada ao fundo da própria linha (`background`), não translúcida: `bg-info/5` substituía o
   // `bg-background` e pintava sobre o cartão branco — branco + 5% de info dava o próprio fundo azulado (ΔE OKLab 0,006 no
   // claro, hover invisível; no escuro a linha só clareava para o tom do cartão).
@@ -616,10 +616,12 @@ function DiagnosisDetails({
             className={cn(
               // `last:rounded-b-md` acompanha o canto interno do grupo (6px − 1px de borda), para o anel da última linha
               // selecionada não ser cortado pelo recorte do contorno.
-              "flex items-center justify-between gap-2 bg-muted/30 p-2 transition-colors last:rounded-b-md",
+              // Hover como no menu lateral e na caixa da área no ECG, que acendem junto com a linha (modelo do macOS): acende
+              // na hora e apaga em 200ms. A seleção entra em 150ms, como antes.
+              "flex items-center justify-between gap-2 bg-muted/30 p-2 transition-colors duration-200 ease-out last:rounded-b-md",
               styles.areaRow,
-              isHovered && !isSelected && styles.areaRowHovered,
-              isSelected && styles.areaRowSelected,
+              isHovered && !isSelected && cn(styles.areaRowHovered, "duration-0"),
+              isSelected && cn(styles.areaRowSelected, "duration-150"),
             )}
             key={regionKey}
             onBlur={() => onRegionHover?.(null)}
@@ -1378,7 +1380,7 @@ export default function DiagnosisPanel({
                     <CollapsibleTrigger
                       render={
                         <Button
-                          className="h-auto min-h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 py-2 text-left font-heading text-sm whitespace-normal transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                          className="h-auto min-h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 py-2 text-left font-heading text-sm whitespace-normal transition-colors duration-200 ease-out hover:duration-0 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                           type="button"
                           variant="collapsible"
                         />
@@ -1457,12 +1459,13 @@ export default function DiagnosisPanel({
                                 // solavanco de 4px no primeiro frame que a transição antiga precisava compensar.
                                 // `box-shadow` na transição: o anel (marcando área, foco) entra com o fundo, não num quadro antes dele.
                                 // `@container/item-trigger`: a linha estreita (ver o grid do título abaixo) segue a largura do gatilho.
-                                "@container/item-trigger cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-150 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                // Hover como no menu lateral (modelo do macOS): acende na hora e apaga em 200ms, também quando vem do ECG.
+                                "@container/item-trigger cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-200 ease-out hover:duration-0 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                                 // Ligado ao ECG (uma área dele em hover ou selecionada): a mesma tinta nos dois estados, sem anel — o
                                 // selecionado era mais fraco que o hover (ΔE 0,021 × 0,048) e o anel de 1px em volta só do título tinha a forma
                                 // do anel de foco. O anel fica na linha da área selecionada, que é o que está selecionado. `hover:` repete a
                                 // tinta para ela não cair para o hover comum (mais fraco) com o ponteiro sobre o título.
-                                [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`)) && "bg-accent/60 hover:bg-accent/60",
+                                [hoveredRegionKey, selectedRegionKey].some((key) => key?.startsWith(`${diagnosis.id}:`)) && "bg-accent/60 duration-0 hover:bg-accent/60",
                                 // Marcando área: a barra é sticky, então o sinal fica visível mesmo com a lista rolada.
                                 activeRegionTarget?.diagnosisId === diagnosis.id && "bg-info/5 ring-1 ring-inset ring-info/40",
                               )}>
@@ -1595,7 +1598,7 @@ export default function DiagnosisPanel({
                       aria-controls={addDiagnosisContentId}
                       aria-expanded={false}
                       aria-label="Adicionar diagnóstico"
-                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-200 ease-out hover:duration-0 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                       disabled={isBusy}
                       onClick={() => handleAddDiagnosisToggle(true)}
                       ref={addDiagnosisTriggerRef}
