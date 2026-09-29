@@ -62,13 +62,14 @@ function NavigationAction({
   label,
   onClick,
 }) {
+  // Linha de 48px com destaque de 40px (8px entre destaques; no trilho, um quadrado do tamanho da marca e do avatar).
   return (
-    <div className="flex h-13 items-center" data-navigation-item={itemKey}>
+    <div className="flex h-12 items-center" data-navigation-item={itemKey}>
       <Button
         aria-label={label}
         className={cn(
-          "mx-2 grid h-full grid-cols-[3rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
-          compact ? "w-12" : "w-[calc(100%-1rem)]",
+          "mx-3 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
+          compact ? "w-10" : "w-[calc(100%-1.5rem)]",
         )}
         disabled={disabled}
         onClick={onClick}
@@ -78,7 +79,7 @@ function NavigationAction({
       >
         <Icon aria-hidden="true" className="justify-self-center" data-icon="inline-start" />
         {compact ? null : (
-          <span className="min-w-0 truncate pr-4 pl-2 transition-opacity duration-150">
+          <span className="min-w-0 truncate pr-4 pl-3 transition-opacity duration-150">
             {label}
           </span>
         )}
@@ -169,7 +170,7 @@ function NavigationPanel({
           />
         </div>
 
-        <div className="mt-auto flex flex-col">
+        <div className="mt-auto flex flex-col pb-1">
           <NavigationAction
             compact={compact}
             icon={HelpCircle}
