@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   LogOut,
   Moon,
+  Sun,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -55,23 +56,21 @@ function getUserRoleLabel(user) {
 
 // Sem tooltip no trilho recolhido: o menu abre com os nomes logo em seguida, e a dica só piscava antes de ser coberta.
 function NavigationAction({
+  accessibleLabel,
   compact,
   disabled,
   icon: Icon,
   itemKey,
   label,
   onClick,
-  pressed,
-  status,
 }) {
   // Linha de 48px com destaque de 40px (8px entre destaques; no trilho, um quadrado do tamanho da marca e do avatar).
   return (
     <div className="flex h-12 items-center" data-navigation-item={itemKey}>
       <Button
-        aria-label={label}
-        aria-pressed={pressed}
+        aria-label={accessibleLabel ?? label}
         className={cn(
-          "mx-3 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-0 rounded-lg border-0 px-0 text-left",
+          "mx-3 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
           compact ? "w-10" : "w-[calc(100%-1.5rem)]",
         )}
         disabled={disabled}
@@ -84,11 +83,6 @@ function NavigationAction({
         {compact ? null : (
           <span className="min-w-0 truncate pr-4 pl-3 transition-opacity duration-150">
             {label}
-          </span>
-        )}
-        {compact || !status ? null : (
-          <span className="pr-3 text-xs text-brand-foreground/90" data-slot="navigation-status">
-            {status}
           </span>
         )}
       </Button>
@@ -202,14 +196,15 @@ function NavigationPanel({
             label="Contato e suporte"
             onClick={onSupport}
           />
+          {/* Nome e ícone do modo para onde o clique leva (lua no claro, sol no escuro), como no cabeçalho do dashboard: o
+              estado atual já está na tela inteira. O leitor de tela, sem essa pista, ouve o verbo ("Ativar modo escuro"). */}
           <NavigationAction
+            accessibleLabel={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
             compact={compact}
-            icon={Moon}
+            icon={isDark ? Sun : Moon}
             itemKey="theme"
-            label="Modo escuro"
+            label={isDark ? "Modo claro" : "Modo escuro"}
             onClick={onTheme}
-            pressed={isDark}
-            status={isDark ? "Ligado" : "Desligado"}
           />
           <Separator
             className={cn(

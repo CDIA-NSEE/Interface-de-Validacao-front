@@ -18,6 +18,7 @@ import {
 
 const navigate = vi.fn();
 const logout = vi.fn();
+const theme = vi.hoisted(() => ({ isDark: false }));
 
 beforeAll(() => {
   Object.defineProperty(Element.prototype, "getAnimations", {
@@ -54,7 +55,7 @@ vi.mock("../src/context/AuthContext.jsx", () => ({
 }));
 
 vi.mock("../src/context/ThemeContext.jsx", () => ({
-  useTheme: () => ({ isDark: false, toggleTheme: vi.fn() }),
+  useTheme: () => ({ isDark: theme.isDark, toggleTheme: vi.fn() }),
 }));
 
 vi.mock("../src/services/examsService.js", () => ({
@@ -127,6 +128,7 @@ const exam = {
 beforeEach(() => {
   navigate.mockReset();
   logout.mockReset();
+  theme.isDark = false;
   vi.stubGlobal("ResizeObserver", class ResizeObserver {
     observe() {}
     disconnect() {}
@@ -417,11 +419,6 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Contato e suporte")).toBeVisible();
     expect(screen.queryByText("Central de ajuda / Contato")).not.toBeInTheDocument();
     expect(screen.getByText("Modo escuro")).toBeVisible();
-    // O nome não muda com o tema: o estado aparece ao lado ("Desligado") e em aria-pressed.
-    const themeToggle = expandedNavigation.querySelector('button[aria-label="Modo escuro"]');
-    expect(themeToggle).toHaveAttribute("aria-pressed", "false");
-    expect(themeToggle).toHaveTextContent("Desligado");
-    expect(screen.queryByText("Modo claro")).not.toBeInTheDocument();
     expect(screen.getByText("Dra. Ana", { selector: "p" })).toBeVisible();
     expect(screen.getByText("Médico avaliador")).toBeVisible();
     expect(screen.queryByText("Navegação da validação")).not.toBeInTheDocument();
@@ -481,6 +478,31 @@ describe("ExamReviewPage", () => {
     expect(expandedNavigation).toHaveAttribute("data-open");
     act(() => vi.advanceTimersByTime(1));
     expect(expandedNavigation).toHaveAttribute("data-closed");
+  });
+
+  it.each([
+    { isDark: false, label: "Modo escuro", accessibleName: "Ativar modo escuro", icon: "lucide-moon" },
+    { isDark: true, label: "Modo claro", accessibleName: "Ativar modo claro", icon: "lucide-sun" },
+  ])("mostra no item de tema o modo para onde o clique leva (escuro: $isDark)", async ({
+    accessibleName,
+    icon,
+    isDark,
+    label,
+  }) => {
+    theme.isDark = isDark;
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    screen.getByRole("button", { name: accessibleName }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    const themeButton = expandedNavigation.querySelector('[data-navigation-item="theme"] button');
+
+    // O estado atual já está na tela inteira: sem "Ligado"/"Desligado" e sem aria-pressed (o nome troca com o tema).
+    expect(themeButton).toHaveAccessibleName(accessibleName);
+    expect(themeButton).toHaveTextContent(new RegExp(`^${label}$`));
+    expect(themeButton).not.toHaveAttribute("aria-pressed");
+    expect(themeButton.querySelector("svg")).toHaveClass(icon);
   });
 
   it("abre pelo menu lateral a lista de atalhos de teclado", async () => {
@@ -586,7 +608,7 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     await screen.findByRole("button", { name: "Concordo" });
-    await user.click(screen.getByRole("button", { name: "Modo escuro" }));
+    await user.click(screen.getByRole("button", { name: "Ativar modo escuro" }));
     const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     const expandedHome = expandedNavigation.querySelector('button[aria-label="Início"]');
     expandedHome.focus();
