@@ -389,13 +389,12 @@ describe("ExamReviewPage", () => {
     act(() => vi.advanceTimersByTime(200));
     expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
 
-    // Andar pelo trilho recomeça a contagem; um tremor dentro da tolerância não.
+    // Subir e descer pelos ícones não adia a abertura: 200ms depois de entrar no trilho o menu abre, parado ou não.
     fireEvent.pointerEnter(collapsedNavigation, { clientX: 32, clientY: 300 });
-    act(() => vi.advanceTimersByTime(150));
+    act(() => vi.advanceTimersByTime(100));
     fireEvent.pointerMove(collapsedNavigation, { clientX: 32, clientY: 360 });
-    act(() => vi.advanceTimersByTime(150));
-    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
-    fireEvent.pointerMove(collapsedNavigation, { clientX: 34, clientY: 363 });
+    act(() => vi.advanceTimersByTime(50));
+    fireEvent.pointerMove(collapsedNavigation, { clientX: 32, clientY: 240 });
     act(() => vi.advanceTimersByTime(49));
     expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
 

@@ -23,10 +23,10 @@ import { useAuth } from "@/context/AuthContext.jsx";
 import { useTheme } from "@/context/ThemeContext.jsx";
 import { cn } from "@/lib/utils.js";
 
-// O menu abre quando o ponteiro PARA no trilho (tempo contado do último deslocamento além da tolerância), não quando
-// só passa por ele a caminho do painel — passar 120ms já abria, escurecia e travava a tela (NN/g: 0,3–0,5s parado).
+// O menu abre 200ms depois que o ponteiro entra no trilho, parado ou em movimento (como o trilho do Carbon, que conta
+// só a permanência). Exigir o ponteiro parado fazia o menu nunca abrir para quem percorre os ícones subindo e descendo;
+// só passar pelo trilho a caminho do painel leva menos que isso — com 100ms, uma passagem de 120ms já abria o menu.
 const SIDEBAR_OPEN_DELAY_MS = 200;
-const SIDEBAR_HOVER_TOLERANCE_PX = 6;
 const SIDEBAR_CLOSE_DELAY_MS = 300;
 
 const FOCUSABLE_SELECTOR =
@@ -292,7 +292,6 @@ export default function ValidationSidebar({
   const popupRef = useRef(null);
   const railRef = useRef(null);
   const focusedItemKeyRef = useRef(null);
-  const hoverOriginRef = useRef(null);
   const railPointerItemRef = useRef(null);
   const [pointerItemKey, setPointerItemKey] = useState(null);
   const doctorName = user?.full_name || "Usuário";
@@ -355,20 +354,11 @@ export default function ValidationSidebar({
     clearOpenTimer();
     clearCloseTimer();
     rememberTrigger(event);
-    hoverOriginRef.current = { x: event.clientX, y: event.clientY };
     openTimerRef.current = window.setTimeout(() => {
       openTimerRef.current = null;
       focusedItemKeyRef.current = null;
       openMenu();
     }, SIDEBAR_OPEN_DELAY_MS);
-  }
-
-  function restartOpenWhileMoving(event) {
-    if (expanded || openTimerRef.current === null) return;
-
-    const origin = hoverOriginRef.current;
-    const distance = origin ? Math.hypot(event.clientX - origin.x, event.clientY - origin.y) : Infinity;
-    if (distance > SIDEBAR_HOVER_TOLERANCE_PX) scheduleOpen(event);
   }
 
   function handleRailPointerLeave(event) {
@@ -471,7 +461,6 @@ export default function ValidationSidebar({
         onFocusCapture={openImmediately}
         onPointerEnter={scheduleOpen}
         onPointerLeave={handleRailPointerLeave}
-        onPointerMove={restartOpenWhileMoving}
         onPointerOver={trackRailPointer}
         ref={railRef}
       >
