@@ -132,6 +132,8 @@ export default function EcgViewer({
   const isImageReady = Boolean(imageUrl);
   const isSelectionActive = Boolean(selectionLabel);
   const isEditing = isSelectionActive && Boolean(selectedRegion);
+  // Em 1× o traçado cabe inteiro: não há o que arrastar, e a mão de "agarrar" prometia um movimento que não vinha.
+  const canPan = zoom > MIN_ZOOM;
   const activeRegion = draftRegion || selectedRegion;
   const hasSelectedSavedRegion = regions.some((region) => region.isSelected);
   const visibleRegions = useMemo(
@@ -493,7 +495,7 @@ export default function EcgViewer({
       >
         <div className="ecg-canvas" ref={canvasRef}>
           <div
-            className={`ecg-image-stage ${!isImageReady ? "" : isSelectionActive ? "touch-none cursor-crosshair" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`ecg-image-stage ${!isImageReady ? "" : isSelectionActive ? "touch-none cursor-crosshair" : !canPan ? "" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

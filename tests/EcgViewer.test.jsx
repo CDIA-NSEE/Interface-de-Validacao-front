@@ -451,6 +451,21 @@ describe("EcgViewer", () => {
     expect(onRegionChange).toHaveBeenLastCalledWith({ x: 10, y: 10, width: 30, height: 30 });
   });
 
+  it("mostra a mão de arrastar só com o traçado ampliado", () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+
+    expect(stage).not.toHaveClass("cursor-grab");
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    expect(stage).toHaveClass("cursor-grab");
+    fireEvent.pointerDown(stage, { button: 0, clientX: 300, clientY: 200, pointerId: 1 });
+    expect(stage).toHaveClass("cursor-grabbing");
+    fireEvent.pointerUp(stage, { button: 0, clientX: 280, clientY: 200, pointerId: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "Restaurar visualização" }));
+    expect(stage).not.toHaveClass("cursor-grab");
+  });
+
   it("desmarca a área só no clique no vazio, não ao arrastar o traçado", () => {
     const onRegionSelect = vi.fn();
     const { container } = renderWithTooltips(
