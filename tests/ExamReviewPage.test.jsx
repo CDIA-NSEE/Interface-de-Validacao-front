@@ -568,6 +568,45 @@ describe("ExamReviewPage", () => {
     });
   });
 
+  it("sai do menu pelo Tab no último item e segue para a tela, como uma navegação comum", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    screen.getByRole("button", { name: "Sair da sessão" }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    await waitFor(() => {
+      expect(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]')).toHaveFocus();
+    });
+
+    // Antes o Tab voltava para "Início" dentro do menu; agora fecha o menu e continua na página.
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
+    });
+    await waitFor(() => expect(screen.getByRole("main")).toContainElement(document.activeElement));
+  });
+
+  it("sai do menu pelo Shift+Tab no primeiro item e volta ao começo da página", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    screen.getByRole("button", { name: "Início" }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    await waitFor(() => expect(expandedNavigation.querySelector('button[aria-label="Início"]')).toHaveFocus());
+
+    await user.tab({ shift: true });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
+    });
+    expect(document.body).toHaveFocus();
+  });
+
   it("pede confirmação antes de sair da sessão com alterações não salvas", async () => {
     const user = userEvent.setup();
     stubViewport(false);

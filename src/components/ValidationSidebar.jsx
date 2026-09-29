@@ -29,6 +29,24 @@ const SIDEBAR_OPEN_DELAY_MS = 200;
 const SIDEBAR_HOVER_TOLERANCE_PX = 6;
 const SIDEBAR_CLOSE_DELAY_MS = 300;
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+
+// Primeiro controle depois do trilho na ordem da página, fora do menu (que vive num portal no fim do body).
+function getFirstFocusableAfter(rail, menu) {
+  if (!rail) return null;
+
+  return (
+    [...document.querySelectorAll(FOCUSABLE_SELECTOR)].find(
+      (element) =>
+        rail.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING &&
+        !rail.contains(element) &&
+        !menu?.contains(element) &&
+        !element.closest("[hidden]"),
+    ) ?? null
+  );
+}
+
 // Títulos não são nome: "Dra. Maria Souza" vira "MS", não "DM".
 const NAME_TITLES = new Set(["dr", "dra", "prof", "profa"]);
 
@@ -252,6 +270,7 @@ export default function ValidationSidebar({
   const openTimerRef = useRef(null);
   const closeTimerRef = useRef(null);
   const popupRef = useRef(null);
+  const railRef = useRef(null);
   const focusedItemKeyRef = useRef(null);
   const hoverOriginRef = useRef(null);
   const doctorName = user?.full_name || "Usuário";
@@ -358,6 +377,26 @@ export default function ValidationSidebar({
     queueMicrotask(action);
   }
 
+  // Pelo teclado, o menu é uma parada da ordem de Tab, não um beco: Tab depois do último item fecha e segue para o
+  // primeiro controle da tela; Shift+Tab antes do primeiro fecha e volta ao começo da página (como o trilho do Carbon).
+  // Antes o Tab circulava dentro do menu, e do topo da página só se chegava à tela voltando com Shift+Tab.
+  function leaveMenuByTab(event) {
+    if (event.key !== "Tab") return;
+
+    const popup = popupRef.current;
+    const items = [...(popup?.querySelectorAll("button:not(:disabled)") ?? [])];
+    const leavingForward = !event.shiftKey && document.activeElement === items.at(-1);
+    const leavingBackward = event.shiftKey && (document.activeElement === items[0] || document.activeElement === popup);
+    if (!leavingForward && !leavingBackward) return;
+
+    event.preventDefault();
+    clearOpenTimer();
+    clearCloseTimer();
+    triggerRef.current = leavingForward ? getFirstFocusableAfter(railRef.current, popup) : null;
+    if (leavingBackward) document.activeElement?.blur();
+    onOpenChange(false);
+  }
+
   return (
     <>
       <nav
@@ -367,6 +406,7 @@ export default function ValidationSidebar({
         onPointerEnter={scheduleOpen}
         onPointerLeave={handleRailPointerLeave}
         onPointerMove={restartOpenWhileMoving}
+        ref={railRef}
       >
         <NavigationPanel
           compact
@@ -390,6 +430,7 @@ export default function ValidationSidebar({
           className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground outline-none transition-[width] duration-200 ease-out motion-reduce:transition-none data-ending-style:opacity-100 data-starting-style:opacity-100 data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
           finalFocus={false}
           initialFocus={getInitialFocus}
+          onKeyDown={leaveMenuByTab}
           onPointerEnter={keepOpen}
           onPointerLeave={scheduleClose}
           overlayClassName="bg-scrim/28"
