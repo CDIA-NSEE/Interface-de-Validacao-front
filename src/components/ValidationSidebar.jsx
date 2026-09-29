@@ -91,10 +91,11 @@ function NavigationAction({
 }
 
 function NavigationHeader({ compact }) {
+  // Marca invertida: com a tinta a 15%, era igual ao destaque de hover dos itens (1,03:1) e parecia um botão aceso.
   const brandMark = (
     <div
       aria-hidden="true"
-      className="grid size-10 place-items-center justify-self-center rounded-lg bg-brand-foreground/15"
+      className="grid size-10 place-items-center justify-self-center rounded-lg bg-brand-foreground text-brand"
       data-navigation-item="brand"
     >
       <Activity className="size-5" />
