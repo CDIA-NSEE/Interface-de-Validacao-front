@@ -327,9 +327,10 @@ export default function ValidationSidebar({
       </nav>
 
       <Sheet open={expanded} onOpenChange={handleSheetOpenChange}>
-        {/* Fundo só escurecido, sem desfoque (o DESIGN.md recusa blur de fundo; o overlay base do Sheet também não tem). */}
+        {/* Fundo só escurecido, sem desfoque (o DESIGN.md recusa blur de fundo; o overlay base do Sheet também não tem).
+            O menu cresce a partir do trilho sempre opaco: com o fade do Sheet, o painel vazava por trás dele na abertura. */}
         <SheetContent
-          className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground outline-none transition-[width,opacity] duration-200 ease-out data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
+          className="gap-0 overflow-hidden border-brand-foreground/10 bg-brand text-brand-foreground outline-none transition-[width] duration-200 ease-out motion-reduce:transition-none data-ending-style:opacity-100 data-starting-style:opacity-100 data-[side=left]:w-72 data-[side=left]:data-ending-style:w-16 data-[side=left]:data-ending-style:translate-x-0 data-[side=left]:data-starting-style:w-16 data-[side=left]:data-starting-style:translate-x-0 data-[side=left]:sm:max-w-none"
           finalFocus={false}
           initialFocus={getInitialFocus}
           onPointerEnter={keepOpen}
