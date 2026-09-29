@@ -93,6 +93,46 @@ describe("EcgViewer", () => {
     });
   });
 
+  it("desce a etiqueta Dn.i para dentro da caixa quando ela não cabe acima", async () => {
+    let resizeCallback;
+    vi.stubGlobal("ResizeObserver", class ResizeObserver {
+      constructor(callback) {
+        resizeCallback = callback;
+      }
+      observe() {}
+      disconnect() {}
+    });
+
+    const { container } = renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        regions={[
+          { id: 1, x: 10, y: 2, width: 10, height: 10, label: "D2.1", regionReference: "D2.1" },
+          { id: 2, x: 40, y: 10, width: 10, height: 10, label: "D2.2", regionReference: "D2.2" },
+        ]}
+      />,
+    );
+    const canvas = container.querySelector(".ecg-canvas");
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 500 });
+    const image = screen.getByRole("img", { name: "Traçado do ECG" });
+    Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
+    Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
+    fireEvent.load(image);
+    act(() => resizeCallback());
+
+    // Traçado de 1000×500 sem folga acima: a 2% (10px) a etiqueta não cabe; a 10% (50px), cabe.
+    const nearTop = screen.getByRole("button", { name: "D2.1" });
+    const lower = screen.getByRole("button", { name: "D2.2" });
+    await waitFor(() => expect(nearTop).toHaveAttribute("data-label-inside"));
+    expect(lower).not.toHaveAttribute("data-label-inside");
+
+    // Com zoom, a mesma área fica mais longe do topo: a 2,4× são 24px, e a etiqueta volta para cima.
+    const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
+    for (let index = 0; index < 4; index += 1) fireEvent.click(zoomIn);
+    expect(nearTop).not.toHaveAttribute("data-label-inside");
+  });
+
   it("sem o traçado, mostra o carregamento no lugar dele, sem áreas nem controles", () => {
     renderWithTooltips(
       <EcgViewer regions={[{ id: 1, x: 10, y: 10, width: 20, height: 20, regionReference: "D2.1" }]} />,

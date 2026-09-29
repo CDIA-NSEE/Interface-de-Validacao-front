@@ -369,3 +369,8 @@
   text-align: center;
   white-space: nowrap;
 }
+
+/* Sem espaço acima (área encostada no topo do traçado), a etiqueta desce para o canto de dentro da caixa, sobre a borda. */
+[data-label-inside] > .region-reference-label {
+  top: -2px;
+}

@@ -21,6 +21,8 @@ const ARROW_PAN_DIRECTIONS = {
   ArrowUp: [0, -1],
   ArrowDown: [0, 1],
 };
+// Altura que a etiqueta Dn.i ocupa acima da caixa (1,375rem).
+const REGION_LABEL_SPACE = 22;
 // Até 3px entre apertar e soltar ainda é clique, não arrasto (a mão treme um pouco no clique).
 const CLICK_TOLERANCE = 3;
 const TOOLBAR_LEFT_TOOLTIP_PROPS = { side: "left", sideOffset: 8 };
@@ -166,6 +168,13 @@ export default function EcgViewer({
         height: `${fittedSize.height * zoom}px`,
       }
     : { width: `${Number((zoom * 100).toFixed(2))}%` };
+  // A etiqueta Dn.i fica acima da caixa; perto do topo do traçado (ou com zoom, rolado até o topo) ela era cortada pela
+  // borda do visualizador, e então desce para dentro da caixa. Conta a folga que o traçado centralizado deixa acima dele.
+  const minTopForLabelAbove = fittedSize
+    ? REGION_LABEL_SPACE - Math.max(0, (canvasSize.height - fittedSize.height * zoom) / 2)
+    : 0;
+  const hasLabelInside = (region) =>
+    Boolean(fittedSize) && (region.y / 100) * fittedSize.height * zoom < minTopForLabelAbove;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -595,6 +604,7 @@ export default function EcgViewer({
               aria-label={region.label || region.regionReference || "Área vinculada"}
               aria-pressed={Boolean(region.isSelected)}
               className={`saved-region-box ${region.isHovered ? "is-hovered" : ""} ${region.isSelected ? "is-selected" : ""} ${region.isDimmed ? "is-dimmed" : ""}`}
+              data-label-inside={hasLabelInside(region) || undefined}
               key={`${region.diagnosisId || "region"}-${region.id || `legacy-${index}`}`}
               onBlur={() => onRegionHover?.(null)}
               onClick={(event) => {
@@ -622,6 +632,7 @@ export default function EcgViewer({
           {isImageReady && !isCleanView && activeRegion ? (
             <span
               className={`selection-box active-selection-box ${draftRegion ? "is-draft" : ""}`}
+              data-label-inside={hasLabelInside(activeRegion) || undefined}
               style={{
                 "--region-color": selectionVisual?.color,
                 "--region-fill": selectionVisual?.fill,
