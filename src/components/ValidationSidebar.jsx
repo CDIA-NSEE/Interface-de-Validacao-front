@@ -279,8 +279,13 @@ export default function ValidationSidebar({
     if (distance > SIDEBAR_HOVER_TOLERANCE_PX) scheduleOpen(event);
   }
 
-  function cancelScheduledOpen() {
+  function handleRailPointerLeave(event) {
     clearOpenTimer();
+    // O menu pode abrir no instante em que o ponteiro já sai: ele nasce com a largura do trilho e o ponteiro sai sem ter
+    // entrado nele. Sem entrada no menu não há a saída que agenda o fechamento, e a tela ficava escurecida e travada.
+    // Fora da árvore do React (ou da janela), o `relatedTarget` do evento sintético é `window`, que não é um Node.
+    const enteredMenu = event.relatedTarget instanceof Node && popupRef.current?.contains(event.relatedTarget);
+    if (expanded && !enteredMenu) scheduleClose();
   }
 
   function keepOpen() {
@@ -327,7 +332,7 @@ export default function ValidationSidebar({
         className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand-foreground/10 bg-brand text-brand-foreground"
         onFocusCapture={openImmediately}
         onPointerEnter={scheduleOpen}
-        onPointerLeave={cancelScheduledOpen}
+        onPointerLeave={handleRailPointerLeave}
         onPointerMove={restartOpenWhileMoving}
       >
         <NavigationPanel

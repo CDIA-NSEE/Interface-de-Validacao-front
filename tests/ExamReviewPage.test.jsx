@@ -448,6 +448,30 @@ describe("ExamReviewPage", () => {
     expect(agreeButton).toHaveFocus();
   });
 
+  it("fecha o menu que abriu no instante em que o ponteiro saía do trilho sem entrar nele", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
+    vi.useFakeTimers();
+    fireEvent.pointerEnter(collapsedNavigation, { clientX: 20, clientY: 600 });
+    act(() => vi.advanceTimersByTime(200));
+    const expandedNavigation = screen.getByRole("dialog", { name: "Validação médica" });
+
+    // Saindo do trilho para dentro do menu: continua aberto.
+    fireEvent.pointerLeave(collapsedNavigation, { relatedTarget: expandedNavigation });
+    act(() => vi.advanceTimersByTime(300));
+    expect(expandedNavigation).toHaveAttribute("data-open");
+
+    // Saindo para o fundo sem ter entrado no menu: fecha como uma saída do menu.
+    fireEvent.pointerLeave(collapsedNavigation, { relatedTarget: document.body });
+    act(() => vi.advanceTimersByTime(299));
+    expect(expandedNavigation).toHaveAttribute("data-open");
+    act(() => vi.advanceTimersByTime(1));
+    expect(expandedNavigation).toHaveAttribute("data-closed");
+  });
+
   it("mantém expansão por teclado e fecha com Escape", async () => {
     const user = userEvent.setup();
     stubViewport(false);
