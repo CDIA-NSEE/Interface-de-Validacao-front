@@ -8,9 +8,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
-const MIN_ZOOM = 0.6;
+// De caber na tela (1×) até 2,4×. Abaixo de 1× o traçado só encolhia dentro do espaço vazio.
+const MIN_ZOOM = 1;
 const MAX_ZOOM = 2.4;
-const ZOOM_STEP = 0.15;
+// Passo multiplicativo: cada "+" amplia 25% do que está na tela, do começo ao fim da faixa (1 → 1,25 → 1,56 → 1,95 →
+// 2,4). O passo fixo de 0,15 valia +25% no começo e +6% no fim.
+const ZOOM_FACTOR = 1.25;
 const TOOLBAR_LEFT_TOOLTIP_PROPS = { side: "left", sideOffset: 8 };
 const TOOLBAR_RIGHT_TOOLTIP_PROPS = { side: "left", sideOffset: 48 };
 
@@ -20,6 +23,13 @@ function stopToolbarEvent(event) {
 
 function clamp(value, minimum = 0, maximum = 100) {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+// Próximo degrau da escala 1,25ⁿ na direção pedida; de um zoom fora dos degraus, vai ao degrau vizinho.
+function getSteppedZoom(current, direction) {
+  const level = Math.log(current) / Math.log(ZOOM_FACTOR);
+  const nextLevel = direction > 0 ? Math.floor(level + 1e-6) + 1 : Math.ceil(level - 1e-6) - 1;
+  return clamp(ZOOM_FACTOR ** nextLevel, MIN_ZOOM, MAX_ZOOM);
 }
 
 function roundRegion(region) {
@@ -173,7 +183,7 @@ export default function EcgViewer({
     onImageAspectRatioChange?.(nextAspectRatio);
   }
 
-  const changeZoom = useCallback((amount, anchor = null) => {
+  const changeZoom = useCallback((direction, anchor = null) => {
     const stage = stageRef.current;
     const canvas = canvasRef.current;
     if (anchor && stage && canvas) {
@@ -186,7 +196,7 @@ export default function EcgViewer({
       };
     }
     setZoom((current) => {
-      const nextZoom = clamp(Number((current + amount).toFixed(2)), MIN_ZOOM, MAX_ZOOM);
+      const nextZoom = getSteppedZoom(current, direction);
       if (nextZoom === current) zoomAnchorRef.current = null;
       return nextZoom;
     });
@@ -322,7 +332,7 @@ export default function EcgViewer({
 
     function handleWheel(event) {
       event.preventDefault();
-      changeZoom(event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP, event);
+      changeZoom(event.deltaY < 0 ? 1 : -1, event);
     }
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
@@ -351,10 +361,10 @@ export default function EcgViewer({
 
       if (event.key === "+" || event.code === "NumpadAdd") {
         event.preventDefault();
-        changeZoom(ZOOM_STEP);
+        changeZoom(1);
       } else if (event.key === "-" || event.code === "NumpadSubtract") {
         event.preventDefault();
-        changeZoom(-ZOOM_STEP);
+        changeZoom(-1);
       } else if (event.key === "0" || event.code === "Numpad0") {
         event.preventDefault();
         resetView();
@@ -388,7 +398,7 @@ export default function EcgViewer({
       <TooltipIconButton
         disabled={zoom >= MAX_ZOOM}
         label="Aumentar zoom"
-        onClick={() => changeZoom(ZOOM_STEP)}
+        onClick={() => changeZoom(1)}
         size="icon"
         tooltip="Aumentar zoom (+)"
         tooltipContentProps={TOOLBAR_LEFT_TOOLTIP_PROPS}
@@ -399,7 +409,7 @@ export default function EcgViewer({
       <TooltipIconButton
         disabled={zoom <= MIN_ZOOM}
         label="Diminuir zoom"
-        onClick={() => changeZoom(-ZOOM_STEP)}
+        onClick={() => changeZoom(-1)}
         size="icon"
         tooltip="Diminuir zoom (-)"
         tooltipContentProps={TOOLBAR_RIGHT_TOOLTIP_PROPS}

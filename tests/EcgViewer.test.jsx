@@ -119,32 +119,37 @@ describe("EcgViewer", () => {
     expect(onImageRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("preserva a faixa de zoom de 0,6 a 2,4 e o passo de 0,15", () => {
+  it("amplia em passos de 25% entre caber na tela (1×) e 2,4×", () => {
     renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
 
+    const stage = document.querySelector(".ecg-image-stage");
     const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
-
+    const zoomOut = screen.getByRole("button", { name: "Diminuir zoom" });
     const reset = screen.getByRole("button", { name: "Restaurar visualização" });
+    expect(zoomOut).toBeDisabled();
     expect(reset).toBeDisabled();
+
     fireEvent.click(zoomIn);
-    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" });
+    expect(stage).toHaveStyle({ width: "125%" });
     expect(reset).toBeEnabled();
     fireEvent.click(reset);
-    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "100%" });
+    expect(stage).toHaveStyle({ width: "100%" });
     expect(reset).toBeDisabled();
-    fireEvent.click(zoomIn);
 
-    for (let index = 0; index < 20; index += 1) {
-      fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    const widths = [];
+    for (let index = 0; index < 6; index += 1) {
+      fireEvent.click(zoomIn);
+      widths.push(stage.style.width);
     }
-    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "240%" });
-    expect(screen.getByRole("button", { name: "Aumentar zoom" })).toBeDisabled();
+    expect(widths).toEqual(["125%", "156.25%", "195.31%", "240%", "240%", "240%"]);
+    expect(zoomIn).toBeDisabled();
 
-    for (let index = 0; index < 20; index += 1) {
-      fireEvent.click(screen.getByRole("button", { name: "Diminuir zoom" }));
-    }
-    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "60%" });
-    expect(screen.getByRole("button", { name: "Diminuir zoom" })).toBeDisabled();
+    // Da ponta de cima, volta pelos mesmos degraus.
+    fireEvent.click(zoomOut);
+    expect(stage).toHaveStyle({ width: "195.31%" });
+    for (let index = 0; index < 6; index += 1) fireEvent.click(zoomOut);
+    expect(stage).toHaveStyle({ width: "100%" });
+    expect(zoomOut).toBeDisabled();
   });
 
   it("mantém as regiões em coordenadas percentuais e permite limpar a seleção", () => {
@@ -319,7 +324,7 @@ describe("EcgViewer", () => {
 
     fireEvent.pointerEnter(viewer);
     fireEvent.keyDown(window, { key: "+" });
-    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" });
+    expect(document.querySelector(".ecg-image-stage")).toHaveStyle({ width: "125%" });
     fireEvent.keyDown(window, { key: "v" });
     expect(screen.getByRole("button", { name: "Mostrar marcações" })).toBeVisible();
     fireEvent.keyDown(window, { key: "0" });
@@ -341,7 +346,7 @@ describe("EcgViewer", () => {
     const wheelEvent = new WheelEvent("wheel", { bubbles: true, cancelable: true, clientX: 40, clientY: 30, deltaY: -100 });
     canvas.dispatchEvent(wheelEvent);
     expect(wheelEvent.defaultPrevented).toBe(true);
-    await waitFor(() => expect(container.querySelector(".ecg-image-stage")).toHaveStyle({ width: "115%" }));
+    await waitFor(() => expect(container.querySelector(".ecg-image-stage")).toHaveStyle({ width: "125%" }));
 
     canvas.scrollLeft = 30;
     canvas.scrollTop = 20;
