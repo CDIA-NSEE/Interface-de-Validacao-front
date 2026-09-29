@@ -353,7 +353,7 @@ describe("ExamReviewPage", () => {
 
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
     agreeButton.focus();
-    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
     expect(collapsedNavigation).toBeVisible();
     const collapsedBrand = collapsedNavigation.querySelector('[data-navigation-item="brand"]');
     expect(collapsedBrand).toHaveAttribute("aria-hidden", "true");
@@ -369,7 +369,12 @@ describe("ExamReviewPage", () => {
     // Sem dica no trilho: o menu abre com os nomes, e a dica só piscava antes de ser coberta.
     expect(collapsedNavigation.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
     // "Dra." é título, não nome: as iniciais de "Dra. Ana" são "A".
-    expect(collapsedNavigation.querySelector('[data-navigation-item="account"]')).toHaveTextContent(/^A$/);
+    const collapsedAccount = collapsedNavigation.querySelector('[data-navigation-item="account"]');
+    expect(collapsedAccount.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^A$/);
+    // A identidade não é controle: sem parada de Tab; no trilho, o nome fica para o leitor de tela.
+    expect(collapsedAccount).not.toHaveAttribute("tabindex");
+    expect(collapsedAccount).not.toHaveAttribute("role");
+    expect(collapsedAccount).toHaveTextContent("Dra. Ana");
 
     vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation, { clientX: 32, clientY: 300 });
@@ -417,7 +422,7 @@ describe("ExamReviewPage", () => {
     expect(themeToggle).toHaveAttribute("aria-pressed", "false");
     expect(themeToggle).toHaveTextContent("Desligado");
     expect(screen.queryByText("Modo claro")).not.toBeInTheDocument();
-    expect(screen.getByText("Dra. Ana")).toBeVisible();
+    expect(screen.getByText("Dra. Ana", { selector: "p" })).toBeVisible();
     expect(screen.getByText("Médico avaliador")).toBeVisible();
     expect(screen.queryByText("Navegação da validação")).not.toBeInTheDocument();
     expect(screen.queryByText("Navegação")).not.toBeInTheDocument();
@@ -459,7 +464,7 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     await screen.findByRole("button", { name: "Concordo" });
-    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação recolhida" });
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
     vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation, { clientX: 20, clientY: 600 });
     act(() => vi.advanceTimersByTime(200));
@@ -502,7 +507,7 @@ describe("ExamReviewPage", () => {
 
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
     agreeButton.focus();
-    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
+    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação principal" }));
 
     const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     await waitFor(() => expect(expandedNavigation).toHaveFocus());
@@ -581,7 +586,7 @@ describe("ExamReviewPage", () => {
 
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
     vi.useFakeTimers();
-    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
+    fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação principal" }));
     act(() => vi.advanceTimersByTime(200));
     screen.getByRole("dialog", { name: "Revisão de ECG" });
 

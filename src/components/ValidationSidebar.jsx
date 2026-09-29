@@ -123,22 +123,23 @@ function NavigationHeader({ compact }) {
   );
 }
 
+// Identidade não é controle: sem parada de Tab. As iniciais são decorativas; no trilho, o nome fica só para leitor de tela.
 function AccountIdentity({ compact, doctorName, doctorRole }) {
   return (
     <div
-      aria-label={compact ? doctorName : undefined}
       className="grid h-16 grid-cols-[4rem_minmax(0,1fr)] items-center"
       data-navigation-item="account"
-      role={compact ? "img" : undefined}
-      tabIndex={compact ? 0 : undefined}
     >
       <Badge
+        aria-hidden="true"
         className="size-10 justify-center justify-self-center rounded-full bg-brand-foreground/15 text-brand-foreground"
         variant="secondary"
       >
         {getInitials(doctorName)}
       </Badge>
-      {compact ? null : (
+      {compact ? (
+        <span className="sr-only">{doctorName}</span>
+      ) : (
         <div className="min-w-0 pr-4">
           <p className="truncate text-sm font-semibold">{doctorName}</p>
           <p className="truncate text-xs text-brand-foreground/70">{doctorRole}</p>
@@ -346,7 +347,7 @@ export default function ValidationSidebar({
   return (
     <>
       <nav
-        aria-label="Navegação recolhida"
+        aria-label="Navegação principal"
         className="h-svh min-h-0 w-16 overflow-x-hidden overflow-y-hidden border-r border-brand-foreground/10 bg-brand text-brand-foreground"
         onFocusCapture={openImmediately}
         onPointerEnter={scheduleOpen}
