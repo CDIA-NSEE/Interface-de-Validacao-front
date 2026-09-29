@@ -735,7 +735,7 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Dados do exame (com notas do laudo)" })).toContainElement(trigger);
     expect(trigger).toContainElement(screen.getByText("Notas do laudo"));
     expect(trigger.closest("[data-slot='card']")).toHaveClass("py-0");
-    expect(trigger).toHaveClass("h-11", "border-0", "focus-visible:ring-inset");
+    expect(trigger).toHaveClass("min-h-11", "border-0", "focus-visible:ring-inset");
     expect(trigger).not.toHaveClass("active:not-aria-[haspopup]:translate-y-px");
     expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted/50");
     expect(trigger).not.toHaveClass("hover:bg-muted");
@@ -750,7 +750,8 @@ describe("ExamReviewPage", () => {
     const clinicalIconLabel = clinicalHeading.querySelector('[data-slot="validation-panel-icon-label"]');
     const informationIconLabel = trigger.querySelector('[data-slot="validation-panel-icon-label"]');
     expect(clinicalIconLabel).toHaveClass("gap-2", "items-center");
-    expect(informationIconLabel).toHaveClass("gap-2", "items-center");
+    // Ícone na altura da 1ª linha: no painel estreito a etiqueta "Notas do laudo" desce para uma 2ª linha.
+    expect(informationIconLabel).toHaveClass("gap-2", "items-start");
     expect(clinicalIconLabel.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
       "size-5",
       "shrink-0",

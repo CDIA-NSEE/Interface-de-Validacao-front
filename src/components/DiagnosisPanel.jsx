@@ -1365,26 +1365,30 @@ export default function DiagnosisPanel({
                     informações", o cartão de seção vizinho; o ícone é aria-hidden, então o nome do gatilho segue sendo o rótulo.
                     O chevron fecha a linha com px-3 e size-7: mesma coluna dos indicadores dos itens abaixo.
                     Lista vazia: título estático, sem chevron nem hover — recolher uma lista vazia não faz nada, e um controle
-                    que não controla nada só confunde. Mesma caixa (h-11, px-3) e mesma tipografia do gatilho. */}
+                    que não controla nada só confunde. Mesma caixa (h-11, px-3) e mesma tipografia do gatilho.
+                    Painel estreito (cartão < 301px, ~1240px de janela): o "Opcional" desce para uma 2ª linha. Com o nowrap do
+                    Button e a altura fixa, o rótulo empurrava o chevron para fora do cartão, que o recortava. O ícone fica na
+                    altura da 1ª linha (`items-start`; numa linha só, a diferença para o centro é de 0,2px). O respiro antes da
+                    etiqueta é margem do título (mr-1), não da etiqueta: na 2ª linha ela começa alinhada ao título. */}
                 <h2>
                   {hasSecondaryDiagnoses ? (
                     <CollapsibleTrigger
                       render={
                         <Button
-                          className="h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 text-left font-heading text-sm transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                          className="h-auto min-h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 py-2 text-left font-heading text-sm whitespace-normal transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                           type="button"
                           variant="collapsible"
                         />
                       }
                     >
-                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <OptionalTag className="ml-1" /></ValidationPanelIconLabel>
+                      <ValidationPanelIconLabel className="items-start" icon={ClipboardList}><span className="mr-1">Diagnósticos adicionais</span> <OptionalTag /></ValidationPanelIconLabel>
                       <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4">
                         <ChevronDown className={cn("text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none", isSecondaryOpen && "rotate-180")} />
                       </span>
                     </CollapsibleTrigger>
                   ) : (
-                    <span className="flex h-11 items-center px-3 font-heading text-sm font-medium">
-                      <ValidationPanelIconLabel icon={ClipboardList}>Diagnósticos adicionais <OptionalTag className="ml-1" /></ValidationPanelIconLabel>
+                    <span className="flex min-h-11 items-center px-3 py-2 font-heading text-sm font-medium">
+                      <ValidationPanelIconLabel className="items-start" icon={ClipboardList}><span className="mr-1">Diagnósticos adicionais</span> <OptionalTag /></ValidationPanelIconLabel>
                     </span>
                   )}
                 </h2>

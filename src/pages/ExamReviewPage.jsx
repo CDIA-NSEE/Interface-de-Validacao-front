@@ -1002,12 +1002,14 @@ export default function ExamReviewPage() {
               por títulos junto de "Dados clínicos". A barra repete a de "Diagnósticos adicionais" (h-11: o título cai a 22px
               do topo nos três cartões de seção). border-0, não border-x-0: sobrava 1px transparente em cima e embaixo, onde
               o fundo do hover não pinta (background-clip: padding-box) — uma faixa branca entre a tinta e a borda do cartão
-              e outra antes da divisória. */}
+              e outra antes da divisória. Painel estreito: "Notas do laudo" desce para uma 2ª linha, como o "Opcional" de
+              "Diagnósticos adicionais" (com o nowrap e a altura fixa, o chevron saía do cartão e era recortado); o mr-1 do
+              título, no lugar do ml-1 da etiqueta, a deixa alinhada ao título na 2ª linha. */}
           <h2>
             <CollapsibleTrigger
               render={
                 <Button
-                  className="h-11 w-full justify-between border-0 px-3 transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                  className="h-auto min-h-11 w-full justify-between border-0 px-3 py-2 text-left whitespace-normal transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                   type="button"
                   variant="collapsible"
                 />
@@ -1016,12 +1018,12 @@ export default function ExamReviewPage() {
               {/* "Notas do laudo": as notas do próprio exame (comments) às vezes são o texto do laudo original e ficavam
                   escondidas no cartão fechado, sem sinal. Etiqueta neutra no formato da "Opcional" (propriedade do exame,
                   não estado: não muda ao abrir/fechar); o leitor de tela ouve "Dados do exame (com notas do laudo)". */}
-              <ValidationPanelIconLabel icon={FileText}>
-                Dados do exame
+              <ValidationPanelIconLabel className="items-start" icon={FileText}>
+                <span className="mr-1">Dados do exame</span>
                 {exam.comments ? (
                   <>
                     {" "}
-                    <Badge aria-hidden="true" className="ml-1 rounded-md bg-muted px-1.5 text-muted-foreground" variant="secondary">
+                    <Badge aria-hidden="true" className="rounded-md bg-muted px-1.5 text-muted-foreground" variant="secondary">
                       Notas do laudo
                     </Badge>
                     <span className="sr-only">(com notas do laudo)</span>
