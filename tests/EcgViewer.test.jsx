@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import EcgViewer from "../src/components/EcgViewer.jsx";
 import { TooltipProvider } from "../src/components/ui/tooltip.jsx";
@@ -489,6 +489,47 @@ describe("EcgViewer", () => {
     fireEvent.pointerEnter(viewer);
     fireEvent.keyDown(panelButton, { key: "ArrowLeft" });
     expect(canvas.scrollLeft).toBe(600);
+  });
+
+  it("durante a marcação, segurar Espaço e arrastar move o traçado sem desenhar", () => {
+    const onRegionChange = vi.fn();
+    const { container } = renderWithTooltips(
+      <EcgViewer imageUrl="/ecg-real.png" onRegionChange={onRegionChange} selectionLabel="Marcando área para D2" />,
+    );
+    const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 0 });
+    const pressSpace = () => {
+      const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, code: "Space", key: " " });
+      act(() => {
+        window.dispatchEvent(event);
+      });
+      return event;
+    };
+    fireEvent.pointerEnter(viewer);
+
+    // Em 1× não há o que mover: o Espaço segue para o botão em foco.
+    expect(pressSpace().defaultPrevented).toBe(false);
+    expect(stage).toHaveClass("cursor-crosshair");
+
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    canvas.scrollLeft = 100;
+    canvas.scrollTop = 50;
+    expect(pressSpace().defaultPrevented).toBe(true);
+    expect(stage).toHaveClass("cursor-grab");
+    fireEvent.pointerDown(stage, { button: 0, clientX: 300, clientY: 200, pointerId: 1 });
+    expect(stage).toHaveClass("cursor-grabbing");
+    fireEvent.pointerMove(stage, { clientX: 260, clientY: 180, pointerId: 1 });
+    fireEvent.pointerUp(stage, { button: 0, clientX: 260, clientY: 180, pointerId: 1 });
+    expect(canvas.scrollLeft).toBe(140);
+    expect(canvas.scrollTop).toBe(70);
+    expect(onRegionChange).not.toHaveBeenCalled();
+
+    fireEvent.keyUp(window, { code: "Space", key: " " });
+    expect(stage).toHaveClass("cursor-crosshair");
   });
 
   it("mostra a mão de arrastar só com o traçado ampliado", () => {

@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog.jsx";
 
-// Os mesmos atalhos que EcgViewer (+ − 0 setas V Esc) e os campos de texto (Ctrl+Enter) tratam — mudou lá, muda aqui.
+// Os mesmos atalhos que EcgViewer (+ − 0 setas Espaço V Esc) e os campos de texto (Ctrl+Enter) tratam — mudou lá, muda aqui.
 const SHORTCUT_GROUPS = [
   {
     id: "ecg",
@@ -17,6 +17,7 @@ const SHORTCUT_GROUPS = [
       { keys: ["0"], label: "Restaurar visualização" },
       { keys: ["← ↑ ↓ →"], label: "Mover o traçado ampliado" },
       { keys: ["Shift", "← ↑ ↓ →"], label: "Mover meia tela" },
+      { keys: ["Espaço"], label: "Segurar e arrastar para mover durante a marcação" },
       { keys: ["V"], label: "Ocultar ou mostrar marcações" },
       { keys: ["Esc"], label: "Cancelar a marcação ou desmarcar a área" },
     ],

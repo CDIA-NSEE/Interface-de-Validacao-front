@@ -124,6 +124,7 @@ export default function EcgViewer({
   const [zoom, setZoom] = useState(1);
   const [isCleanView, setIsCleanView] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [isSpaceHeld, setIsSpaceHeld] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -141,6 +142,8 @@ export default function EcgViewer({
   const isEditing = isSelectionActive && Boolean(selectedRegion);
   // Em 1× o traçado cabe inteiro: não há o que arrastar, e a mão de "agarrar" prometia um movimento que não vinha.
   const canPan = zoom > MIN_ZOOM;
+  // Durante a marcação arrastar desenha; segurando Espaço (como no Photoshop e no Figma), arrastar move o traçado.
+  const isSpacePanning = isSelectionActive && canPan && isSpaceHeld;
   const activeRegion = draftRegion || selectedRegion;
   const hasSelectedSavedRegion = regions.some((region) => region.isSelected);
   const visibleRegions = useMemo(
@@ -277,14 +280,15 @@ export default function EcgViewer({
 
   function handlePointerDown(event) {
     if (event.button !== 0 || !isImageReady) return;
-    if (!isSelectionActive) {
-      if (event.target.closest?.(".saved-region-box")) return;
+    if (!isSelectionActive || isSpacePanning) {
+      if (!isSpacePanning && event.target.closest?.(".saved-region-box")) return;
       // Desmarcar a área fica para o soltar, e só num clique: arrastar para mover o traçado mantém a seleção.
       const canvas = canvasRef.current;
       panStartRef.current = {
         clientX: event.clientX,
         clientY: event.clientY,
-        moved: false,
+        // Na marcação, soltar sem ter movido não desmarca nada (a seleção é a própria marcação).
+        moved: isSpacePanning,
         scrollLeft: canvas?.scrollLeft || 0,
         scrollTop: canvas?.scrollTop || 0,
       };
@@ -301,7 +305,7 @@ export default function EcgViewer({
   }
 
   function handlePointerMove(event) {
-    if (panStartRef.current && !isSelectionActive) {
+    if (panStartRef.current) {
       const panStart = panStartRef.current;
       const deltaX = event.clientX - panStart.clientX;
       const deltaY = event.clientY - panStart.clientY;
@@ -362,6 +366,39 @@ export default function EcgViewer({
   useEffect(() => {
     if (isSelectionActive) setIsCleanView(false);
   }, [isSelectionActive]);
+
+  useEffect(() => {
+    if (!isImageReady || !isSelectionActive || !canPan) {
+      setIsSpaceHeld(false);
+      return undefined;
+    }
+
+    // Só com o ponteiro sobre o ECG: aí o Espaço é do traçado, mesmo com o foco no "Marcar área" do painel — cancelar a
+    // tecla impede que ela acione o botão (o que encerraria a marcação).
+    function handleKeyDown(event) {
+      if (event.code !== "Space" || !isPointerInsideRef.current) return;
+      if (isTextEntryElement(event.target) || hasOpenDialog()) return;
+      event.preventDefault();
+      setIsSpaceHeld(true);
+    }
+
+    function handleKeyUp(event) {
+      if (event.code === "Space") setIsSpaceHeld(false);
+    }
+
+    function handleBlur() {
+      setIsSpaceHeld(false);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [canPan, isImageReady, isSelectionActive]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -446,6 +483,13 @@ export default function EcgViewer({
     selectedRegion,
   ]);
 
+  let stageCursorClass = "";
+  if (isImageReady) {
+    if (isSpacePanning) stageCursorClass = isPanning ? "touch-none cursor-grabbing" : "touch-none cursor-grab";
+    else if (isSelectionActive) stageCursorClass = "touch-none cursor-crosshair";
+    else if (canPan) stageCursorClass = isPanning ? "cursor-grabbing" : "cursor-grab";
+  }
+
   const cleanViewTooltip = isSelectionActive
     ? isEditing
       ? "Conclua ou cancele a edição para ocultar as marcações."
@@ -528,7 +572,7 @@ export default function EcgViewer({
       >
         <div className="ecg-canvas" ref={canvasRef}>
           <div
-            className={`ecg-image-stage ${!isImageReady ? "" : isSelectionActive ? "touch-none cursor-crosshair" : !canPan ? "" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`ecg-image-stage ${stageCursorClass}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
