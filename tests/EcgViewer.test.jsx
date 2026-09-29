@@ -19,13 +19,65 @@ describe("EcgViewer", () => {
     const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
 
     expect(canvas.parentElement).toContainElement(toolbar);
-    expect(toolbar).toHaveClass("absolute", "right-3", "bottom-3", "grid", "grid-cols-2");
+    expect(toolbar).toHaveClass("absolute", "grid", "grid-cols-2");
     expect(toolbar).not.toHaveTextContent("Controles do ECG");
     expect(canvas.parentElement).toHaveClass("min-h-72", "sm:min-h-88");
-    const controls = screen.getAllByRole("button");
+    const [grip, ...controls] = screen.getAllByRole("button");
+    // A alça é uma aba fora da grade (absoluta), oculta em repouso: a barra segue 2×2.
+    expect(grip).toHaveAccessibleName("Mover controles");
+    expect(grip).toHaveClass("absolute", "opacity-0", "pointer-events-none", "right-full");
     expect(controls).toHaveLength(4);
     controls.forEach((control) => expect(control).toHaveClass("size-8"));
     expect(screen.getByRole("button", { name: "Restaurar visualização" })).not.toHaveTextContent("100%");
+  });
+
+  it("deixa arrastar a barra de controles, guarda a posição e volta ao canto no clique duplo", () => {
+    window.localStorage.removeItem("medpage.ecgControlsPosition");
+    const { unmount } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
+    const grip = screen.getByRole("button", { name: "Mover controles" });
+    grip.setPointerCapture = vi.fn();
+    // left/top = calc(12px + fração × (100% − 24px)): a fração é a posição no espaço livre.
+    const fraction = (value) => Number(value.match(/\+ ([\d.]+) \*/)[1]);
+    // Visualizador de 924×424 e barra de 100×100: sobram 800×300 para mover (12px de margem de cada lado).
+    Object.defineProperty(viewer, "clientWidth", { configurable: true, value: 924 });
+    Object.defineProperty(viewer, "clientHeight", { configurable: true, value: 424 });
+    Object.defineProperty(toolbar, "offsetWidth", { configurable: true, value: 100 });
+    Object.defineProperty(toolbar, "offsetHeight", { configurable: true, value: 100 });
+
+    // Nasce no canto inferior direito.
+    expect(fraction(toolbar.style.left)).toBe(1);
+    expect(fraction(toolbar.style.top)).toBe(1);
+
+    fireEvent.pointerDown(grip, { button: 0, clientX: 900, clientY: 450, pointerId: 1 });
+    fireEvent.pointerMove(grip, { clientX: 500, clientY: 300, pointerId: 1 });
+    fireEvent.pointerUp(grip, { clientX: 500, clientY: 300, pointerId: 1 });
+    expect(fraction(toolbar.style.left)).toBe(0.5);
+    expect(fraction(toolbar.style.top)).toBe(0.5);
+    expect(JSON.parse(window.localStorage.getItem("medpage.ecgControlsPosition"))).toEqual({ x: 0.5, y: 0.5 });
+
+    // Não sai do visualizador.
+    fireEvent.pointerDown(grip, { button: 0, clientX: 500, clientY: 300, pointerId: 2 });
+    fireEvent.pointerMove(grip, { clientX: -2000, clientY: -2000, pointerId: 2 });
+    fireEvent.pointerUp(grip, { clientX: -2000, clientY: -2000, pointerId: 2 });
+    expect(fraction(toolbar.style.left)).toBe(0);
+
+    // Pelo teclado, setas na alça movem a barra (e não o traçado).
+    fireEvent.keyDown(grip, { key: "ArrowRight", shiftKey: true });
+    expect(fraction(toolbar.style.left)).toBe(0.08);
+
+    // A posição vale para o próximo exame.
+    unmount();
+    renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const nextToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
+    expect(fraction(nextToolbar.style.left)).toBe(0.08);
+    expect(fraction(nextToolbar.style.top)).toBe(0);
+
+    fireEvent.doubleClick(screen.getByRole("button", { name: "Mover controles" }));
+    expect(fraction(nextToolbar.style.left)).toBe(1);
+    expect(fraction(nextToolbar.style.top)).toBe(1);
+    expect(window.localStorage.getItem("medpage.ecgControlsPosition")).toBeNull();
   });
 
   it("usa a proporção natural da imagem e a informa ao layout", async () => {

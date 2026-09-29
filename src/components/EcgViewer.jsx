@@ -1,10 +1,11 @@
-import { Eye, EyeOff, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Minus, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import TooltipIconButton from "@/components/TooltipIconButton.jsx";
 import { DEFAULT_ECG_ASPECT_RATIO } from "../utils/reviewLayout.js";
 
@@ -25,8 +26,43 @@ const ARROW_PAN_DIRECTIONS = {
 const REGION_LABEL_SPACE = 22;
 // Até 3px entre apertar e soltar ainda é clique, não arrasto (a mão treme um pouco no clique).
 const CLICK_TOLERANCE = 3;
-const TOOLBAR_LEFT_TOOLTIP_PROPS = { side: "left", sideOffset: 8 };
-const TOOLBAR_RIGHT_TOOLTIP_PROPS = { side: "left", sideOffset: 48 };
+// Dicas à esquerda da barra, 3px além da borda dela: a coluna da direita desconta um botão (32px) e o vão (4px); com
+// a alça aparente à esquerda (16px), todas se afastam mais 16px para não cobri-la.
+const TOOLBAR_TOOLTIP_OFFSET = { left: 8, right: 48 };
+const CONTROLS_GRIP_WIDTH = 16;
+// A barra nasce no canto inferior direito, sobre a tarja preta do traçado (área morta), e o médico pode arrastá-la
+// para onde preferir. A posição é a fração do espaço livre (0 = encostada à esquerda/no topo, 1 = à direita/na base),
+// então acompanha o visualizador quando a janela muda; fica guardada neste navegador.
+const CONTROLS_POSITION_KEY = "medpage.ecgControlsPosition";
+const DEFAULT_CONTROLS_POSITION = { x: 1, y: 1 };
+// Margem da barra até a borda do visualizador (a do antigo right-3/bottom-3).
+const CONTROLS_INSET = 12;
+// Setas na alça: 16px por toque, 64px com Shift.
+const CONTROLS_KEY_STEP = 16;
+
+function readControlsPosition() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(CONTROLS_POSITION_KEY));
+    if (Number.isFinite(stored?.x) && Number.isFinite(stored?.y)) {
+      return { x: clamp(stored.x, 0, 1), y: clamp(stored.y, 0, 1) };
+    }
+  } catch {
+    // Sem armazenamento (janela privada, dados bloqueados): fica no canto.
+  }
+  return DEFAULT_CONTROLS_POSITION;
+}
+
+function saveControlsPosition(position) {
+  try {
+    if (position.x === DEFAULT_CONTROLS_POSITION.x && position.y === DEFAULT_CONTROLS_POSITION.y) {
+      window.localStorage.removeItem(CONTROLS_POSITION_KEY);
+    } else {
+      window.localStorage.setItem(CONTROLS_POSITION_KEY, JSON.stringify(position));
+    }
+  } catch {
+    // Sem armazenamento: a posição vale só nesta tela.
+  }
+}
 
 function stopToolbarEvent(event) {
   event.stopPropagation();
@@ -127,6 +163,9 @@ export default function EcgViewer({
   const [isCleanView, setIsCleanView] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [isSpaceHeld, setIsSpaceHeld] = useState(false);
+  const [controlsPosition, setControlsPosition] = useState(readControlsPosition);
+  // Posição da barra quando o arrasto começou (null fora do arrasto).
+  const [controlsDragStart, setControlsDragStart] = useState(null);
   const [selectionStart, setSelectionStart] = useState(null);
   // Primeiro canto de uma marcação por dois cliques, à espera do canto oposto.
   const [firstCorner, setFirstCorner] = useState(null);
@@ -139,6 +178,8 @@ export default function EcgViewer({
   const isPointerInsideRef = useRef(false);
   const panStartRef = useRef(null);
   const drawPressRef = useRef(null);
+  const controlsRef = useRef(null);
+  const controlsDragRef = useRef(null);
   const draftFrameRef = useRef(null);
   const draftPointRef = useRef(null);
   const zoomAnchorRef = useRef(null);
@@ -523,6 +564,67 @@ export default function EcgViewer({
     selectedRegion,
   ]);
 
+  const isDraggingControls = Boolean(controlsDragStart);
+
+  useEffect(() => {
+    if (!isDraggingControls) saveControlsPosition(controlsPosition);
+  }, [controlsPosition, isDraggingControls]);
+
+  // Desloca a barra em px a partir de `from`, sem sair do visualizador.
+  function moveControls(from, deltaX, deltaY) {
+    const viewer = viewerRef.current;
+    const toolbar = controlsRef.current;
+    if (!viewer || !toolbar) return from;
+    const freeWidth = viewer.clientWidth - CONTROLS_INSET * 2 - toolbar.offsetWidth;
+    const freeHeight = viewer.clientHeight - CONTROLS_INSET * 2 - toolbar.offsetHeight;
+    return {
+      x: freeWidth > 0 ? clamp(from.x + deltaX / freeWidth, 0, 1) : from.x,
+      y: freeHeight > 0 ? clamp(from.y + deltaY / freeHeight, 0, 1) : from.y,
+    };
+  }
+
+  function handleControlsGripPointerDown(event) {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    controlsDragRef.current = { clientX: event.clientX, clientY: event.clientY, position: controlsPosition };
+    setControlsDragStart(controlsPosition);
+  }
+
+  function handleControlsGripPointerMove(event) {
+    const drag = controlsDragRef.current;
+    if (!drag) return;
+    setControlsPosition(moveControls(drag.position, event.clientX - drag.clientX, event.clientY - drag.clientY));
+  }
+
+  function handleControlsGripPointerUp() {
+    if (!controlsDragRef.current) return;
+    controlsDragRef.current = null;
+    setControlsDragStart(null);
+  }
+
+  function handleControlsGripKeyDown(event) {
+    const direction = ARROW_PAN_DIRECTIONS[event.key];
+    if (!direction) return;
+    // As setas movem a barra, não o traçado (o atalho do visualizador ignora teclas já tratadas).
+    event.preventDefault();
+    const step = event.shiftKey ? CONTROLS_KEY_STEP * 4 : CONTROLS_KEY_STEP;
+    setControlsPosition(moveControls(controlsPosition, direction[0] * step, direction[1] * step));
+  }
+
+  // A alça é uma aba presa à lateral da barra, fora dela: em repouso a barra ocupa só os 78×78px de sempre (sobre a
+  // tarja preta). Fica do lado que tem espaço — à esquerda com a barra na metade direita, à direita na outra metade.
+  // Durante o arrasto, o lado é o do início: a alça não troca de lado embaixo do ponteiro ao cruzar o meio.
+  const isGripOnLeft = (controlsDragStart || controlsPosition).x > 0.5;
+  const tooltipGripAllowance = isGripOnLeft ? CONTROLS_GRIP_WIDTH : 0;
+  const leftColumnTooltipProps = { side: "left", sideOffset: TOOLBAR_TOOLTIP_OFFSET.left + tooltipGripAllowance };
+  const rightColumnTooltipProps = { side: "left", sideOffset: TOOLBAR_TOOLTIP_OFFSET.right + tooltipGripAllowance };
+  // `left` perto da borda direita encolheria a barra ao espaço que sobra à direita dela; `w-max` a mantém inteira.
+  const controlsStyle = {
+    left: `calc(${CONTROLS_INSET}px + (100% - ${CONTROLS_INSET * 2}px) * ${controlsPosition.x})`,
+    top: `calc(${CONTROLS_INSET}px + (100% - ${CONTROLS_INSET * 2}px) * ${controlsPosition.y})`,
+    transform: `translate(${-controlsPosition.x * 100}%, ${-controlsPosition.y * 100}%)`,
+  };
+
   let stageCursorClass = "";
   if (isImageReady) {
     if (isSpacePanning) stageCursorClass = isPanning ? "touch-none cursor-grabbing" : "touch-none cursor-grab";
@@ -540,20 +642,50 @@ export default function EcgViewer({
   const controls = (
     <div
       aria-label="Controles do ECG"
-      className="absolute right-3 bottom-3 z-10 grid grid-cols-2 gap-1 rounded-lg border bg-background/95 p-1"
+      className="group/controls absolute z-10 grid w-max grid-cols-2 gap-1 rounded-lg border bg-background/95 p-1"
       onClick={stopToolbarEvent}
       onMouseDown={stopToolbarEvent}
       onPointerDown={stopToolbarEvent}
       onWheel={stopToolbarEvent}
+      ref={controlsRef}
       role="toolbar"
+      style={controlsStyle}
     >
+      {/* Aparece com o ponteiro sobre a barra ou o foco de teclado nela (na hora; some em 200ms, como os hovers da tela) e,
+          oculta, não intercepta o ponteiro — por baixo dela está o traçado. */}
+      <TooltipIconButton
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+        className={cn(
+          "absolute -inset-y-px h-auto w-4 border-border bg-background/95 text-muted-foreground",
+          "transition-opacity duration-200 ease-out motion-reduce:transition-none",
+          isDraggingControls
+            ? "cursor-grabbing opacity-100"
+            : "pointer-events-none cursor-grab opacity-0 group-hover/controls:pointer-events-auto group-hover/controls:opacity-100 group-hover/controls:duration-0 group-has-[:focus-visible]/controls:pointer-events-auto group-has-[:focus-visible]/controls:opacity-100",
+          isGripOnLeft ? "right-full rounded-r-none border-r-0" : "left-full rounded-l-none border-l-0",
+        )}
+        data-controls-grip=""
+        label="Mover controles"
+        onDoubleClick={() => setControlsPosition(DEFAULT_CONTROLS_POSITION)}
+        onKeyDown={handleControlsGripKeyDown}
+        onLostPointerCapture={handleControlsGripPointerUp}
+        onPointerCancel={handleControlsGripPointerUp}
+        onPointerDown={handleControlsGripPointerDown}
+        onPointerMove={handleControlsGripPointerMove}
+        onPointerUp={handleControlsGripPointerUp}
+        size="icon"
+        tooltip="Arraste para mover · clique duplo volta ao canto"
+        tooltipContentProps={{ side: isGripOnLeft ? "left" : "right", sideOffset: 8 }}
+        variant="ghost"
+      >
+        <GripVertical aria-hidden="true" data-icon="inline-start" />
+      </TooltipIconButton>
       <TooltipIconButton
         disabled={zoom >= MAX_ZOOM}
         label="Aumentar zoom"
         onClick={() => changeZoom(1)}
         size="icon"
         tooltip="Aumentar zoom (+)"
-        tooltipContentProps={TOOLBAR_LEFT_TOOLTIP_PROPS}
+        tooltipContentProps={leftColumnTooltipProps}
         variant="outline"
       >
         <Plus aria-hidden="true" data-icon="inline-start" />
@@ -564,7 +696,7 @@ export default function EcgViewer({
         onClick={() => changeZoom(-1)}
         size="icon"
         tooltip="Diminuir zoom (-)"
-        tooltipContentProps={TOOLBAR_RIGHT_TOOLTIP_PROPS}
+        tooltipContentProps={rightColumnTooltipProps}
         variant="outline"
       >
         <Minus aria-hidden="true" data-icon="inline-start" />
@@ -578,7 +710,7 @@ export default function EcgViewer({
         }}
         size="icon"
         tooltip={cleanViewTooltip}
-        tooltipContentProps={TOOLBAR_LEFT_TOOLTIP_PROPS}
+        tooltipContentProps={leftColumnTooltipProps}
         variant="outline"
       >
         {isCleanView
@@ -591,7 +723,7 @@ export default function EcgViewer({
         onClick={resetView}
         size="icon"
         tooltip="Restaurar visualização (0)"
-        tooltipContentProps={TOOLBAR_RIGHT_TOOLTIP_PROPS}
+        tooltipContentProps={rightColumnTooltipProps}
         variant="outline"
       >
         <RotateCcw aria-hidden="true" data-icon="inline-start" />
