@@ -46,6 +46,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/context/AuthContext.jsx";
 import { cn } from "@/lib/utils";
 import {
   addDiagnosis,
@@ -186,6 +187,7 @@ function useCompactReviewLayout() {
 export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const reviewLayoutRef = useRef(null);
   const sidebarTriggerRef = useRef(null);
   const shouldRestoreSidebarFocusRef = useRef(true);
@@ -221,6 +223,7 @@ export default function ExamReviewPage() {
   const latestNotesRef = useRef("");
   const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+  const [exitIntent, setExitIntent] = useState("home");
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const [ecgImage, setEcgImage] = useState(ECG_IMAGE_LOADING);
   const ecgImageRequestRef = useRef(null);
@@ -669,15 +672,28 @@ export default function ExamReviewPage() {
     // Voltar/Início ficam travados durante uma ação; na janela silenciosa o botão ainda não está `disabled`.
     if (isBusyRef.current) return;
     if (hasUnsavedChanges) {
+      setExitIntent("home");
       setIsExitConfirmOpen(true);
       return;
     }
     navigate("/");
   }
 
-  function handleDiscardAndBack() {
+  // Sair da sessão pelo menu lateral descarta o mesmo trabalho que voltar à lista: passa pela mesma confirmação.
+  function handleLogout() {
+    if (isBusyRef.current) return;
+    if (hasUnsavedChanges) {
+      setExitIntent("logout");
+      setIsExitConfirmOpen(true);
+      return;
+    }
+    logout();
+  }
+
+  function handleDiscardAndExit() {
     setIsExitConfirmOpen(false);
-    navigate("/");
+    if (exitIntent === "logout") logout();
+    else navigate("/");
   }
 
   async function validateCurrentExam() {
@@ -1125,6 +1141,7 @@ export default function ExamReviewPage() {
           expanded={isSidebarExpanded}
           isBusy={isBusyIndicated}
           onHome={handleReturnHome}
+          onLogout={handleLogout}
           onOpenChange={handleSidebarOpenChange}
           onSupport={openSupport}
           onTutorial={() => setIsTutorialOpen(true)}
@@ -1286,8 +1303,9 @@ export default function ExamReviewPage() {
         />
         <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
         <UnsavedChangesModal
+          intent={exitIntent}
           isOpen={isExitConfirmOpen}
-          onDiscard={handleDiscardAndBack}
+          onDiscard={handleDiscardAndExit}
           onStay={() => setIsExitConfirmOpen(false)}
         />
       </div>

@@ -482,6 +482,40 @@ describe("ExamReviewPage", () => {
     });
   });
 
+  it("pede confirmação antes de sair da sessão com alterações não salvas", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
+    fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
+    screen.getByRole("button", { name: "Sair da sessão" }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    await user.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
+
+    expect(await screen.findByRole("alertdialog", { name: "Sair sem salvar?" })).toHaveTextContent(
+      "descartar essas alterações e sair da sessão.",
+    );
+    expect(logout).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Descartar e sair" }));
+    expect(logout).toHaveBeenCalledOnce();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("sai da sessão sem confirmação quando não há alterações não salvas", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    screen.getByRole("button", { name: "Sair da sessão" }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    await user.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
+
+    await waitFor(() => expect(logout).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
   it("permanece recolhida após restaurar o foco ao clicar fora da navegação", async () => {
     const user = userEvent.setup();
     stubViewport(false);
@@ -916,6 +950,7 @@ describe("ExamReviewPage", () => {
     const agree = await screen.findByRole("button", { name: "Concordo" });
     const back = screen.getByRole("button", { name: "Voltar" });
     const home = screen.getByRole("button", { name: "Início" });
+    const logoutButton = screen.getByRole("button", { name: "Sair da sessão" });
 
     vi.useFakeTimers();
     fireEvent.click(agree);
@@ -923,6 +958,7 @@ describe("ExamReviewPage", () => {
     // Requisição em andamento, mas dentro do limiar: nada fica desabilitado (sem a "piscada" da página).
     expect(back).toBeEnabled();
     expect(home).toBeEnabled();
+    expect(logoutButton).toBeEnabled();
     act(() => vi.advanceTimersByTime(299));
     expect(back).toBeEnabled();
     expect(home).toBeEnabled();
@@ -930,12 +966,14 @@ describe("ExamReviewPage", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(back).toBeDisabled();
     expect(home).toBeDisabled();
+    expect(logoutButton).toBeDisabled();
 
     await act(async () => {
       resolveReview({ ...exam, diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }] });
     });
     expect(back).toBeEnabled();
     expect(home).toBeEnabled();
+    expect(logoutButton).toBeEnabled();
     expect(screen.getByLabelText("✓ Decisão salva")).toBeInTheDocument();
   });
 

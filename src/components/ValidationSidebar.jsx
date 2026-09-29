@@ -206,6 +206,7 @@ function NavigationPanel({
           <AccountIdentity compact={compact} doctorName={doctorName} doctorRole={doctorRole} />
           <NavigationAction
             compact={compact}
+            disabled={isBusy}
             icon={LogOut}
             itemKey="logout"
             label="Sair da sessão"
@@ -221,12 +222,13 @@ export default function ValidationSidebar({
   expanded,
   isBusy,
   onHome,
+  onLogout,
   onOpenChange,
   onSupport,
   onTutorial,
   triggerRef,
 }) {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const openTimerRef = useRef(null);
   const closeTimerRef = useRef(null);
@@ -338,7 +340,7 @@ export default function ValidationSidebar({
           isBusy={isBusy}
           isDark={isDark}
           onHome={onHome}
-          onLogout={logout}
+          onLogout={onLogout}
           onSupport={onSupport}
           onTheme={toggleTheme}
           onTutorial={onTutorial}
@@ -364,7 +366,7 @@ export default function ValidationSidebar({
             isBusy={isBusy}
             isDark={isDark}
             onHome={() => closeThen(onHome)}
-            onLogout={() => closeThen(logout)}
+            onLogout={() => closeThen(onLogout)}
             onSupport={() => closeThen(onSupport)}
             onTheme={toggleTheme}
             onTutorial={() => closeThen(onTutorial)}

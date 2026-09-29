@@ -74,4 +74,14 @@ describe("shared overlays", () => {
     expect(onStay).toHaveBeenCalledOnce();
     expect(onDiscard).not.toHaveBeenCalled();
   });
+
+  it("names the logout destination when leaving the session", () => {
+    render(<UnsavedChangesModal intent="logout" isOpen onDiscard={vi.fn()} onStay={vi.fn()} />);
+
+    expect(screen.getByRole("alertdialog", { name: "Sair sem salvar?" })).toHaveTextContent(
+      "descartar essas alterações e sair da sessão.",
+    );
+    expect(screen.getByRole("button", { name: "Descartar e sair" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Descartar e voltar" })).not.toBeInTheDocument();
+  });
 });

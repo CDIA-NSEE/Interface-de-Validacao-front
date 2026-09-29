@@ -1,4 +1,4 @@
-import { ArrowLeft, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, LogOut, TriangleAlert, X } from "lucide-react";
 
 import {
   AlertDialog,
@@ -12,7 +12,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.jsx";
 
-export default function UnsavedChangesModal({ isOpen, onDiscard, onStay }) {
+const EXIT_COPY = {
+  home: { destination: "voltar à lista", discardLabel: "Descartar e voltar", icon: ArrowLeft },
+  logout: { destination: "sair da sessão", discardLabel: "Descartar e sair", icon: LogOut },
+};
+
+export default function UnsavedChangesModal({ intent = "home", isOpen, onDiscard, onStay }) {
+  const { destination, discardLabel, icon: DiscardIcon } = EXIT_COPY[intent];
+
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onStay()}>
       <AlertDialogContent>
@@ -23,7 +30,7 @@ export default function UnsavedChangesModal({ isOpen, onDiscard, onStay }) {
           <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
           <AlertDialogDescription>
             Há informações que ainda não foram salvas neste ECG. Você pode continuar revisando ou
-            descartar essas alterações e voltar à lista.
+            descartar essas alterações e {destination}.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -41,8 +48,8 @@ export default function UnsavedChangesModal({ isOpen, onDiscard, onStay }) {
         <AlertDialogFooter>
           <AlertDialogCancel>Continuar no ECG</AlertDialogCancel>
           <AlertDialogAction onClick={onDiscard} variant="destructive">
-            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-            Descartar e voltar
+            <DiscardIcon data-icon="inline-start" aria-hidden="true" />
+            {discardLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
