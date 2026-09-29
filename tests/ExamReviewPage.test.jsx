@@ -412,6 +412,11 @@ describe("ExamReviewPage", () => {
     expect(screen.getByText("Contato e suporte")).toBeVisible();
     expect(screen.queryByText("Central de ajuda / Contato")).not.toBeInTheDocument();
     expect(screen.getByText("Modo escuro")).toBeVisible();
+    // O nome não muda com o tema: o estado aparece ao lado ("Desligado") e em aria-pressed.
+    const themeToggle = expandedNavigation.querySelector('button[aria-label="Modo escuro"]');
+    expect(themeToggle).toHaveAttribute("aria-pressed", "false");
+    expect(themeToggle).toHaveTextContent("Desligado");
+    expect(screen.queryByText("Modo claro")).not.toBeInTheDocument();
     expect(screen.getByText("Dra. Ana")).toBeVisible();
     expect(screen.getByText("Médico avaliador")).toBeVisible();
     expect(screen.queryByText("Navegação da validação")).not.toBeInTheDocument();
