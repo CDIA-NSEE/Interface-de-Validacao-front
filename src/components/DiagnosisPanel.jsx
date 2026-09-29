@@ -113,8 +113,9 @@ const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration
 // barra que o abre e fecha (contagem ou rótulo à esquerda, chevron à direita, na largura toda). Os dois grupos usam as
 // mesmas classes para terem a mesma forma — o médico aprende um e reconhece o outro. Ver o comentário da barra de áreas.
 const GROUP_OUTLINE_CLASS = "overflow-hidden rounded-lg border border-input";
+// Hover como no menu lateral e nas linhas do painel (modelo do macOS): acende na hora e apaga em 200ms.
 const GROUP_BAR_CLASS =
-  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
+  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors duration-200 ease-out hover:duration-0 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
 // O campo da justificativa não tem moldura própria: com foco nele, o contorno do grupo faz o papel da borda do campo.
 const JUSTIFICATION_FOCUS_CLASS =
   "has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-3 has-[textarea:focus-visible]:ring-ring/50";
