@@ -102,8 +102,8 @@ function NavigationHeader({ compact }) {
     <div className="grid h-16 grid-cols-[4rem_minmax(0,1fr)] items-center">
       {brandMark}
       {compact ? null : (
-        <SheetTitle className="min-w-0 truncate pr-4 text-sm font-semibold tracking-wide text-brand-foreground uppercase">
-          Validação médica
+        <SheetTitle className="min-w-0 truncate pr-4 text-base font-semibold text-brand-foreground">
+          Revisão de ECG
         </SheetTitle>
       )}
     </div>

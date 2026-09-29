@@ -359,7 +359,7 @@ describe("ExamReviewPage", () => {
     expect(collapsedBrand).toHaveAttribute("aria-hidden", "true");
     expect(collapsedBrand.tagName).toBe("DIV");
     expect(screen.queryByRole("button", { name: "Expandir navegação" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     expect(
       [...collapsedNavigation.querySelectorAll("[data-navigation-item]")].map(
@@ -373,29 +373,29 @@ describe("ExamReviewPage", () => {
 
     vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation, { clientX: 32, clientY: 300 });
-    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
     expect(document.querySelector('[data-slot="sheet-overlay"]')).not.toBeInTheDocument();
 
     // Só passar pelo trilho a caminho do painel não abre o menu.
     act(() => vi.advanceTimersByTime(199));
     fireEvent.pointerLeave(collapsedNavigation);
     act(() => vi.advanceTimersByTime(200));
-    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
 
     // Andar pelo trilho recomeça a contagem; um tremor dentro da tolerância não.
     fireEvent.pointerEnter(collapsedNavigation, { clientX: 32, clientY: 300 });
     act(() => vi.advanceTimersByTime(150));
     fireEvent.pointerMove(collapsedNavigation, { clientX: 32, clientY: 360 });
     act(() => vi.advanceTimersByTime(150));
-    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
     fireEvent.pointerMove(collapsedNavigation, { clientX: 34, clientY: 363 });
     act(() => vi.advanceTimersByTime(49));
-    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(1));
 
     const expandedNavigation = screen.getByRole("dialog", {
-      name: "Validação médica",
+      name: "Revisão de ECG",
     });
     expect(expandedNavigation).toBeVisible();
     expect(
@@ -457,7 +457,7 @@ describe("ExamReviewPage", () => {
     vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation, { clientX: 20, clientY: 600 });
     act(() => vi.advanceTimersByTime(200));
-    const expandedNavigation = screen.getByRole("dialog", { name: "Validação médica" });
+    const expandedNavigation = screen.getByRole("dialog", { name: "Revisão de ECG" });
 
     // Saindo do trilho para dentro do menu: continua aberto.
     fireEvent.pointerLeave(collapsedNavigation, { relatedTarget: expandedNavigation });
@@ -480,12 +480,12 @@ describe("ExamReviewPage", () => {
     const agreeButton = await screen.findByRole("button", { name: "Concordo" });
     agreeButton.focus();
     screen.getByRole("button", { name: "Início" }).focus();
-    expect(await screen.findByRole("dialog", { name: "Validação médica" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Revisão de ECG" })).toBeVisible();
 
     await user.keyboard("{Escape}");
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
     });
     expect(agreeButton).toHaveFocus();
   });
@@ -498,7 +498,7 @@ describe("ExamReviewPage", () => {
     agreeButton.focus();
     fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
 
-    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     await waitFor(() => expect(expandedNavigation).toHaveFocus());
     expect(expandedNavigation.querySelector('button[aria-label="Início"]')).not.toHaveFocus();
   });
@@ -511,7 +511,7 @@ describe("ExamReviewPage", () => {
     agreeButton.focus();
     screen.getByRole("button", { name: "Sair da sessão" }).focus();
 
-    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     await waitFor(() => {
       expect(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]')).toHaveFocus();
     });
@@ -525,7 +525,7 @@ describe("ExamReviewPage", () => {
     const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
     fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
     screen.getByRole("button", { name: "Sair da sessão" }).focus();
-    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     await user.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
 
     expect(await screen.findByRole("alertdialog", { name: "Sair sem salvar?" })).toHaveTextContent(
@@ -544,7 +544,7 @@ describe("ExamReviewPage", () => {
 
     await screen.findByRole("button", { name: "Concordo" });
     screen.getByRole("button", { name: "Sair da sessão" }).focus();
-    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     await user.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
 
     await waitFor(() => expect(logout).toHaveBeenCalledOnce());
@@ -558,7 +558,7 @@ describe("ExamReviewPage", () => {
 
     await screen.findByRole("button", { name: "Concordo" });
     await user.click(screen.getByRole("button", { name: "Modo escuro" }));
-    const expandedNavigation = await screen.findByRole("dialog", { name: "Validação médica" });
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     const expandedHome = expandedNavigation.querySelector('button[aria-label="Início"]');
     expandedHome.focus();
     expect(expandedHome).toHaveFocus();
@@ -566,7 +566,7 @@ describe("ExamReviewPage", () => {
     await user.click(document.querySelector('[data-slot="sheet-overlay"]'));
     await new Promise((resolve) => window.setTimeout(resolve, 500));
 
-    expect(screen.queryByRole("dialog", { name: "Validação médica" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
   });
 
   it("bloqueia uma ação clínica enquanto a navegação lateral está aberta", async () => {
@@ -577,7 +577,7 @@ describe("ExamReviewPage", () => {
     vi.useFakeTimers();
     fireEvent.pointerEnter(screen.getByRole("navigation", { name: "Navegação recolhida" }));
     act(() => vi.advanceTimersByTime(200));
-    screen.getByRole("dialog", { name: "Validação médica" });
+    screen.getByRole("dialog", { name: "Revisão de ECG" });
 
     fireEvent.click(agreeButton);
 
