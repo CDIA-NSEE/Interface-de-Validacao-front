@@ -384,6 +384,35 @@ describe("EcgViewer", () => {
     expect(canvas.scrollTop).toBe(40);
   });
 
+  it("amplia pela roda na proporção do gesto e não reage ao deslizar para o lado", async () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    const wheel = (init) => {
+      const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, ...init });
+      canvas.dispatchEvent(event);
+      return event;
+    };
+
+    // Um gesto leve de touchpad: oito eventos pequenos somam um terço de dente da roda.
+    for (let index = 0; index < 8; index += 1) wheel({ deltaY: -4 });
+    await waitFor(() => expect(Number.parseFloat(stage.style.width)).toBeCloseTo(100 * 1.25 ** 0.32, 1));
+
+    // Deslizar para o lado fica com o navegador (rola o traçado ampliado), sem mexer no zoom.
+    const sideways = wheel({ deltaX: 60, deltaY: 0 });
+    expect(sideways.defaultPrevented).toBe(false);
+    expect(Number.parseFloat(stage.style.width)).toBeCloseTo(100 * 1.25 ** 0.32, 1);
+
+    // Firefox conta em linhas: três linhas (um dente) valem 0,75 de passo — e o zoom não passa de caber na tela.
+    wheel({ deltaMode: 1, deltaY: 3 });
+    await waitFor(() => expect(stage).toHaveStyle({ width: "100%" }));
+
+    // A pinça chega como roda com Ctrl e deltas pequenos.
+    const pinch = wheel({ ctrlKey: true, deltaY: -10 });
+    expect(pinch.defaultPrevented).toBe(true);
+    await waitFor(() => expect(stage).toHaveStyle({ width: "125%" }));
+  });
+
   it("só desenha após ativar Marcar área e permite ciclos consecutivos", () => {
     const onRegionChange = vi.fn();
     const { container, rerender } = renderWithTooltips(

@@ -32,6 +32,15 @@ function getSteppedZoom(current, direction) {
   return clamp(ZOOM_FACTOR ** nextLevel, MIN_ZOOM, MAX_ZOOM);
 }
 
+// Zoom proporcional ao gesto, medido em passos do "+": um dente da roda (100px) vale um passo; o touchpad manda
+// dezenas de eventos pequenos por gesto e cada um vale a sua fração — antes cada evento valia um passo inteiro, e um
+// gesto leve ia de 1× a 2,2×. Linhas e páginas convertidas como no d3-zoom (25px e 500px); a pinça (Ctrl) manda deltas
+// ~10× menores.
+function getWheelZoomExponent(event) {
+  const unit = event.deltaMode === 1 ? 25 : event.deltaMode === 2 ? 500 : 1;
+  return (-event.deltaY * unit * (event.ctrlKey ? 10 : 1)) / 100;
+}
+
 function roundRegion(region) {
   return {
     x: Number(region.x.toFixed(2)),
@@ -185,7 +194,7 @@ export default function EcgViewer({
 
   // Sem âncora (botões e teclado), amplia em torno do centro da vista; antes o traçado crescia a partir do canto
   // superior esquerdo e o que o médico olhava saía da tela.
-  const changeZoom = useCallback((direction, anchor = null) => {
+  const applyZoom = useCallback((getNextZoom, anchor = null) => {
     const stage = stageRef.current;
     const canvas = canvasRef.current;
     if (stage && canvas) {
@@ -201,11 +210,16 @@ export default function EcgViewer({
       };
     }
     setZoom((current) => {
-      const nextZoom = getSteppedZoom(current, direction);
+      const nextZoom = getNextZoom(current);
       if (nextZoom === current) zoomAnchorRef.current = null;
       return nextZoom;
     });
   }, []);
+
+  const changeZoom = useCallback(
+    (direction) => applyZoom((current) => getSteppedZoom(current, direction)),
+    [applyZoom],
+  );
 
   const resetView = useCallback(() => {
     const canvas = canvasRef.current;
@@ -336,13 +350,18 @@ export default function EcgViewer({
     if (!canvas || !isImageReady) return undefined;
 
     function handleWheel(event) {
+      // Deslizar para o lado no touchpad rola o traçado ampliado, como em qualquer área rolável; antes, com deltaY 0,
+      // cada evento lateral diminuía o zoom. A pinça chega como roda com Ctrl e continua ampliando.
+      if (!event.ctrlKey && Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       event.preventDefault();
-      changeZoom(event.deltaY < 0 ? 1 : -1, event);
+      const exponent = getWheelZoomExponent(event);
+      if (!exponent) return;
+      applyZoom((current) => clamp(current * ZOOM_FACTOR ** exponent, MIN_ZOOM, MAX_ZOOM), event);
     }
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [changeZoom, isImageReady]);
+  }, [applyZoom, isImageReady]);
 
   useEffect(() => () => cancelDraftFrame(), [cancelDraftFrame]);
 

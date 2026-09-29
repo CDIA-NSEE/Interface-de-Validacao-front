@@ -248,6 +248,8 @@
   min-height: 0;
   flex: 1 1 0%;
   overflow: auto;
+  /* Deslizar para o lado no touchpad rola o traçado ampliado; na borda, não passa adiante (nem vira "voltar" do navegador). */
+  overscroll-behavior: contain;
   padding: clamp(2px, 0.35vw, 6px);
   background: var(--card);
   scrollbar-width: thin;
