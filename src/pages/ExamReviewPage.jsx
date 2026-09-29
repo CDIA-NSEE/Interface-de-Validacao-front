@@ -130,6 +130,12 @@ const BUSY_INDICATION_DELAY_MS = 300;
 // trocar o item aberto), saltando o painel dezenas de pixels sem ação do médico.
 const REVIEW_BODY_SCROLL_CLASS = "min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]]:[overflow-anchor:none]";
 
+// Numa tela 16:9 o ECG (~1,74:1) é limitado pela largura: o painel no piso de 30% deixava 226px de altura vazios no
+// visualizador a 1920×1080. O piso vira o menor entre 30% e 440px — a largura do painel a 1536×730 (1080p a 125%) —,
+// e a 1920×1080 o ECG passa de 1263×724 para ~1380×791. Até ~1536px de janela nada muda.
+const REVIEW_SIDEBAR_MIN_RATIO = 0.3;
+const REVIEW_SIDEBAR_FLOOR_CAP = 440;
+
 // "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
 // reabrir a cada exame da fila. Preferência deste navegador, como o tema; sem armazenamento, vale só a sessão.
 const EXAM_DATA_OPEN_KEY = "medpage.examDataOpen";
@@ -378,7 +384,7 @@ export default function ExamReviewPage() {
         maximumSidebarRatio: usesIntermediateLayout ? 0.42 : 0.32,
         minimumSidebarWidth: usesIntermediateLayout
           ? 300
-          : Math.round(layoutWidth * 0.3),
+          : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), REVIEW_SIDEBAR_FLOOR_CAP),
         viewerHorizontalChrome: 24,
         viewerVerticalChrome: 150,
       });
@@ -1171,9 +1177,9 @@ export default function ExamReviewPage() {
         >
           <h1 className="sr-only">Exame {exam.exam_code}</h1>
           <main
-            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(30%,var(--review-sidebar-width))_minmax(0,1fr)]"
+            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(min(30%,440px),var(--review-sidebar-width))_minmax(0,1fr)]"
             ref={reviewLayoutRef}
-            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : "30%" }}
+            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : "min(30%, 440px)" }}
           >
             {!isCompactLayout ? (
               <aside
