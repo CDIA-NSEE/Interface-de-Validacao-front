@@ -44,10 +44,11 @@ export default function AppHeader({ onContact, onTutorial, title = "Revisão de 
             </div>
 
             <nav className="flex items-center gap-1" aria-label="Ações globais">
-              <TooltipIconButton label="Abrir tutorial" onClick={onTutorial} size="icon" variant="brandGhost">
+              {/* Os mesmos nomes do menu lateral da tela de revisão: uma ação, um nome em toda a aplicação. */}
+              <TooltipIconButton label="Tutorial rápido" onClick={onTutorial} size="icon" variant="brandGhost">
                 <HelpCircle aria-hidden="true" />
               </TooltipIconButton>
-              <TooltipIconButton label="Entrar em contato" onClick={onContact} size="icon" variant="brandGhost">
+              <TooltipIconButton label="Contato e suporte" onClick={onContact} size="icon" variant="brandGhost">
                 <LifeBuoy aria-hidden="true" />
               </TooltipIconButton>
               <TooltipIconButton
@@ -58,7 +59,7 @@ export default function AppHeader({ onContact, onTutorial, title = "Revisão de 
               >
                 {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
               </TooltipIconButton>
-              <TooltipIconButton label="Sair" onClick={logout} size="icon" variant="brandGhost">
+              <TooltipIconButton label="Sair da sessão" onClick={logout} size="icon" variant="brandGhost">
                 <LogOut aria-hidden="true" />
               </TooltipIconButton>
             </nav>
