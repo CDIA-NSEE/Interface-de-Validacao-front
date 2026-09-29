@@ -46,8 +46,10 @@ describe("shared overlays", () => {
   it("renders the tutorial as an accessible dialog", () => {
     render(<TutorialModal isOpen onClose={vi.fn()} />);
 
-    expect(screen.getByRole("dialog", { name: "Validação de ECG" })).toBeInTheDocument();
+    // Mesmo nome do item que abre a janela; "Início" é o nome da tela inicial no menu (não "home").
+    expect(screen.getByRole("dialog", { name: "Tutorial rápido" })).toBeInTheDocument();
     expect(screen.getByText("Fila do dia")).toBeInTheDocument();
+    expect(screen.getByText("Comece pelo diagnóstico ativo exibido no Início.")).toBeInTheDocument();
     expect(screen.getByText("Decisão obrigatória")).toBeInTheDocument();
   });
 

@@ -19,7 +19,7 @@ const STEPS = [
   {
     icon: ListChecks,
     title: "Fila do dia",
-    text: "Comece pelo diagnóstico ativo exibido na home.",
+    text: "Comece pelo diagnóstico ativo exibido no Início.",
   },
   {
     icon: MousePointerClick,
@@ -38,7 +38,7 @@ export default function TutorialModal({ isOpen, onClose }) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="pr-10">
-          <DialogTitle>Validação de ECG</DialogTitle>
+          <DialogTitle>Tutorial rápido</DialogTitle>
           <DialogDescription>
             Três passos para revisar a fila com segurança.
           </DialogDescription>
