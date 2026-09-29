@@ -183,16 +183,21 @@ export default function EcgViewer({
     onImageAspectRatioChange?.(nextAspectRatio);
   }
 
+  // Sem âncora (botões e teclado), amplia em torno do centro da vista; antes o traçado crescia a partir do canto
+  // superior esquerdo e o que o médico olhava saía da tela.
   const changeZoom = useCallback((direction, anchor = null) => {
     const stage = stageRef.current;
     const canvas = canvasRef.current;
-    if (anchor && stage && canvas) {
+    if (stage && canvas) {
       const stageRect = stage.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const clientX = anchor ? anchor.clientX : canvasRect.left + canvasRect.width / 2;
+      const clientY = anchor ? anchor.clientY : canvasRect.top + canvasRect.height / 2;
       zoomAnchorRef.current = {
-        clientX: anchor.clientX,
-        clientY: anchor.clientY,
-        xRatio: stageRect.width ? (anchor.clientX - stageRect.left) / stageRect.width : 0.5,
-        yRatio: stageRect.height ? (anchor.clientY - stageRect.top) / stageRect.height : 0.5,
+        clientX,
+        clientY,
+        xRatio: stageRect.width ? (clientX - stageRect.left) / stageRect.width : 0.5,
+        yRatio: stageRect.height ? (clientY - stageRect.top) / stageRect.height : 0.5,
       };
     }
     setZoom((current) => {

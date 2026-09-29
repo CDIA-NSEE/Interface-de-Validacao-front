@@ -152,6 +152,34 @@ describe("EcgViewer", () => {
     expect(zoomOut).toBeDisabled();
   });
 
+  it("amplia pelos botões e pelo teclado em torno do centro da vista", () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 0 });
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 500 });
+    stage.getBoundingClientRect = () => {
+      const scale = Number.parseFloat(stage.style.width) / 100;
+      return { left: -canvas.scrollLeft, top: -canvas.scrollTop, width: 1000 * scale, height: 500 * scale };
+    };
+    const centerRatio = () => {
+      const rect = stage.getBoundingClientRect();
+      return [(500 - rect.left) / rect.width, (250 - rect.top) / rect.height];
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    expect(canvas.scrollLeft).toBe(125);
+    expect(canvas.scrollTop).toBe(62.5);
+    expect(centerRatio()).toEqual([0.5, 0.5]);
+
+    fireEvent.pointerEnter(viewer);
+    fireEvent.keyDown(window, { key: "+" });
+    expect(stage).toHaveStyle({ width: "156.25%" });
+    expect(centerRatio()).toEqual([0.5, 0.5]);
+  });
+
   it("mantém as regiões em coordenadas percentuais e permite limpar a seleção", () => {
     const onRegionCancel = vi.fn();
     const onRegionChange = vi.fn();
