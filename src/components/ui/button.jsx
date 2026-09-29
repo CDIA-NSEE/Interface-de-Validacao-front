@@ -20,7 +20,7 @@ const buttonVariants = cva(
         brandGhost:
           "text-brand-foreground hover:bg-brand-foreground/12 hover:text-brand-foreground focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-brand-foreground focus-visible:ring-inset aria-expanded:bg-brand-foreground/12 aria-expanded:text-brand-foreground",
         brandNavigation:
-          "text-brand-foreground transition-colors duration-10 ease-out motion-reduce:transition-none hover:bg-brand-foreground/16 hover:text-brand-foreground focus-visible:ring-2 focus-visible:ring-brand-foreground focus-visible:ring-inset aria-expanded:bg-brand-foreground/16 aria-expanded:text-brand-foreground [&_svg:not([class*='size-'])]:size-5",
+          "text-brand-foreground transition-colors duration-200 ease-out hover:duration-0 motion-reduce:transition-none hover:bg-brand-foreground/16 hover:text-brand-foreground focus-visible:ring-2 focus-visible:ring-brand-foreground focus-visible:ring-inset aria-expanded:bg-brand-foreground/16 aria-expanded:text-brand-foreground [&_svg:not([class*='size-'])]:size-5",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         success:
