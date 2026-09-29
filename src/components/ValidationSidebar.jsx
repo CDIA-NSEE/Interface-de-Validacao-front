@@ -8,7 +8,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge.jsx";
 import { Button } from "@/components/ui/button.jsx";
@@ -87,6 +87,7 @@ function NavigationAction({
   itemKey,
   label,
   onClick,
+  pointerItemKey,
 }) {
   // Linha de 48px com destaque de 40px (8px entre destaques; no trilho, um quadrado do tamanho da marca e do avatar).
   return (
@@ -97,6 +98,7 @@ function NavigationAction({
           "mx-3 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-0 rounded-lg border-0 px-0 text-left",
           compact ? "w-10" : "w-[calc(100%-1.5rem)]",
         )}
+        data-pointer-over={pointerItemKey === itemKey || undefined}
         disabled={disabled}
         onClick={onClick}
         onMouseDown={compact ? keepFocusOnPress : undefined}
@@ -193,6 +195,7 @@ function NavigationPanel({
   onSupport,
   onTheme,
   onTutorial,
+  pointerItemKey,
 }) {
   return (
     <div className="flex h-full w-72 flex-col">
@@ -209,6 +212,7 @@ function NavigationPanel({
             itemKey="home"
             label="Início"
             onClick={onHome}
+            pointerItemKey={pointerItemKey}
           />
           <NavigationSeparator compact={compact} />
           <NavigationAction
@@ -217,6 +221,7 @@ function NavigationPanel({
             itemKey="tutorial"
             label="Tutorial rápido"
             onClick={onTutorial}
+            pointerItemKey={pointerItemKey}
           />
           <NavigationAction
             compact={compact}
@@ -224,6 +229,7 @@ function NavigationPanel({
             itemKey="shortcuts"
             label="Atalhos de teclado"
             onClick={onShortcuts}
+            pointerItemKey={pointerItemKey}
           />
           <NavigationAction
             compact={compact}
@@ -231,6 +237,7 @@ function NavigationPanel({
             itemKey="support"
             label="Contato e suporte"
             onClick={onSupport}
+            pointerItemKey={pointerItemKey}
           />
           {/* Nome e ícone do modo para onde o clique leva (lua no claro, sol no escuro), como no cabeçalho do dashboard: o
               estado atual já está na tela inteira. O leitor de tela, sem essa pista, ouve o verbo ("Ativar modo escuro"). */}
@@ -241,6 +248,7 @@ function NavigationPanel({
             itemKey="theme"
             label={isDark ? "Modo claro" : "Modo escuro"}
             onClick={onTheme}
+            pointerItemKey={pointerItemKey}
           />
         </div>
 
@@ -254,6 +262,7 @@ function NavigationPanel({
             itemKey="logout"
             label="Sair da sessão"
             onClick={onLogout}
+            pointerItemKey={pointerItemKey}
           />
         </div>
       </div>
@@ -280,6 +289,8 @@ export default function ValidationSidebar({
   const railRef = useRef(null);
   const focusedItemKeyRef = useRef(null);
   const hoverOriginRef = useRef(null);
+  const railPointerItemRef = useRef(null);
+  const [pointerItemKey, setPointerItemKey] = useState(null);
   const doctorName = user?.full_name || "Usuário";
   const doctorRole = getUserRoleLabel(user);
 
@@ -307,13 +318,31 @@ export default function ValidationSidebar({
     triggerRef.current = focusedElement instanceof HTMLElement ? focusedElement : null;
   }
 
+  // O menu nasce opaco por cima do trilho, e o navegador só dá `:hover` ao item do menu sob o ponteiro alguns quadros
+  // depois (50–100ms): o destaque do trilho sumia e voltava. O item que estava sob o ponteiro no trilho já abre destacado,
+  // até o primeiro movimento dentro do menu, quando o hover de verdade assume.
+  function trackRailPointer(event) {
+    railPointerItemRef.current =
+      event.target.closest?.("[data-navigation-item] button")?.closest("[data-navigation-item]")?.dataset.navigationItem ??
+      null;
+  }
+
+  function openMenu() {
+    setPointerItemKey(railPointerItemRef.current);
+    onOpenChange(true);
+  }
+
+  function releasePointerItem() {
+    setPointerItemKey(null);
+  }
+
   function openImmediately(event) {
     clearOpenTimer();
     clearCloseTimer();
     rememberTrigger(event);
     focusedItemKeyRef.current =
       event.target.closest?.("[data-navigation-item]")?.dataset.navigationItem ?? null;
-    onOpenChange(true);
+    openMenu();
   }
 
   function scheduleOpen(event) {
@@ -326,7 +355,7 @@ export default function ValidationSidebar({
     openTimerRef.current = window.setTimeout(() => {
       openTimerRef.current = null;
       focusedItemKeyRef.current = null;
-      onOpenChange(true);
+      openMenu();
     }, SIDEBAR_OPEN_DELAY_MS);
   }
 
@@ -340,6 +369,7 @@ export default function ValidationSidebar({
 
   function handleRailPointerLeave(event) {
     clearOpenTimer();
+    railPointerItemRef.current = null;
     // O menu pode abrir no instante em que o ponteiro já sai: ele nasce com a largura do trilho e o ponteiro sai sem ter
     // entrado nele. Sem entrada no menu não há a saída que agenda o fechamento, e a tela ficava escurecida e travada.
     // Fora da árvore do React (ou da janela), o `relatedTarget` do evento sintético é `window`, que não é um Node.
@@ -406,7 +436,7 @@ export default function ValidationSidebar({
     clearCloseTimer();
     rememberTrigger();
     focusedItemKeyRef.current = null;
-    onOpenChange(true);
+    openMenu();
   }
 
   // Pelo teclado, o menu é uma parada da ordem de Tab, não um beco: Tab depois do último item fecha e segue para o
@@ -438,6 +468,7 @@ export default function ValidationSidebar({
         onPointerEnter={scheduleOpen}
         onPointerLeave={handleRailPointerLeave}
         onPointerMove={restartOpenWhileMoving}
+        onPointerOver={trackRailPointer}
         ref={railRef}
       >
         <NavigationPanel
@@ -465,6 +496,7 @@ export default function ValidationSidebar({
           onKeyDown={leaveMenuByTab}
           onPointerEnter={keepOpen}
           onPointerLeave={scheduleClose}
+          onPointerMove={releasePointerItem}
           overlayClassName="bg-scrim/28"
           ref={popupRef}
           showCloseButton={false}
@@ -481,6 +513,7 @@ export default function ValidationSidebar({
             onSupport={() => closeThen(onSupport)}
             onTheme={toggleTheme}
             onTutorial={() => closeThen(onTutorial)}
+            pointerItemKey={pointerItemKey}
           />
         </SheetContent>
       </Sheet>

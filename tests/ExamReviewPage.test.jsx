@@ -554,6 +554,26 @@ describe("ExamReviewPage", () => {
     expect(expandedNavigation.querySelector('button[aria-label="Início"]')).not.toHaveFocus();
   });
 
+  it("abre a navegação pelo mouse com o item sob o ponteiro já destacado, sem piscar", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    const collapsedNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+    fireEvent.pointerEnter(collapsedNavigation);
+    fireEvent.pointerOver(collapsedNavigation.querySelector('button[aria-label="Tutorial rápido"]'));
+
+    // O menu cobre o trilho e o navegador só dá `:hover` ao item do menu alguns quadros depois: sem o destaque levado do
+    // trilho, ele sumia e voltava.
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    const tutorialItem = expandedNavigation.querySelector('button[aria-label="Tutorial rápido"]');
+    expect(tutorialItem).toHaveAttribute("data-pointer-over");
+    expect(expandedNavigation.querySelector('button[aria-label="Início"]')).not.toHaveAttribute("data-pointer-over");
+
+    fireEvent.pointerMove(expandedNavigation);
+    expect(tutorialItem).not.toHaveAttribute("data-pointer-over");
+  });
+
   it("abre a navegação pelo teclado no item que recebeu o foco", async () => {
     stubViewport(false);
     render(<ExamReviewPage />);
