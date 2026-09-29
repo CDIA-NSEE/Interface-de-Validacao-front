@@ -23,7 +23,7 @@ export default function AppHeader({ onContact, onTutorial, title = "Revisão de 
           <div className="flex min-w-0 items-center gap-3">
             <span
               aria-hidden="true"
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-foreground/15 text-brand-foreground"
+              className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-foreground text-brand"
             >
               <Activity className="size-5" />
             </span>
