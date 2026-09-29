@@ -89,9 +89,11 @@ function NavigationAction({
   onClick,
   pointerItemKey,
 }) {
-  // Linha de 48px com destaque de 40px (8px entre destaques; no trilho, um quadrado do tamanho da marca e do avatar).
+  // Destaques colados, como no Gemini e no ChatGPT: com linha de 48px e destaque de 40px, sobrava um vão de 8px, e na
+  // troca de item os dois destaques ficavam acesos com uma faixa escura entre eles. No trilho, o destaque é um quadrado
+  // do tamanho da marca e do avatar.
   return (
-    <div className="flex h-12 items-center" data-navigation-item={itemKey}>
+    <div className="flex h-10 items-center" data-navigation-item={itemKey}>
       <Button
         aria-label={accessibleLabel ?? label}
         className={cn(
@@ -197,8 +199,10 @@ function NavigationPanel({
   onTutorial,
   pointerItemKey,
 }) {
+  // `group/navigation`: com o ponteiro dentro do painel, o destaque salta de item em item; o fade de saída fica para
+  // quando ele sai (como no menu do macOS).
   return (
-    <div className="flex h-full w-72 flex-col">
+    <div className="group/navigation flex h-full w-72 flex-col">
       <NavigationHeader compact={compact} />
 
       {/* Destino e ferramentas juntos no topo, separados por uma linha (grupos numa lista só, como no Material); a conta
@@ -252,7 +256,7 @@ function NavigationPanel({
           />
         </div>
 
-        <div className="mt-auto flex flex-col pb-1">
+        <div className="mt-auto flex flex-col pb-2">
           <NavigationSeparator compact={compact} />
           <AccountIdentity compact={compact} doctorName={doctorName} doctorRole={doctorRole} />
           <NavigationAction
