@@ -368,6 +368,8 @@ describe("ExamReviewPage", () => {
     ).toEqual(["brand", "home", "tutorial", "support", "theme", "account", "logout"]);
     // Sem dica no trilho: o menu abre com os nomes, e a dica só piscava antes de ser coberta.
     expect(collapsedNavigation.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
+    // "Dra." é título, não nome: as iniciais de "Dra. Ana" são "A".
+    expect(collapsedNavigation.querySelector('[data-navigation-item="account"]')).toHaveTextContent(/^A$/);
 
     vi.useFakeTimers();
     fireEvent.pointerEnter(collapsedNavigation);

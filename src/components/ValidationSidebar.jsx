@@ -24,10 +24,14 @@ import { cn } from "@/lib/utils.js";
 const SIDEBAR_OPEN_DELAY_MS = 100;
 const SIDEBAR_CLOSE_DELAY_MS = 150;
 
+// Títulos não são nome: "Dra. Maria Souza" vira "MS", não "DM".
+const NAME_TITLES = new Set(["dr", "dra", "prof", "profa"]);
+
 function getInitials(name) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
+  const parts = name.split(/\s+/).filter(Boolean);
+  const nameParts = parts.filter((part) => !NAME_TITLES.has(part.replace(/\.$/, "").toLowerCase()));
+
+  return (nameParts.length > 0 ? nameParts : parts)
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
