@@ -14,6 +14,13 @@ const MAX_ZOOM = 2.4;
 // Passo multiplicativo: cada "+" amplia 25% do que está na tela, do começo ao fim da faixa (1 → 1,25 → 1,56 → 1,95 →
 // 2,4). O passo fixo de 0,15 valia +25% no começo e +6% no fim.
 const ZOOM_FACTOR = 1.25;
+// Setas movem o traçado ampliado: 10% da vista por toque, meia vista com Shift.
+const ARROW_PAN_DIRECTIONS = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
 // Até 3px entre apertar e soltar ainda é clique, não arrasto (a mão treme um pouco no clique).
 const CLICK_TOLERANCE = 3;
 const TOOLBAR_LEFT_TOOLTIP_PROPS = { side: "left", sideOffset: 8 };
@@ -391,7 +398,24 @@ export default function EcgViewer({
         return;
       }
 
-      const viewerHasContext = isPointerInsideRef.current || viewerRef.current?.contains(document.activeElement);
+      const isFocusInViewer = Boolean(viewerRef.current?.contains(document.activeElement));
+      const panDirection = ARROW_PAN_DIRECTIONS[event.key];
+      if (panDirection) {
+        // As setas também navegam em grupos do painel (Concordo/Discordo, itens): só movem o traçado com o foco nele
+        // (clicar no ECG o foca) ou, com o ponteiro sobre ele, sem nada em foco.
+        const nothingFocused = !document.activeElement || document.activeElement === document.body;
+        if (!canPan || event.defaultPrevented) return;
+        if (!isFocusInViewer && !(isPointerInsideRef.current && nothingFocused)) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        event.preventDefault();
+        const share = event.shiftKey ? 0.5 : 0.1;
+        canvas.scrollLeft += panDirection[0] * canvas.clientWidth * share;
+        canvas.scrollTop += panDirection[1] * canvas.clientHeight * share;
+        return;
+      }
+
+      const viewerHasContext = isPointerInsideRef.current || isFocusInViewer;
       if (!viewerHasContext) return;
 
       if (event.key === "+" || event.code === "NumpadAdd") {
@@ -411,7 +435,16 @@ export default function EcgViewer({
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [changeZoom, clearSelection, hasSelectedSavedRegion, isImageReady, isSelectionActive, resetView, selectedRegion]);
+  }, [
+    canPan,
+    changeZoom,
+    clearSelection,
+    hasSelectedSavedRegion,
+    isImageReady,
+    isSelectionActive,
+    resetView,
+    selectedRegion,
+  ]);
 
   const cleanViewTooltip = isSelectionActive
     ? isEditing

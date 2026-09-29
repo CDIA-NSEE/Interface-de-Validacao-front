@@ -451,6 +451,46 @@ describe("EcgViewer", () => {
     expect(onRegionChange).toHaveBeenLastCalledWith({ x: 10, y: 10, width: 30, height: 30 });
   });
 
+  it("move o traçado ampliado pelas setas, com passo maior no Shift", () => {
+    const { container } = renderWithTooltips(
+      <div>
+        <button type="button">Concordo</button>
+        <EcgViewer imageUrl="/ecg-real.png" />
+      </div>,
+    );
+    const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    const canvas = container.querySelector(".ecg-canvas");
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 500 });
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 0 });
+
+    // Em 1× não há o que mover: a seta segue para a página.
+    viewer.focus();
+    const idleArrow = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowRight" });
+    viewer.dispatchEvent(idleArrow);
+    expect(idleArrow.defaultPrevented).toBe(false);
+    expect(canvas.scrollLeft).toBe(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    canvas.scrollLeft = 0;
+    canvas.scrollTop = 0;
+    viewer.focus();
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    fireEvent.keyDown(viewer, { key: "ArrowDown" });
+    expect(canvas.scrollLeft).toBe(100);
+    expect(canvas.scrollTop).toBe(50);
+    fireEvent.keyDown(viewer, { key: "ArrowRight", shiftKey: true });
+    expect(canvas.scrollLeft).toBe(600);
+
+    // Com o foco num botão do painel, as setas são dele, mesmo com o ponteiro sobre o ECG.
+    const panelButton = screen.getByRole("button", { name: "Concordo" });
+    panelButton.focus();
+    fireEvent.pointerEnter(viewer);
+    fireEvent.keyDown(panelButton, { key: "ArrowLeft" });
+    expect(canvas.scrollLeft).toBe(600);
+  });
+
   it("mostra a mão de arrastar só com o traçado ampliado", () => {
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const stage = container.querySelector(".ecg-image-stage");

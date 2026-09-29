@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog.jsx";
 
-// Os mesmos atalhos que EcgViewer (+ − 0 V Esc) e os campos de texto (Ctrl+Enter) tratam — mudou lá, muda aqui.
+// Os mesmos atalhos que EcgViewer (+ − 0 setas V Esc) e os campos de texto (Ctrl+Enter) tratam — mudou lá, muda aqui.
 const SHORTCUT_GROUPS = [
   {
     id: "ecg",
@@ -15,6 +15,8 @@ const SHORTCUT_GROUPS = [
       { keys: ["+"], label: "Aumentar zoom" },
       { keys: ["−"], label: "Diminuir zoom" },
       { keys: ["0"], label: "Restaurar visualização" },
+      { keys: ["← ↑ ↓ →"], label: "Mover o traçado ampliado" },
+      { keys: ["Shift", "← ↑ ↓ →"], label: "Mover meia tela" },
       { keys: ["V"], label: "Ocultar ou mostrar marcações" },
       { keys: ["Esc"], label: "Cancelar a marcação ou desmarcar a área" },
     ],
@@ -33,7 +35,8 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
         <DialogHeader className="pr-10">
           <DialogTitle>Atalhos de teclado</DialogTitle>
           <DialogDescription>
-            Os atalhos do traçado valem com o ponteiro sobre o ECG e fora dos campos de texto.
+            Os atalhos do traçado valem com o ponteiro sobre o ECG e fora dos campos de texto;
+            as setas, depois de clicar no ECG.
           </DialogDescription>
         </DialogHeader>
         {SHORTCUT_GROUPS.map((group) => (
