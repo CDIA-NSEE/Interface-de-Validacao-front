@@ -319,6 +319,21 @@
   transition-duration: 120ms, 0ms, 120ms;
 }
 
+/* Com o ponteiro sobre alguma área (caixa ou linha do painel), o destaque salta de uma para a outra — nunca duas caixas
+   acesas; ao sair das áreas, apaga em fade junto com a linha. `data-region-hover` fica na raiz, posto pela página. */
+[data-region-hover] .saved-region-box {
+  transition-duration: 120ms, 0ms, 120ms;
+}
+
+/* Com o ponteiro sobre uma caixa, só ela fica em hover: o `is-hovered` da caixa anterior só sai quando a página
+   re-renderiza (1 quadro em produção), e ao passar de uma caixa para a vizinha as duas ficavam acesas. */
+.ecg-image-stage:has(.saved-region-box:hover) .saved-region-box.is-hovered:not(:hover, :focus-visible, .is-selected) {
+  background: var(
+    --region-fill,
+    color-mix(in oklab, var(--region-color, var(--primary)) 10%, transparent)
+  );
+}
+
 .saved-region-box.is-selected {
   background: color-mix(in oklab, var(--region-color, var(--primary)) 20%, transparent);
   box-shadow:

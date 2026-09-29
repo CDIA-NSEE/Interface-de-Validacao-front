@@ -350,6 +350,15 @@ export default function ExamReviewPage() {
     };
   }, [isSidebarExpanded]);
 
+  // Com o ponteiro sobre alguma área (caixa no ECG ou linha no painel), o destaque das áreas salta de uma para a outra;
+  // ao sair delas, a linha e a caixa apagam juntas em fade. Na raiz do documento porque, na tela estreita, o painel fica
+  // numa gaveta fora da página; antes da pintura, para valer no mesmo quadro em que o hover muda.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute("data-region-hover", Boolean(hoveredRegionKey));
+    return () => root.removeAttribute("data-region-hover");
+  }, [hoveredRegionKey]);
+
   useLayoutEffect(() => {
     const layout = reviewLayoutRef.current;
     if (!layout || isCompactLayout) return undefined;

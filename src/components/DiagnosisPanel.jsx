@@ -113,9 +113,10 @@ const ENTER_ANIMATION_CLASS = "animate-in fade-in-0 slide-in-from-top-1 duration
 // barra que o abre e fecha (contagem ou rótulo à esquerda, chevron à direita, na largura toda). Os dois grupos usam as
 // mesmas classes para terem a mesma forma — o médico aprende um e reconhece o outro. Ver o comentário da barra de áreas.
 const GROUP_OUTLINE_CLASS = "overflow-hidden rounded-lg border border-input";
-// Hover como no menu lateral e nas linhas do painel (modelo do macOS): acende na hora e apaga em 200ms.
+// Hover como no menu lateral e nas linhas do painel (modelo do macOS): dentro do painel o destaque salta de uma linha
+// para a outra (`group/panel`); ao sair dele, apaga em 200ms.
 const GROUP_BAR_CLASS =
-  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors duration-200 ease-out hover:duration-0 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
+  "h-8 w-full min-w-0 cursor-pointer justify-between gap-2 rounded-none border-0 bg-muted/60 px-2 text-muted-foreground transition-colors duration-200 ease-out hover:duration-0 group-hover/panel:duration-0 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none dark:bg-muted/40 dark:hover:bg-muted/60";
 // O campo da justificativa não tem moldura própria: com foco nele, o contorno do grupo faz o papel da borda do campo.
 const JUSTIFICATION_FOCUS_CLASS =
   "has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-3 has-[textarea:focus-visible]:ring-ring/50";
@@ -617,11 +618,13 @@ function DiagnosisDetails({
             className={cn(
               // `last:rounded-b-md` acompanha o canto interno do grupo (6px − 1px de borda), para o anel da última linha
               // selecionada não ser cortado pelo recorte do contorno.
-              // Hover como no menu lateral e na caixa da área no ECG, que acendem junto com a linha (modelo do macOS): acende
-              // na hora e apaga em 200ms. A seleção entra em 150ms, como antes.
+              // Hover como no menu lateral (modelo do macOS), junto com a caixa da área no ECG: com o ponteiro sobre alguma
+              // área (`data-region-hover`, posto pela página), o destaque salta de uma para a outra; ao sair das áreas, linha e
+              // caixa apagam juntas em 200ms. A seleção entra em 150ms, como antes.
               "flex items-center justify-between gap-2 bg-muted/30 p-2 transition-colors duration-200 ease-out last:rounded-b-md",
               styles.areaRow,
-              isHovered && !isSelected && cn(styles.areaRowHovered, "duration-0"),
+              !isSelected && "[[data-region-hover]_&]:duration-0",
+              isHovered && !isSelected && styles.areaRowHovered,
               isSelected && cn(styles.areaRowSelected, "duration-150"),
             )}
             key={regionKey}
@@ -1346,7 +1349,7 @@ export default function DiagnosisPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3" data-decisions-locked={isLocked || undefined}>
+    <div className="group/panel flex flex-col gap-3" data-decisions-locked={isLocked || undefined}>
       <section aria-label={isGeneralReviewDay ? "Revalidação geral" : "Diagnóstico do dia"} className="flex flex-col gap-2" role="region">
         {isGeneralReviewDay ? (
           <div className="px-0.5">
@@ -1381,7 +1384,7 @@ export default function DiagnosisPanel({
                     <CollapsibleTrigger
                       render={
                         <Button
-                          className="h-auto min-h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 py-2 text-left font-heading text-sm whitespace-normal transition-colors duration-200 ease-out hover:duration-0 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                          className="h-auto min-h-11 min-w-0 w-full cursor-pointer justify-between gap-2 rounded-none border-0 px-3 py-2 text-left font-heading text-sm whitespace-normal transition-colors duration-200 ease-out hover:duration-0 group-hover/panel:duration-0 hover:bg-muted/50 focus-visible:ring-inset active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                           type="button"
                           variant="collapsible"
                         />
@@ -1460,8 +1463,9 @@ export default function DiagnosisPanel({
                                 // solavanco de 4px no primeiro frame que a transição antiga precisava compensar.
                                 // `box-shadow` na transição: o anel (marcando área, foco) entra com o fundo, não num quadro antes dele.
                                 // `@container/item-trigger`: a linha estreita (ver o grid do título abaixo) segue a largura do gatilho.
-                                // Hover como no menu lateral (modelo do macOS): acende na hora e apaga em 200ms, também quando vem do ECG.
-                                "@container/item-trigger cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-200 ease-out hover:duration-0 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
+                                // Hover como no menu lateral (modelo do macOS): dentro do painel, ou com o ponteiro sobre alguma área (a tinta
+                                // vinda do ECG), o destaque salta de um item para o outro; ao sair, apaga em 200ms.
+                                "@container/item-trigger cursor-pointer items-center gap-2 rounded-none border-0 px-3 py-2 transition-[color,background-color,box-shadow] duration-200 ease-out hover:duration-0 group-hover/panel:duration-0 [[data-region-hover]_&]:duration-0 hover:bg-muted/50 hover:no-underline focus-visible:ring-inset motion-reduce:transition-none [&>[data-slot=accordion-trigger-indicator]]:h-5",
                                 // Ligado ao ECG (uma área dele em hover ou selecionada): a mesma tinta nos dois estados, sem anel — o
                                 // selecionado era mais fraco que o hover (ΔE 0,021 × 0,048) e o anel de 1px em volta só do título tinha a forma
                                 // do anel de foco. O anel fica na linha da área selecionada, que é o que está selecionado. `hover:` repete a
@@ -1599,7 +1603,7 @@ export default function DiagnosisPanel({
                       aria-controls={addDiagnosisContentId}
                       aria-expanded={false}
                       aria-label="Adicionar diagnóstico"
-                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-200 ease-out hover:duration-0 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
+                      className="h-10 w-full cursor-pointer justify-start rounded-[inherit] border-0 px-3 text-muted-foreground transition-colors duration-200 ease-out hover:duration-0 group-hover/panel:duration-0 hover:bg-muted/50 hover:text-foreground focus-visible:ring-inset has-data-[icon=inline-start]:pl-3 active:not-aria-[haspopup]:translate-y-0 motion-reduce:transition-none"
                       disabled={isBusy}
                       onClick={() => handleAddDiagnosisToggle(true)}
                       ref={addDiagnosisTriggerRef}
