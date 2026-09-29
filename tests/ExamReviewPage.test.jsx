@@ -641,13 +641,52 @@ describe("ExamReviewPage", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
+  it("executa a ação do ícone do trilho no primeiro clique, sem abrir o menu", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    const railTutorial = screen.getByRole("button", { name: "Tutorial rápido" });
+    await user.click(railTutorial);
+
+    expect(await screen.findByRole("dialog", { name: "Tutorial rápido" })).toBeInTheDocument();
+    // O clique não foca o trilho (o foco abria o menu e o clique se perdia) e cancela a abertura por hover agendada.
+    expect(railTutorial).not.toHaveFocus();
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Tutorial rápido" })).not.toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "Início" }));
+    expect(navigate).toHaveBeenCalledWith("/");
+    expect(screen.queryByRole("dialog", { name: "Revisão de ECG" })).not.toBeInTheDocument();
+  });
+
+  it("no trilho, o primeiro clique em Sair só abre o menu; o segundo, no menu, sai", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    // "Sair" fica a 28px do "Voltar" do painel: um desvio não pode encerrar a sessão.
+    await user.click(screen.getByRole("button", { name: "Sair da sessão" }));
+
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    expect(logout).not.toHaveBeenCalled();
+    await user.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
+    await waitFor(() => expect(logout).toHaveBeenCalledOnce());
+  });
+
   it("permanece recolhida após restaurar o foco ao clicar fora da navegação", async () => {
     const user = userEvent.setup();
     stubViewport(false);
     render(<ExamReviewPage />);
 
     await screen.findByRole("button", { name: "Concordo" });
-    await user.click(screen.getByRole("button", { name: "Ativar modo escuro" }));
+    screen.getByRole("button", { name: "Ativar modo escuro" }).focus();
     const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     const expandedHome = expandedNavigation.querySelector('button[aria-label="Início"]');
     expandedHome.focus();

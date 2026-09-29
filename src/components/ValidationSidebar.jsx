@@ -72,6 +72,12 @@ function getUserRoleLabel(user) {
   return roleLabels[user?.role] || user?.role || "Médico avaliador";
 }
 
+// No trilho, o clique não move o foco: com o foco num botão do trilho o menu abria já no mousedown, o mouseup caía nele
+// e o clique se perdia. Sem foco, o clique chega ao botão, e o foco segue na tela (diálogos o devolvem para lá).
+function keepFocusOnPress(event) {
+  event.preventDefault();
+}
+
 // Sem tooltip no trilho recolhido: o menu abre com os nomes logo em seguida, e a dica só piscava antes de ser coberta.
 function NavigationAction({
   accessibleLabel,
@@ -93,6 +99,7 @@ function NavigationAction({
         )}
         disabled={disabled}
         onClick={onClick}
+        onMouseDown={compact ? keepFocusOnPress : undefined}
         size="icon"
         type="button"
         variant="brandNavigation"
@@ -377,6 +384,31 @@ export default function ValidationSidebar({
     queueMicrotask(action);
   }
 
+  // Os ícones do trilho estão sempre à vista: agem no primeiro clique, sem esperar o menu, que por hover serve para ler
+  // os nomes. O clique cancela a abertura por hover já agendada (o menu não abre por cima do que o clique abriu).
+  function actFromRail(action) {
+    return () => {
+      if (expanded) {
+        closeThen(action);
+        return;
+      }
+      clearOpenTimer();
+      clearCloseTimer();
+      action();
+    };
+  }
+
+  // Exceção: "Sair da sessão" fica a 28px do "Voltar" do painel, na mesma altura, e "Voltar" é clicado a cada exame.
+  // Um desvio não pode encerrar a sessão: o primeiro clique só abre o menu, com "Sair da sessão" escrito sob o cursor, e
+  // o segundo confirma (NN/g: ação consequente ao lado de uma frequente pede um passo a mais).
+  function openMenuFromRail() {
+    clearOpenTimer();
+    clearCloseTimer();
+    rememberTrigger();
+    focusedItemKeyRef.current = null;
+    onOpenChange(true);
+  }
+
   // Pelo teclado, o menu é uma parada da ordem de Tab, não um beco: Tab depois do último item fecha e segue para o
   // primeiro controle da tela; Shift+Tab antes do primeiro fecha e volta ao começo da página (como o trilho do Carbon).
   // Antes o Tab circulava dentro do menu, e do topo da página só se chegava à tela voltando com Shift+Tab.
@@ -414,12 +446,12 @@ export default function ValidationSidebar({
           doctorRole={doctorRole}
           isBusy={isBusy}
           isDark={isDark}
-          onHome={onHome}
-          onLogout={onLogout}
-          onShortcuts={onShortcuts}
-          onSupport={onSupport}
-          onTheme={toggleTheme}
-          onTutorial={onTutorial}
+          onHome={actFromRail(onHome)}
+          onLogout={openMenuFromRail}
+          onShortcuts={actFromRail(onShortcuts)}
+          onSupport={actFromRail(onSupport)}
+          onTheme={actFromRail(toggleTheme)}
+          onTutorial={actFromRail(onTutorial)}
         />
       </nav>
 
