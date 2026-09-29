@@ -144,6 +144,17 @@ function AccountIdentity({ compact, doctorName, doctorRole }) {
   );
 }
 
+function NavigationSeparator({ compact }) {
+  return (
+    <Separator
+      className={cn(
+        "mx-3 my-2 bg-brand-foreground/15",
+        compact ? "data-horizontal:w-10" : "data-horizontal:w-auto",
+      )}
+    />
+  );
+}
+
 function NavigationPanel({
   compact = false,
   doctorName,
@@ -161,7 +172,8 @@ function NavigationPanel({
     <div className="flex h-full w-72 flex-col">
       <NavigationHeader compact={compact} />
 
-      {/* Destino no topo; ajuda, preferência e conta embaixo (como Material e Carbon separam destinos de utilidades). */}
+      {/* Destino e ferramentas juntos no topo, separados por uma linha (grupos numa lista só, como no Material); a conta
+          fica na base. Com Início sozinho em cima e o resto embaixo, sobrava um vazio e o peso ia todo para baixo. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         <div className="flex flex-col">
           <NavigationAction
@@ -172,9 +184,7 @@ function NavigationPanel({
             label="Início"
             onClick={onHome}
           />
-        </div>
-
-        <div className="mt-auto flex flex-col pb-1">
+          <NavigationSeparator compact={compact} />
           <NavigationAction
             compact={compact}
             icon={HelpCircle}
@@ -206,12 +216,10 @@ function NavigationPanel({
             label={isDark ? "Modo claro" : "Modo escuro"}
             onClick={onTheme}
           />
-          <Separator
-            className={cn(
-              "mx-3 my-2 bg-brand-foreground/15",
-              compact ? "data-horizontal:w-10" : "data-horizontal:w-auto",
-            )}
-          />
+        </div>
+
+        <div className="mt-auto flex flex-col pb-1">
+          <NavigationSeparator compact={compact} />
           <AccountIdentity compact={compact} doctorName={doctorName} doctorRole={doctorRole} />
           <NavigationAction
             compact={compact}
