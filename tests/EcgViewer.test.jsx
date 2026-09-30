@@ -652,6 +652,49 @@ describe("EcgViewer", () => {
     expect(stage).not.toHaveClass("cursor-grab");
   });
 
+  it("arrastar começando sobre uma área move o traçado sem selecioná-la; parado, o clique seleciona", () => {
+    const onRegionSelect = vi.fn();
+    const { container } = renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        onRegionSelect={onRegionSelect}
+        regions={[{ id: 9, x: 10, y: 10, width: 40, height: 40, label: "D2.1" }]}
+      />,
+    );
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 0 });
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    canvas.scrollLeft = 200;
+    canvas.scrollTop = 100;
+    const region = screen.getByRole("button", { name: "D2.1" });
+
+    fireEvent.pointerDown(region, { button: 0, clientX: 300, clientY: 200, pointerId: 1 });
+    // A captura só vem com o movimento: parado, o clique ainda é da área.
+    expect(stage.setPointerCapture).not.toHaveBeenCalled();
+    fireEvent.pointerMove(stage, { clientX: 250, clientY: 180, pointerId: 1 });
+    expect(stage.setPointerCapture).toHaveBeenCalledWith(1);
+    expect(stage).toHaveClass("cursor-grabbing");
+    fireEvent.pointerUp(stage, { button: 0, clientX: 250, clientY: 180, pointerId: 1 });
+    fireEvent.click(region, { detail: 1 });
+    expect(canvas.scrollLeft).toBe(250);
+    expect(canvas.scrollTop).toBe(120);
+    expect(onRegionSelect).not.toHaveBeenCalled();
+
+    // Enter/Espaço na área (clique com detail 0) seleciona mesmo logo depois de um pan.
+    fireEvent.click(region, { detail: 0 });
+    expect(onRegionSelect).toHaveBeenCalledTimes(1);
+
+    // Clique parado na área: seleciona (e não é tomado por "desmarcar" do vazio).
+    fireEvent.pointerDown(region, { button: 0, clientX: 300, clientY: 200, pointerId: 2 });
+    fireEvent.pointerUp(region, { button: 0, clientX: 301, clientY: 200, pointerId: 2 });
+    fireEvent.click(region, { detail: 1 });
+    expect(onRegionSelect).toHaveBeenCalledTimes(2);
+    expect(onRegionSelect).not.toHaveBeenCalledWith(null);
+  });
+
   it("desmarca a área só no clique no vazio, não ao arrastar o traçado", () => {
     const onRegionSelect = vi.fn();
     const { container } = renderWithTooltips(

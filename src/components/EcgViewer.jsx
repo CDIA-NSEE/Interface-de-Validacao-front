@@ -186,6 +186,8 @@ export default function EcgViewer({
   const isPointerInsideRef = useRef(false);
   const panStartRef = useRef(null);
   const drawPressRef = useRef(null);
+  // O último pan começou numa área e se moveu: o clique que o navegador ainda mande a ela não a seleciona.
+  const regionPanMovedRef = useRef(false);
   const controlsRef = useRef(null);
   const controlsDragRef = useRef(null);
   const draftFrameRef = useRef(null);
@@ -341,18 +343,25 @@ export default function EcgViewer({
 
   function handlePointerDown(event) {
     if (event.button !== 0 || !isImageReady) return;
+    regionPanMovedRef.current = false;
     if (!isSelectionActive || isSpacePanning) {
-      if (!isSpacePanning && event.target.closest?.(".saved-region-box")) return;
+      // Começar sobre uma área também move o traçado: com zoom, as áreas cobrem boa parte da vista. Parado, é o clique
+      // que seleciona a área; por isso a captura do ponteiro só vem quando o movimento começa (ver handlePointerMove) —
+      // capturado já no apertar, o clique iria para o palco e a área não seria selecionada.
+      const fromRegion = !isSpacePanning && Boolean(event.target.closest?.(".saved-region-box"));
       // Desmarcar a área fica para o soltar, e só num clique: arrastar para mover o traçado mantém a seleção.
       const canvas = canvasRef.current;
       panStartRef.current = {
         clientX: event.clientX,
         clientY: event.clientY,
+        fromRegion,
         // Na marcação, soltar sem ter movido não desmarca nada (a seleção é a própria marcação).
         moved: isSpacePanning,
+        pointerId: event.pointerId,
         scrollLeft: canvas?.scrollLeft || 0,
         scrollTop: canvas?.scrollTop || 0,
       };
+      if (fromRegion) return;
       setIsPanning(true);
       event.currentTarget.setPointerCapture?.(event.pointerId);
       return;
@@ -373,7 +382,14 @@ export default function EcgViewer({
       const panStart = panStartRef.current;
       const deltaX = event.clientX - panStart.clientX;
       const deltaY = event.clientY - panStart.clientY;
-      if (Math.hypot(deltaX, deltaY) >= CLICK_TOLERANCE) panStart.moved = true;
+      if (!panStart.moved && Math.hypot(deltaX, deltaY) >= CLICK_TOLERANCE) {
+        panStart.moved = true;
+        if (panStart.fromRegion) {
+          event.currentTarget.setPointerCapture?.(panStart.pointerId);
+          setIsPanning(true);
+        }
+      }
+      if (panStart.fromRegion && !panStart.moved) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       canvas.scrollLeft = panStart.scrollLeft - deltaX;
@@ -395,10 +411,12 @@ export default function EcgViewer({
 
   function handlePointerUp(event) {
     if (panStartRef.current) {
-      const { moved } = panStartRef.current;
+      const { fromRegion, moved } = panStartRef.current;
       panStartRef.current = null;
       setIsPanning(false);
-      if (!moved) onRegionSelect?.(null);
+      if (fromRegion) regionPanMovedRef.current = moved;
+      // Clique parado: no vazio desmarca; numa área, quem seleciona é o clique dela.
+      else if (!moved) onRegionSelect?.(null);
       return;
     }
     if (!selectionStart) return;
@@ -781,6 +799,8 @@ export default function EcgViewer({
               onBlur={() => onRegionHover?.(null)}
               onClick={(event) => {
                 event.stopPropagation();
+                // Soltar um pan que começou nesta área não a seleciona; Enter/Espaço (detail 0) sempre selecionam.
+                if (regionPanMovedRef.current && event.detail !== 0) return;
                 onRegionSelect?.(region);
               }}
               onFocus={() => onRegionHover?.(region)}
