@@ -845,9 +845,13 @@ export default function EcgViewer({
         </div>
         {/* No canto inferior esquerdo, sobre a faixa de papel sem traçado abaixo da tira longa de DII (y 591–639 de 645 em
             todos os exames da fonte); no alto ele cobria o rótulo "DI". A largura deixa livre o canto da barra de
-            controles (78px + margens): estado à esquerda, controles à direita. */}
+            controles (78px + margens): estado à esquerda, controles à direita. O fundo é a tinta info a 14% sobre o fundo
+            do tema, opaca: translúcido, no escuro ele pegava o branco do papel e o texto claro ficava a 1,8:1. */}
         {isSelectionActive ? (
-          <Badge className="absolute bottom-3 left-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 pr-1 pl-2" variant="info">
+          <Badge
+            className="absolute bottom-3 left-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 bg-[color-mix(in_oklab,var(--info)_14%,var(--background))] pr-1 pl-2"
+            variant="info"
+          >
             {isEditing
               ? <Pencil aria-hidden="true" data-icon="inline-start" />
               : <Plus aria-hidden="true" data-icon="inline-start" />}
