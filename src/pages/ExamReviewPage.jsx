@@ -385,8 +385,9 @@ export default function ExamReviewPage() {
         minimumSidebarWidth: usesIntermediateLayout
           ? 300
           : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), REVIEW_SIDEBAR_FLOOR_CAP),
+        // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo + 8px de vão + 98px das observações.
         viewerHorizontalChrome: 24,
-        viewerVerticalChrome: 150,
+        viewerVerticalChrome: 138,
       });
 
       setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
@@ -1193,9 +1194,11 @@ export default function ExamReviewPage() {
               </aside>
             ) : null}
 
+            {/* 16px em cima e embaixo, como o painel: o topo do ECG alinha com o primeiro cartão do painel e a base das
+                observações com o rodapé (com 12px ficavam 4px desencontrados nas duas pontas). Nas laterais seguem 12px. */}
             <section
               aria-label="Visualizador de ECG"
-              className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:p-3 md:pb-3"
+              className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:px-3 md:py-4"
             >
               <div className="flex min-h-full w-full flex-col gap-2">
                 <EcgViewer
