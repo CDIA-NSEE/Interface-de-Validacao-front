@@ -64,6 +64,14 @@ function saveControlsPosition(position) {
   }
 }
 
+// Um clique duplo (ou Ctrl+A) punha a imagem na seleção da página, e seleção é arrastável: o arrasto seguinte virava o
+// arrastar nativo do navegador — uma cópia translúcida do traçado —, que cancela o ponteiro e parava o pan em ~15px.
+// `select-none` impede a seleção pelo clique; cancelar o `dragstart` cobre a que vem de fora (Ctrl+A), e aí o
+// arrastar nativo não acontece (HTML Standard, processamento do drag-and-drop).
+function preventNativeDrag(event) {
+  event.preventDefault();
+}
+
 function stopToolbarEvent(event) {
   event.stopPropagation();
 }
@@ -744,7 +752,8 @@ export default function EcgViewer({
       >
         <div className="ecg-canvas" ref={canvasRef}>
           <div
-            className={`ecg-image-stage ${stageCursorClass}`}
+            className={`ecg-image-stage ${isImageReady ? "select-none" : ""} ${stageCursorClass}`}
+            onDragStart={preventNativeDrag}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

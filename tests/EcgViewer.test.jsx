@@ -624,6 +624,19 @@ describe("EcgViewer", () => {
     expect(stage).toHaveClass("cursor-crosshair");
   });
 
+  it("não deixa o traçado virar seleção nem arrasto nativo do navegador", () => {
+    const { container, rerender } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const stage = container.querySelector(".ecg-image-stage");
+
+    // Clique duplo não seleciona a imagem, e o arrastar nativo (a cópia translúcida) é cancelado ao começar.
+    expect(stage).toHaveClass("select-none");
+    expect(fireEvent.dragStart(stage)).toBe(false);
+
+    // Sem o traçado, o texto do erro continua selecionável (para copiar ao suporte).
+    rerender(<TooltipProvider><EcgViewer imageError="Imagem do ECG não encontrada." /></TooltipProvider>);
+    expect(container.querySelector(".ecg-image-stage")).not.toHaveClass("select-none");
+  });
+
   it("mostra a mão de arrastar só com o traçado ampliado", () => {
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const stage = container.querySelector(".ecg-image-stage");
