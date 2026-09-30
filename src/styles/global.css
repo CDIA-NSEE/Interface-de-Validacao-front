@@ -250,7 +250,8 @@
   overflow: auto;
   /* Deslizar para o lado no touchpad rola o traçado ampliado; na borda, não passa adiante (nem vira "voltar" do navegador). */
   overscroll-behavior: contain;
-  padding: clamp(2px, 0.35vw, 6px);
+  /* Sem padding: o papel vai até a borda do cartão, que é justo a ele. Os 2–6px de antes eram uma moldura branca em
+     volta do papel (que já tem a sua) e tiravam ~1% do ECG; os cantos arredondados só aparam a moldura do papel. */
   background: var(--card);
   scrollbar-width: thin;
 }

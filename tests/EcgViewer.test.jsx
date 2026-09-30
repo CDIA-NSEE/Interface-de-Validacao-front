@@ -97,8 +97,7 @@ describe("EcgViewer", () => {
     );
 
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 600 });
+    canvas.parentElement.parentElement.getBoundingClientRect = () => ({ width: 1000, height: 600 });
 
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
@@ -127,8 +126,7 @@ describe("EcgViewer", () => {
 
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 600 });
+    canvas.parentElement.parentElement.getBoundingClientRect = () => ({ width: 1000, height: 600 });
     Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
     Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 600 });
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
@@ -162,8 +160,7 @@ describe("EcgViewer", () => {
     const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
     const slot = viewer.parentElement;
     // Encaixe de 1000×800 e papel 2:1: o papel tem 1000×500, e o cartão, 500 de altura (não os 800 do encaixe).
-    Object.defineProperty(slot, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(slot, "offsetHeight", { configurable: true, value: 800 });
+    slot.getBoundingClientRect = () => ({ width: 1000, height: 800 });
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
     Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
@@ -191,8 +188,7 @@ describe("EcgViewer", () => {
 
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 400 });
+    canvas.parentElement.parentElement.getBoundingClientRect = () => ({ width: 1000, height: 400 });
 
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
@@ -230,8 +226,7 @@ describe("EcgViewer", () => {
       />,
     );
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 500 });
+    canvas.parentElement.parentElement.getBoundingClientRect = () => ({ width: 1000, height: 500 });
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
     Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });

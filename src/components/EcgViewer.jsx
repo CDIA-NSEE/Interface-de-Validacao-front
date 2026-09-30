@@ -253,10 +253,13 @@ export default function EcgViewer({
       const verticalPadding =
         Number.parseFloat(canvasStyles.paddingTop) + Number.parseFloat(canvasStyles.paddingBottom);
 
-      // Pela caixa inteira, não pela área interna: com zoom surgem as barras de rolagem (10px cada no Windows), a área
-      // interna encolhe, e o ajuste era refeito menor — o passo de zoom caía para ~1,24× e o ponto ancorado deslizava.
-      const width = Math.max(0, slot.offsetWidth - horizontalPadding);
-      const height = Math.max(0, slot.offsetHeight - verticalPadding);
+      // Pela caixa do encaixe, não pela área interna do canvas: com zoom surgem as barras de rolagem (10px cada no
+      // Windows), a área interna encolhe, e o ajuste era refeito menor — o passo caía para ~1,24× e o ponto ancorado
+      // deslizava. Em px fracionários: o papel vai até a borda, e o arredondamento de offsetWidth o deixava até 0,5px
+      // maior que o cartão, o que pode acender uma barra de rolagem em 1×.
+      const slotRect = slot.getBoundingClientRect();
+      const width = Math.max(0, slotRect.width - horizontalPadding);
+      const height = Math.max(0, slotRect.height - verticalPadding);
       setCanvasSize((current) =>
         current.width === width && current.height === height ? current : { width, height },
       );
