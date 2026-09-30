@@ -247,8 +247,10 @@ export default function EcgViewer({
       const verticalPadding =
         Number.parseFloat(canvasStyles.paddingTop) + Number.parseFloat(canvasStyles.paddingBottom);
 
-      const width = Math.max(0, canvas.clientWidth - horizontalPadding);
-      const height = Math.max(0, canvas.clientHeight - verticalPadding);
+      // Pela caixa inteira, não pela área interna: com zoom surgem as barras de rolagem (10px cada no Windows), a área
+      // interna encolhe, e o ajuste era refeito menor — o passo de zoom caía para ~1,24× e o ponto ancorado deslizava.
+      const width = Math.max(0, canvas.offsetWidth - horizontalPadding);
+      const height = Math.max(0, canvas.offsetHeight - verticalPadding);
       setCanvasSize((current) =>
         current.width === width && current.height === height ? current : { width, height },
       );

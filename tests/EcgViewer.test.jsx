@@ -96,8 +96,8 @@ describe("EcgViewer", () => {
     );
 
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 600 });
+    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 600 });
 
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
@@ -114,6 +114,38 @@ describe("EcgViewer", () => {
     });
   });
 
+  it("não refaz o ajuste menor quando as barras de rolagem aparecem com o zoom", async () => {
+    let resizeCallback;
+    vi.stubGlobal("ResizeObserver", class ResizeObserver {
+      constructor(callback) {
+        resizeCallback = callback;
+      }
+      observe() {}
+      disconnect() {}
+    });
+
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const canvas = container.querySelector(".ecg-canvas");
+    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 600 });
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 600 });
+    const image = screen.getByRole("img", { name: "Traçado do ECG" });
+    Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
+    Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
+    fireEvent.load(image);
+    act(() => resizeCallback());
+    const stage = container.querySelector(".ecg-image-stage");
+    await waitFor(() => expect(stage).toHaveStyle({ width: "1000px" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    // As barras de rolagem tomam 10px da área interna; a caixa do canvas não muda.
+    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 990 });
+    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 590 });
+    act(() => resizeCallback());
+    expect(stage).toHaveStyle({ width: "1250px", height: "625px" });
+  });
+
   it("limita a imagem pela altura disponível sem deformar o ECG", async () => {
     let resizeCallback;
     vi.stubGlobal("ResizeObserver", class ResizeObserver {
@@ -126,8 +158,8 @@ describe("EcgViewer", () => {
 
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 400 });
+    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 400 });
 
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
@@ -165,8 +197,8 @@ describe("EcgViewer", () => {
       />,
     );
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 500 });
+    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 500 });
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
     Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
