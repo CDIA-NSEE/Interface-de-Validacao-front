@@ -811,7 +811,7 @@ export default function EcgViewer({
         <div
           aria-label="Visualizador do traçado de ECG"
           className={cn(
-            "relative flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "relative flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 outline-none focus-visible:ring-2 focus-visible:ring-ring",
             !cardHeight && "flex-1",
           )}
           onPointerEnter={() => { isPointerInsideRef.current = true; }}
