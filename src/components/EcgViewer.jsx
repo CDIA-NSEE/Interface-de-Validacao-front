@@ -24,6 +24,7 @@ const ARROW_PAN_DIRECTIONS = {
 };
 // Altura que a etiqueta Dn.i ocupa acima da caixa (1,375rem).
 const REGION_LABEL_SPACE = 22;
+const MIDDLE_BUTTON = 1;
 // Até 3px entre apertar e soltar ainda é clique, não arrasto (a mão treme um pouco no clique).
 const CLICK_TOLERANCE = 3;
 // Dicas à esquerda da barra, 3px além da borda dela: a coluna da direita desconta um botão (32px) e o vão (4px); com
@@ -70,6 +71,11 @@ function saveControlsPosition(position) {
 // arrastar nativo não acontece (HTML Standard, processamento do drag-and-drop).
 function preventNativeDrag(event) {
   event.preventDefault();
+}
+
+// Onde o apertar do ponteiro não suprime o mousedown (fora do Chromium), é ele que dispara a rolagem automática.
+function preventMiddleButtonAutoscroll(event) {
+  if (event.button === MIDDLE_BUTTON) event.preventDefault();
 }
 
 function stopToolbarEvent(event) {
@@ -342,7 +348,27 @@ export default function EcgViewer({
   }
 
   function handlePointerDown(event) {
-    if (event.button !== 0 || !isImageReady) return;
+    if (!isImageReady) return;
+    if (event.button === MIDDLE_BUTTON) {
+      // Arrastar com a rodinha move o traçado em qualquer modo — inclusive na marcação, onde o botão esquerdo desenha —,
+      // como no Figma. Cancelar o apertar evita a rolagem automática do navegador (o ícone de setas do clique na rodinha).
+      event.preventDefault();
+      const canvas = canvasRef.current;
+      panStartRef.current = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        fromRegion: false,
+        // Soltar a rodinha nunca desmarca nada.
+        moved: true,
+        pointerId: event.pointerId,
+        scrollLeft: canvas?.scrollLeft || 0,
+        scrollTop: canvas?.scrollTop || 0,
+      };
+      setIsPanning(true);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      return;
+    }
+    if (event.button !== 0) return;
     regionPanMovedRef.current = false;
     if (!isSelectionActive || isSpacePanning) {
       // Começar sobre uma área também move o traçado: com zoom, as áreas cobrem boa parte da vista. Parado, é o clique
@@ -653,9 +679,11 @@ export default function EcgViewer({
 
   let stageCursorClass = "";
   if (isImageReady) {
-    if (isSpacePanning) stageCursorClass = isPanning ? "touch-none cursor-grabbing" : "touch-none cursor-grab";
+    // Movendo (botão esquerdo, Espaço ou rodinha), a mão fechada vale em qualquer modo.
+    if (isPanning && canPan) stageCursorClass = isSelectionActive ? "touch-none cursor-grabbing" : "cursor-grabbing";
+    else if (isSpacePanning) stageCursorClass = "touch-none cursor-grab";
     else if (isSelectionActive) stageCursorClass = "touch-none cursor-crosshair";
-    else if (canPan) stageCursorClass = isPanning ? "cursor-grabbing" : "cursor-grab";
+    else if (canPan) stageCursorClass = "cursor-grab";
   }
 
   const cleanViewTooltip = isSelectionActive
@@ -772,6 +800,7 @@ export default function EcgViewer({
           <div
             className={`ecg-image-stage ${isImageReady ? "select-none" : ""} ${stageCursorClass}`}
             onDragStart={preventNativeDrag}
+            onMouseDown={preventMiddleButtonAutoscroll}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

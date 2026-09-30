@@ -637,6 +637,51 @@ describe("EcgViewer", () => {
     expect(container.querySelector(".ecg-image-stage")).not.toHaveClass("select-none");
   });
 
+  it("arrastar com a rodinha move o traçado em qualquer modo, inclusive durante a marcação", () => {
+    const onRegionChange = vi.fn();
+    const onRegionSelect = vi.fn();
+    const { container } = renderWithTooltips(
+      <EcgViewer
+        imageUrl="/ecg-real.png"
+        onRegionChange={onRegionChange}
+        onRegionSelect={onRegionSelect}
+        selectionLabel="Marcando área para D2"
+      />,
+    );
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    stage.setPointerCapture = vi.fn();
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 0 });
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
+    canvas.scrollLeft = 100;
+    canvas.scrollTop = 50;
+
+    // A rolagem automática do navegador (clique na rodinha) é cancelada no apertar.
+    const middleDown = new PointerEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+      button: 1,
+      clientX: 300,
+      clientY: 200,
+      pointerId: 1,
+    });
+    fireEvent(stage, middleDown);
+    expect(middleDown.defaultPrevented).toBe(true);
+    expect(fireEvent.mouseDown(stage, { button: 1 })).toBe(false);
+    expect(stage).toHaveClass("cursor-grabbing");
+
+    fireEvent.pointerMove(stage, { clientX: 260, clientY: 180, pointerId: 1 });
+    fireEvent.pointerUp(stage, { button: 1, clientX: 260, clientY: 180, pointerId: 1 });
+    expect(canvas.scrollLeft).toBe(140);
+    expect(canvas.scrollTop).toBe(70);
+    // Não desenhou, não desmarcou, e a marcação continua com a mira.
+    expect(container.querySelector(".active-selection-box")).not.toBeInTheDocument();
+    expect(onRegionChange).not.toHaveBeenCalled();
+    expect(onRegionSelect).not.toHaveBeenCalled();
+    expect(stage).toHaveClass("cursor-crosshair");
+  });
+
   it("mostra a mão de arrastar só com o traçado ampliado", () => {
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const stage = container.querySelector(".ecg-image-stage");
