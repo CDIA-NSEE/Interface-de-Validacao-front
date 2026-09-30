@@ -21,7 +21,8 @@ describe("EcgViewer", () => {
     expect(canvas.parentElement).toContainElement(toolbar);
     expect(toolbar).toHaveClass("absolute", "grid", "grid-cols-2");
     expect(toolbar).not.toHaveTextContent("Controles do ECG");
-    expect(canvas.parentElement).toHaveClass("min-h-72", "sm:min-h-88");
+    // A altura mínima é do encaixe; o cartão acompanha o papel dentro dele.
+    expect(canvas.parentElement.parentElement).toHaveClass("min-h-72", "sm:min-h-88");
     const [grip, ...controls] = screen.getAllByRole("button");
     // A alça é uma aba fora da grade (absoluta), oculta em repouso: a barra segue 2×2.
     expect(grip).toHaveAccessibleName("Mover controles");
@@ -96,8 +97,8 @@ describe("EcgViewer", () => {
     );
 
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 600 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 600 });
 
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
@@ -126,8 +127,8 @@ describe("EcgViewer", () => {
 
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 600 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 600 });
     Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 1000 });
     Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 600 });
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
@@ -139,11 +140,43 @@ describe("EcgViewer", () => {
     await waitFor(() => expect(stage).toHaveStyle({ width: "1000px" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Aumentar zoom" }));
-    // As barras de rolagem tomam 10px da área interna; a caixa do canvas não muda.
+    // As barras de rolagem tomam 10px da área interna do canvas; o ajuste vem do encaixe, que não muda.
     Object.defineProperty(canvas, "clientWidth", { configurable: true, value: 990 });
     Object.defineProperty(canvas, "clientHeight", { configurable: true, value: 590 });
     act(() => resizeCallback());
     expect(stage).toHaveStyle({ width: "1250px", height: "625px" });
+  });
+
+  it("ajusta o cartão à altura do papel e deixa a sobra fora dele", async () => {
+    let resizeCallback;
+    vi.stubGlobal("ResizeObserver", class ResizeObserver {
+      constructor(callback) {
+        resizeCallback = callback;
+      }
+      observe() {}
+      disconnect() {}
+    });
+    const onRegionSelect = vi.fn();
+
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" onRegionSelect={onRegionSelect} />);
+    const viewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    const slot = viewer.parentElement;
+    // Encaixe de 1000×800 e papel 2:1: o papel tem 1000×500, e o cartão, 500 de altura (não os 800 do encaixe).
+    Object.defineProperty(slot, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(slot, "offsetHeight", { configurable: true, value: 800 });
+    const image = screen.getByRole("img", { name: "Traçado do ECG" });
+    Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
+    Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
+    fireEvent.load(image);
+    act(() => resizeCallback());
+
+    await waitFor(() => expect(viewer).toHaveStyle({ height: "500px" }));
+    expect(viewer).not.toHaveClass("flex-1");
+    expect(slot).toHaveClass("flex-1");
+
+    // O fundo do canvas fora do papel (numa janela baixa, a faixa lateral) também desmarca.
+    fireEvent.click(container.querySelector(".ecg-canvas"));
+    expect(onRegionSelect).toHaveBeenCalledWith(null);
   });
 
   it("limita a imagem pela altura disponível sem deformar o ECG", async () => {
@@ -158,8 +191,8 @@ describe("EcgViewer", () => {
 
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 400 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 400 });
 
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
@@ -197,8 +230,8 @@ describe("EcgViewer", () => {
       />,
     );
     const canvas = container.querySelector(".ecg-canvas");
-    Object.defineProperty(canvas, "offsetWidth", { configurable: true, value: 1000 });
-    Object.defineProperty(canvas, "offsetHeight", { configurable: true, value: 500 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetWidth", { configurable: true, value: 1000 });
+    Object.defineProperty(canvas.parentElement.parentElement, "offsetHeight", { configurable: true, value: 500 });
     const image = screen.getByRole("img", { name: "Traçado do ECG" });
     Object.defineProperty(image, "naturalWidth", { configurable: true, value: 1200 });
     Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });

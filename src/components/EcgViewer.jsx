@@ -185,8 +185,10 @@ export default function EcgViewer({
   const [firstCorner, setFirstCorner] = useState(null);
   const [draftRegion, setDraftRegion] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [canvasPadding, setCanvasPadding] = useState({ vertical: 0 });
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_ECG_ASPECT_RATIO);
   const canvasRef = useRef(null);
+  const slotRef = useRef(null);
   const stageRef = useRef(null);
   const viewerRef = useRef(null);
   const isPointerInsideRef = useRef(false);
@@ -228,6 +230,7 @@ export default function EcgViewer({
         height: `${fittedSize.height * zoom}px`,
       }
     : { width: `${Number((zoom * 100).toFixed(2))}%` };
+  const cardHeight = fittedSize ? fittedSize.height + canvasPadding.vertical : 0;
   // A etiqueta Dn.i fica acima da caixa; perto do topo do traçado (ou com zoom, rolado até o topo) ela era cortada pela
   // borda do visualizador, e então desce para dentro da caixa. Conta a folga que o traçado centralizado deixa acima dele.
   const minTopForLabelAbove = fittedSize
@@ -236,9 +239,12 @@ export default function EcgViewer({
   const hasLabelInside = (region) =>
     Boolean(fittedSize) && (region.y / 100) * fittedSize.height * zoom < minTopForLabelAbove;
 
+  // O espaço disponível é o do encaixe (a coluna acima das observações), não o do cartão: o cartão acompanha a altura
+  // do papel, então medi-lo seria circular.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return undefined;
+    const slot = slotRef.current;
+    if (!canvas || !slot) return undefined;
 
     function updateCanvasSize() {
       const canvasStyles = window.getComputedStyle(canvas);
@@ -249,11 +255,12 @@ export default function EcgViewer({
 
       // Pela caixa inteira, não pela área interna: com zoom surgem as barras de rolagem (10px cada no Windows), a área
       // interna encolhe, e o ajuste era refeito menor — o passo de zoom caía para ~1,24× e o ponto ancorado deslizava.
-      const width = Math.max(0, canvas.offsetWidth - horizontalPadding);
-      const height = Math.max(0, canvas.offsetHeight - verticalPadding);
+      const width = Math.max(0, slot.offsetWidth - horizontalPadding);
+      const height = Math.max(0, slot.offsetHeight - verticalPadding);
       setCanvasSize((current) =>
         current.width === width && current.height === height ? current : { width, height },
       );
+      setCanvasPadding((current) => (current.vertical === verticalPadding ? current : { vertical: verticalPadding }));
     }
 
     updateCanvasSize();
@@ -264,7 +271,7 @@ export default function EcgViewer({
     }
 
     const observer = new ResizeObserver(updateCanvasSize);
-    observer.observe(canvas);
+    observer.observe(slot);
     return () => observer.disconnect();
   }, []);
 
@@ -480,6 +487,11 @@ export default function EcgViewer({
     setFirstCorner(null);
     setSelectionStart(null);
     setDraftRegion(null);
+  }
+
+  function handleCanvasBackgroundClick(event) {
+    if (event.target !== event.currentTarget || isSelectionActive) return;
+    onRegionSelect?.(null);
   }
 
   const clearSelection = useCallback(() => {
@@ -789,119 +801,129 @@ export default function EcgViewer({
 
   return (
     <TooltipProvider delay={400}>
-      <div
-        aria-label="Visualizador do traçado de ECG"
-        className="relative flex min-h-72 flex-1 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-88"
-        onPointerEnter={() => { isPointerInsideRef.current = true; }}
-        onPointerLeave={() => { isPointerInsideRef.current = false; }}
-        ref={viewerRef}
-        role="region"
-        tabIndex={0}
-      >
-        <div className="ecg-canvas" ref={canvasRef}>
-          <div
-            className={`ecg-image-stage ${isImageReady ? "select-none" : ""} ${stageCursorClass}`}
-            onDragStart={preventNativeDrag}
-            onMouseDown={preventMiddleButtonAutoscroll}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            ref={stageRef}
-            style={{ ...stageStyle, aspectRatio: imageAspectRatio }}
-          >
-          {isImageReady ? (
-            <img
-              src={imageUrl}
-              alt="Traçado do ECG"
-              draggable="false"
-              onLoad={handleImageLoad}
-            />
-          ) : (
-            <EcgImageUnavailable error={imageError} onRetry={onImageRetry} />
+      {/* O cartão acompanha a altura do papel: a sobra da proporção (o papel é mais largo que o espaço numa tela 16:9)
+          fica fora dele, como fundo da página entre o ECG e as observações. Dentro do cartão ela era uma faixa branca
+          acima e abaixo do papel — 79px a 1920×1080 — que se confundia com o papel e não reagia a clique. */}
+      <div className="flex min-h-72 flex-1 flex-col sm:min-h-88" ref={slotRef}>
+        <div
+          aria-label="Visualizador do traçado de ECG"
+          className={cn(
+            "relative flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-primary/25 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            !cardHeight && "flex-1",
           )}
-          {isImageReady && !isCleanView ? visibleRegions.map((region, index) => (
-            <button
-              aria-label={region.label || region.regionReference || "Área vinculada"}
-              aria-pressed={Boolean(region.isSelected)}
-              className={`saved-region-box ${region.isHovered ? "is-hovered" : ""} ${region.isSelected ? "is-selected" : ""} ${region.isDimmed ? "is-dimmed" : ""}`}
-              data-label-inside={hasLabelInside(region) || undefined}
-              key={`${region.diagnosisId || "region"}-${region.id || `legacy-${index}`}`}
-              onBlur={() => onRegionHover?.(null)}
-              onClick={(event) => {
-                event.stopPropagation();
-                // Soltar um pan que começou nesta área não a seleciona; Enter/Espaço (detail 0) sempre selecionam.
-                if (regionPanMovedRef.current && event.detail !== 0) return;
-                onRegionSelect?.(region);
-              }}
-              onFocus={() => onRegionHover?.(region)}
-              onMouseEnter={() => onRegionHover?.(region)}
-              onMouseLeave={() => onRegionHover?.(null)}
-              style={{
-                "--region-color": region.color,
-                "--region-fill": region.fill,
-                left: `${region.x}%`,
-                top: `${region.y}%`,
-                width: `${region.width}%`,
-                height: `${region.height}%`,
-              }}
-              title={region.label || region.regionReference || "Área vinculada"}
+          onPointerEnter={() => { isPointerInsideRef.current = true; }}
+          onPointerLeave={() => { isPointerInsideRef.current = false; }}
+          ref={viewerRef}
+          role="region"
+          style={cardHeight ? { height: `${cardHeight}px` } : undefined}
+          tabIndex={0}
+        >
+          {/* Clicar no fundo do canvas fora do papel (a faixa lateral que sobra numa janela baixa) também desmarca. */}
+          <div className="ecg-canvas" onClick={handleCanvasBackgroundClick} ref={canvasRef}>
+            <div
+              className={`ecg-image-stage ${isImageReady ? "select-none" : ""} ${stageCursorClass}`}
+              onDragStart={preventNativeDrag}
+              onMouseDown={preventMiddleButtonAutoscroll}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              ref={stageRef}
+              style={{ ...stageStyle, aspectRatio: imageAspectRatio }}
             >
-              {region.regionReference ? (
-                <span className="region-reference-label">{region.regionReference}</span>
-              ) : null}
-            </button>
-          )) : null}
-          {isImageReady && !isCleanView && activeRegion ? (
-            <span
-              className={`selection-box active-selection-box ${draftRegion ? "is-draft" : ""}`}
-              data-label-inside={hasLabelInside(activeRegion) || undefined}
-              style={{
-                "--region-color": selectionVisual?.color,
-                "--region-fill": selectionVisual?.fill,
-                "--region-draft-fill": selectionVisual?.draftFill,
-                left: `${activeRegion.x}%`,
-                top: `${activeRegion.y}%`,
-                width: `${activeRegion.width}%`,
-                height: `${activeRegion.height}%`,
-              }}
-              title={selectionReference || "Área sem diagnóstico associado"}
-            >
-              {selectionReference ? (
-                <span className="region-reference-label">{selectionReference}</span>
-              ) : null}
-            </span>
-          ) : null}
+            {isImageReady ? (
+              <img
+                src={imageUrl}
+                alt="Traçado do ECG"
+                draggable="false"
+                onLoad={handleImageLoad}
+              />
+            ) : (
+              <EcgImageUnavailable error={imageError} onRetry={onImageRetry} />
+            )}
+            {isImageReady && !isCleanView ? visibleRegions.map((region, index) => (
+              <button
+                aria-label={region.label || region.regionReference || "Área vinculada"}
+                aria-pressed={Boolean(region.isSelected)}
+                className={`saved-region-box ${region.isHovered ? "is-hovered" : ""} ${region.isSelected ? "is-selected" : ""} ${region.isDimmed ? "is-dimmed" : ""}`}
+                data-label-inside={hasLabelInside(region) || undefined}
+                key={`${region.diagnosisId || "region"}-${region.id || `legacy-${index}`}`}
+                onBlur={() => onRegionHover?.(null)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  // Soltar um pan que começou nesta área não a seleciona; Enter/Espaço (detail 0) sempre selecionam.
+                  if (regionPanMovedRef.current && event.detail !== 0) return;
+                  onRegionSelect?.(region);
+                }}
+                onFocus={() => onRegionHover?.(region)}
+                onMouseEnter={() => onRegionHover?.(region)}
+                onMouseLeave={() => onRegionHover?.(null)}
+                style={{
+                  "--region-color": region.color,
+                  "--region-fill": region.fill,
+                  left: `${region.x}%`,
+                  top: `${region.y}%`,
+                  width: `${region.width}%`,
+                  height: `${region.height}%`,
+                }}
+                title={region.label || region.regionReference || "Área vinculada"}
+              >
+                {region.regionReference ? (
+                  <span className="region-reference-label">{region.regionReference}</span>
+                ) : null}
+              </button>
+            )) : null}
+            {isImageReady && !isCleanView && activeRegion ? (
+              <span
+                className={`selection-box active-selection-box ${draftRegion ? "is-draft" : ""}`}
+                data-label-inside={hasLabelInside(activeRegion) || undefined}
+                style={{
+                  "--region-color": selectionVisual?.color,
+                  "--region-fill": selectionVisual?.fill,
+                  "--region-draft-fill": selectionVisual?.draftFill,
+                  left: `${activeRegion.x}%`,
+                  top: `${activeRegion.y}%`,
+                  width: `${activeRegion.width}%`,
+                  height: `${activeRegion.height}%`,
+                }}
+                title={selectionReference || "Área sem diagnóstico associado"}
+              >
+                {selectionReference ? (
+                  <span className="region-reference-label">{selectionReference}</span>
+                ) : null}
+              </span>
+            ) : null}
+            </div>
           </div>
-        </div>
-        {/* No canto inferior esquerdo, sobre a faixa de papel sem traçado abaixo da tira longa de DII (y 591–639 de 645 em
-            todos os exames da fonte); no alto ele cobria o rótulo "DI". A largura deixa livre o canto da barra de
-            controles (78px + margens): estado à esquerda, controles à direita. O fundo é a tinta info a 14% sobre o fundo
-            do tema, opaca: translúcido, no escuro ele pegava o branco do papel e o texto claro ficava a 1,8:1. */}
-        {isSelectionActive ? (
-          <Badge
-            className="absolute bottom-3 left-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 bg-[color-mix(in_oklab,var(--info)_14%,var(--background))] pr-1 pl-2"
-            variant="info"
-          >
-            {isEditing
-              ? <Pencil aria-hidden="true" data-icon="inline-start" />
-              : <Plus aria-hidden="true" data-icon="inline-start" />}
-            <Tooltip>
-              <TooltipTrigger render={<span className="truncate" />}>{selectionLabel}</TooltipTrigger>
-              <TooltipContent>{selectionDescription}</TooltipContent>
-            </Tooltip>
-            <TooltipIconButton
-              className="size-5 rounded-full border-0 bg-transparent hover:bg-info/20"
-              label={isEditing ? "Cancelar edição" : "Cancelar marcação"}
-              onClick={clearSelection}
-              tooltip={isEditing ? "Cancelar edição (Esc)" : "Cancelar marcação (Esc)"}
-              variant="ghost"
+          {/* No canto inferior esquerdo, sobre a faixa de papel sem traçado abaixo da tira longa de DII (y 591–639 de 645 em
+              todos os exames da fonte); no alto ele cobria o rótulo "DI". A largura deixa livre o canto da barra de
+              controles (78px + margens): estado à esquerda, controles à direita. O fundo é a tinta info a 14% sobre o fundo
+              do tema, opaca: translúcido, no escuro ele pegava o branco do papel e o texto claro ficava a 1,8:1. */}
+          {isSelectionActive ? (
+            <Badge
+              className="absolute bottom-3 left-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 bg-[color-mix(in_oklab,var(--info)_14%,var(--background))] pr-1 pl-2"
+              variant="info"
             >
-              <X aria-hidden="true" data-icon="inline-start" />
-            </TooltipIconButton>
-          </Badge>
-        ) : null}
-        {isImageReady ? controls : null}
+              {isEditing
+                ? <Pencil aria-hidden="true" data-icon="inline-start" />
+                : <Plus aria-hidden="true" data-icon="inline-start" />}
+              <Tooltip>
+                <TooltipTrigger render={<span className="truncate" />}>{selectionLabel}</TooltipTrigger>
+                <TooltipContent>{selectionDescription}</TooltipContent>
+              </Tooltip>
+              <TooltipIconButton
+                className="size-5 rounded-full border-0 bg-transparent hover:bg-info/20"
+                label={isEditing ? "Cancelar edição" : "Cancelar marcação"}
+                onClick={clearSelection}
+                tooltip={isEditing ? "Cancelar edição (Esc)" : "Cancelar marcação (Esc)"}
+                variant="ghost"
+              >
+                <X aria-hidden="true" data-icon="inline-start" />
+              </TooltipIconButton>
+            </Badge>
+          ) : null}
+          {isImageReady ? controls : null}
+        </div>
       </div>
     </TooltipProvider>
   );
