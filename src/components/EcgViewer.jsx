@@ -843,8 +843,11 @@ export default function EcgViewer({
           ) : null}
           </div>
         </div>
+        {/* No canto inferior esquerdo, sobre a faixa de papel sem traçado abaixo da tira longa de DII (y 591–639 de 645 em
+            todos os exames da fonte); no alto ele cobria o rótulo "DI". A largura deixa livre o canto da barra de
+            controles (78px + margens): estado à esquerda, controles à direita. */}
         {isSelectionActive ? (
-          <Badge className="absolute top-3 left-3 z-10 h-7 max-w-[calc(100%-6rem)] gap-1 pr-1 pl-2" variant="info">
+          <Badge className="absolute bottom-3 left-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 pr-1 pl-2" variant="info">
             {isEditing
               ? <Pencil aria-hidden="true" data-icon="inline-start" />
               : <Plus aria-hidden="true" data-icon="inline-start" />}
