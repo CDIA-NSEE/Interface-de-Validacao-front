@@ -536,6 +536,34 @@ describe("EcgViewer", () => {
     expect(canvas.scrollTop).toBe(40);
   });
 
+  it("mantém sob o cursor o mesmo ponto do traçado numa rajada da roda que chega ao zoom máximo", () => {
+    const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
+    const canvas = container.querySelector(".ecg-canvas");
+    const stage = container.querySelector(".ecg-image-stage");
+    Object.defineProperty(canvas, "scrollLeft", { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(canvas, "scrollTop", { configurable: true, writable: true, value: 0 });
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 500 });
+    stage.getBoundingClientRect = () => {
+      const scale = Number.parseFloat(stage.style.width) / 100;
+      return { left: -canvas.scrollLeft, top: -canvas.scrollTop, width: 1000 * scale, height: 500 * scale };
+    };
+    // Cursor parado sobre um ponto do traçado (51,5% × 61% do papel), como sobre "V3".
+    const cursor = { clientX: 515, clientY: 305 };
+
+    // Girar rápido manda vários eventos antes do redesenho: quatro dentes chegam a 2,4× e o quinto já não muda nada —
+    // e não pode apagar a âncora dos quatro primeiros.
+    act(() => {
+      for (let index = 0; index < 5; index += 1) {
+        canvas.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -100, ...cursor }));
+      }
+    });
+
+    expect(stage).toHaveStyle({ width: "240%" });
+    const rect = stage.getBoundingClientRect();
+    expect((cursor.clientX - rect.left) / rect.width).toBeCloseTo(0.515, 3);
+    expect((cursor.clientY - rect.top) / rect.height).toBeCloseTo(0.61, 3);
+  });
+
   it("amplia pela roda na proporção do gesto e não reage ao deslizar para o lado", async () => {
     const { container } = renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" />);
     const canvas = container.querySelector(".ecg-canvas");

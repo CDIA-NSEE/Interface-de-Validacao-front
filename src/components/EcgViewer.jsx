@@ -304,11 +304,11 @@ export default function EcgViewer({
         yRatio: stageRect.height ? (clientY - stageRect.top) / stageRect.height : 0.5,
       };
     }
-    setZoom((current) => {
-      const nextZoom = getNextZoom(current);
-      if (nextZoom === current) zoomAnchorRef.current = null;
-      return nextZoom;
-    });
+    // A âncora só é consumida pelo efeito que roda quando o zoom muda. Girar rápido manda vários eventos antes do
+    // redesenho, e o que já encontrava o zoom no limite (2,4×) apagava a âncora dos anteriores: o zoom acumulado era
+    // aplicado sem âncora, a partir do canto superior esquerdo, e o ponto sob o cursor ia parar em outro lugar do
+    // traçado. Uma âncora que sobre sem uso é trocada pela da próxima mudança de zoom, que sempre passa por aqui.
+    setZoom((current) => getNextZoom(current));
   }, []);
 
   const changeZoom = useCallback(
