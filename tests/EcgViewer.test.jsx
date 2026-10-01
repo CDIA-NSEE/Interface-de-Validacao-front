@@ -104,7 +104,9 @@ describe("EcgViewer", () => {
     Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
 
     fireEvent.load(image);
-    resizeCallback();
+    // Em `act`, como nos outros testes: fora dele a medida nova só era desenhada depois, e a checagem do estilo abaixo
+    // (o `waitFor` passa na hora, porque o aviso da proporção é síncrono) falhava quando a suíte rodava com carga.
+    act(() => resizeCallback());
 
     await waitFor(() => expect(onImageAspectRatioChange).toHaveBeenCalledWith(2));
     expect(container.querySelector(".ecg-image-stage")).toHaveStyle({
@@ -195,7 +197,7 @@ describe("EcgViewer", () => {
     Object.defineProperty(image, "naturalHeight", { configurable: true, value: 600 });
 
     fireEvent.load(image);
-    resizeCallback();
+    act(() => resizeCallback());
 
     await waitFor(() => {
       expect(container.querySelector(".ecg-image-stage")).toHaveStyle({
