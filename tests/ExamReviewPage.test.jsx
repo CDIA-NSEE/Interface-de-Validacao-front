@@ -234,6 +234,26 @@ describe("ExamReviewPage", () => {
     heightSpy.mockRestore();
   });
 
+  it.each([
+    { size: "large", width: "416px" },
+    { size: "extra-large", width: "443px" },
+  ])("com o texto maior, o piso do painel é onde a linha de decisão cabe com texto ($size)", async ({ size, width }) => {
+    textSize.value = size;
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1080);
+    stubViewport(false);
+
+    try {
+      const { container } = render(<ExamReviewPage />);
+      await screen.findByRole("heading", { name: "Exame ECG-42" });
+
+      await waitFor(() => expect(container.querySelector("main")).toHaveStyle({ "--review-sidebar-width": width }));
+    } finally {
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+    }
+  });
+
   it("explica por que Salvar e próximo está desabilitado", async () => {
     stubViewport(false);
     render(<ExamReviewPage />);

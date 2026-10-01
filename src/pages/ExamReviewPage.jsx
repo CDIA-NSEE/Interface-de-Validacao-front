@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext.jsx";
-import { useApplyTextSize } from "@/context/TextSizeContext.jsx";
+import { useApplyTextSize, useTextSize } from "@/context/TextSizeContext.jsx";
 import { cn } from "@/lib/utils";
 import {
   addDiagnosis,
@@ -133,8 +133,16 @@ const REVIEW_BODY_SCROLL_CLASS = "min-h-0 flex-1 [&_[data-slot=scroll-area-viewp
 // 4px de folga (medido a 100% e a 125%: a 410px "SUGESTIVA ÁREA ELETRICAMENTE INATIVA ANTEROSSEPTAL" já quebra em 3
 // linhas; a 405px "IA concordou" desce). Com 440px, até 2026-09-30, sobravam 56px vazios abaixo do ECG a 1536×730;
 // a 414px o ECG vai de 1008×578 para 1034×593 (+5% de área). Até ~1440px de janela nada muda.
+// Com o texto maior (menu lateral › Tamanho do texto) o painel cresce só o necessário: o piso é a largura em que a linha
+// Concordo │ Discordo … Marcar área do cartão do dia cabe com texto, mais 4px de folga (medido: 412px no Grande, 439px
+// no Muito grande). Os títulos quebram mais e o painel rola mais, mas o ECG fica com ~100% e 97–98% da largura — crescer
+// na proporção do texto (473 e 532px) custava 6% e 11% dele a 1536×730, tanto quanto o zoom do navegador.
 const REVIEW_SIDEBAR_MIN_RATIO = 0.3;
-const REVIEW_SIDEBAR_FLOOR_CAP = 414;
+const REVIEW_SIDEBAR_FLOOR_CAP = {
+  default: 414,
+  large: 416,
+  "extra-large": 443,
+};
 
 // "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
 // reabrir a cada exame da fila. Preferência deste navegador, como o tema; sem armazenamento, vale só a sessão.
@@ -197,6 +205,8 @@ export default function ExamReviewPage() {
   const { logout } = useAuth();
   // Única tela com o tamanho do texto escolhido no menu lateral, por ora (ver useApplyTextSize).
   useApplyTextSize();
+  const { textSize } = useTextSize();
+  const sidebarFloorCap = REVIEW_SIDEBAR_FLOOR_CAP[textSize] ?? REVIEW_SIDEBAR_FLOOR_CAP.default;
   const reviewLayoutRef = useRef(null);
   const examCardRef = useRef(null);
   const sidebarTriggerRef = useRef(null);
@@ -394,7 +404,7 @@ export default function ExamReviewPage() {
         maximumSidebarRatio: usesIntermediateLayout ? 0.42 : 0.32,
         minimumSidebarWidth: usesIntermediateLayout
           ? 300
-          : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), REVIEW_SIDEBAR_FLOOR_CAP),
+          : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), sidebarFloorCap),
         // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo + o cartão do exame + 8px de vão. As observações
         // saíram de baixo do ECG para o fim do painel (eram 8px de vão + 98px).
         viewerHorizontalChrome: 24,
@@ -415,7 +425,7 @@ export default function ExamReviewPage() {
     observer.observe(layout);
     if (examCardRef.current) observer.observe(examCardRef.current);
     return () => observer.disconnect();
-  }, [imageAspectRatio, isCompactLayout, isLoading]);
+  }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap]);
 
   const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
@@ -1222,7 +1232,7 @@ export default function ExamReviewPage() {
           <main
             className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(min(30%,414px),var(--review-sidebar-width))_minmax(0,1fr)]"
             ref={reviewLayoutRef}
-            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : "min(30%, 414px)" }}
+            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : `min(30%, ${sidebarFloorCap}px)` }}
           >
             {!isCompactLayout ? (
               <aside
