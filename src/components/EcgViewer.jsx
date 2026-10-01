@@ -239,7 +239,7 @@ export default function EcgViewer({
   const hasLabelInside = (region) =>
     Boolean(fittedSize) && (region.y / 100) * fittedSize.height * zoom < minTopForLabelAbove;
 
-  // O espaço disponível é o do encaixe (a coluna acima das observações), não o do cartão: o cartão acompanha a altura
+  // O espaço disponível é o do encaixe (a coluna abaixo do cartão do exame), não o do cartão: o cartão acompanha a altura
   // do papel, então medi-lo seria circular.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -805,7 +805,7 @@ export default function EcgViewer({
   return (
     <TooltipProvider delay={400}>
       {/* O cartão acompanha a altura do papel: a sobra da proporção (o papel é mais largo que o espaço numa tela 16:9)
-          fica fora dele, como fundo da página entre o ECG e as observações. Dentro do cartão ela era uma faixa branca
+          fica fora dele, como fundo da página abaixo do ECG. Dentro do cartão ela era uma faixa branca
           acima e abaixo do papel — 79px a 1920×1080 — que se confundia com o papel e não reagia a clique. */}
       <div className="flex min-h-72 flex-1 flex-col sm:min-h-88" ref={slotRef}>
         <div
