@@ -82,6 +82,12 @@ vi.mock("../src/services/supportService.js", () => ({
   getSupportContact: vi.fn(),
 }));
 
+// "Observações gerais" nasce recolhido: abre pela barra do cartão e devolve o campo.
+async function openObservations() {
+  fireEvent.click(await screen.findByRole("button", { name: /^Observações gerais/ }));
+  return screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
+}
+
 function stubViewport(initialCompact) {
   let isCompact = initialCompact;
   const listeners = new Set();
@@ -171,17 +177,21 @@ describe("ExamReviewPage", () => {
     expect(container.querySelector("header dl")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dados do exame" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Notas do laudo")).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Observações gerais (opcional)" })).toBeVisible();
+    // Observações: último cartão do painel, recolhido, sem "Salvar" à vista enquanto não há alteração.
+    const observationsToggle = screen.getByRole("button", { name: "Observações gerais (opcional)" });
+    expect(observationsToggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).toContainElement(observationsToggle);
+    expect(screen.getByRole("region", { name: "Visualizador de ECG" })).not.toContainElement(observationsToggle);
+    expect(screen.queryByRole("textbox", { name: "Observações gerais (opcional)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvar observações" })).not.toBeInTheDocument();
     const ecgToolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
     expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
-    expect(screen.getByTestId("general-observations-header")).not.toContainElement(ecgToolbar);
     expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
     expect(screen.getByTestId("current-status")).toHaveTextContent("Exame ECG-42");
     expect(screen.getByTestId("current-status")).toHaveTextContent("Status atual:");
     expect(screen.getByText("Iniciar")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Salvar observações" })).toBeDisabled();
   });
 
   it("mede o painel quando o layout surge depois do carregamento", async () => {
@@ -289,7 +299,7 @@ describe("ExamReviewPage", () => {
       "Salvar e próximo indisponível: Carregue o traçado do ECG para continuar.",
     );
     // Observações são rascunho, não decisão: continuam livres.
-    expect(screen.getByRole("textbox", { name: "Observações gerais (opcional)" })).toBeEnabled();
+    expect(await openObservations()).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
@@ -632,7 +642,7 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
+    const notes = await openObservations();
     fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
     screen.getByRole("button", { name: "Sair da sessão" }).focus();
     const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
@@ -1077,32 +1087,30 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
+    const notes = await openObservations();
     fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
 
     await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Salvas");
-    expect(screen.getByTestId("general-observations-header")).toContainElement(screen.getByRole("status"));
-    expect(screen.getByTestId("general-observations-header")).not.toContainElement(
-      screen.getByRole("toolbar", { name: "Controles do ECG" }),
-    );
+    expect(screen.getByTestId("general-observations")).toContainElement(screen.getByRole("status"));
   });
 
-  it("salva as observações pelo botão do próprio campo ou com Ctrl+Enter, fora do rodapé", async () => {
+  it("salva as observações pelo próprio campo ou com Ctrl+Enter, com Cancelar e Salvar só com alteração", async () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
-    const save = screen.getByRole("button", { name: "Salvar observações" });
-    // A ação mora no campo (canto inferior direito), não no rodapé — que fica com Voltar e a primária.
-    expect(notes.closest('[data-slot="input-group"]')).toContainElement(save);
-    expect(screen.getByRole("group", { name: "Ações da validação" })).not.toContainElement(save);
-    expect(save).toHaveTextContent("Salvar");
-    expect(save).toBeDisabled();
+    const notes = await openObservations();
+    // Vazio, o cartão abre para escrever: o cursor já está no campo.
+    await waitFor(() => expect(notes).toHaveFocus());
+    expect(screen.queryByRole("button", { name: "Salvar observações" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).not.toBeInTheDocument();
 
     fireEvent.change(notes, { target: { value: "Reavaliar intervalo PR" } });
-    expect(save).toBeEnabled();
+    const save = screen.getByRole("button", { name: "Salvar observações" });
+    expect(save).toHaveTextContent("Salvar");
+    expect(screen.getByTestId("general-observations")).toContainElement(save);
+    expect(screen.getByRole("group", { name: "Ações da validação" })).not.toContainElement(save);
     saveExamDraft.mockClear();
     // Enter sozinho quebra linha; Ctrl+Enter salva.
     fireEvent.keyDown(notes, { key: "Enter" });
@@ -1110,6 +1118,52 @@ describe("ExamReviewPage", () => {
     fireEvent.keyDown(notes, { ctrlKey: true, key: "Enter" });
     await waitFor(() => expect(saveExamDraft).toHaveBeenCalledWith("42", { notes: "Reavaliar intervalo PR" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Salvas");
+  });
+
+  it("cancela a alteração das observações e não recolhe o cartão com texto não salvo", async () => {
+    const user = userEvent.setup();
+    getExamById.mockResolvedValue({ ...exam, draft_notes: "Paciente em uso de betabloqueador" });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    // Recolhido com texto salvo: a barra mostra o começo dele, e o leitor de tela o ouve como descrição.
+    const toggle = await screen.findByRole("button", { name: "Observações gerais" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAccessibleDescription("Paciente em uso de betabloqueador");
+    expect(screen.queryByText("Opcional", { selector: '[data-testid="general-observations"] *' })).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    const notes = screen.getByRole("textbox", { name: "Observações gerais (opcional)" });
+    expect(notes).toHaveValue("Paciente em uso de betabloqueador");
+    // Com texto, o cartão abre para ler: o foco fica na barra.
+    expect(toggle).toHaveFocus();
+
+    await user.type(notes, " desde 2024");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(notes).toHaveValue("Paciente em uso de betabloqueador");
+    expect(screen.queryByRole("button", { name: "Salvar observações" })).not.toBeInTheDocument();
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("abre as observações com o erro quando o Salvar e próximo não consegue salvá-las", async () => {
+    const user = userEvent.setup();
+    getExamById.mockResolvedValue({
+      ...exam,
+      diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }],
+    });
+    saveExamDraft.mockRejectedValueOnce(new Error("Network Error"));
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Salvar e próximo" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível salvar as observações. Tente novamente.");
+    expect(screen.getByRole("button", { name: "Observações gerais (opcional)" })).toHaveAttribute("aria-expanded", "true");
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("não confirma como salvo um texto alterado durante a requisição", async () => {
@@ -1120,7 +1174,7 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const notes = await screen.findByRole("textbox", { name: "Observações gerais (opcional)" });
+    const notes = await openObservations();
     fireEvent.change(notes, { target: { value: "Primeira versão" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar observações" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Salvando…");

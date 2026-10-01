@@ -1,9 +1,7 @@
 import {
   ArrowLeft,
-  Check,
   ChevronDown,
   FileText,
-  NotebookPen,
   PanelRightOpen,
   Stethoscope,
 } from "lucide-react";
@@ -13,9 +11,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import DiagnosisPanel from "../components/DiagnosisPanel.jsx";
 import EcgViewer from "../components/EcgViewer.jsx";
 import EmptyState from "../components/EmptyState.jsx";
+import GeneralObservations from "../components/GeneralObservations.jsx";
 import KeyboardShortcutsModal from "../components/KeyboardShortcutsModal.jsx";
 import LoadingState from "../components/LoadingState.jsx";
-import OptionalTag from "../components/OptionalTag.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
@@ -33,8 +31,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -213,6 +209,8 @@ export default function ExamReviewPage() {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
   const [isMoreInformationOpen, setIsMoreInformationOpen] = useState(readExamDataOpen);
+  // "Observações gerais" nasce recolhido em cada exame, como a justificativa; com texto salvo, a barra mostra o começo.
+  const [isObservationsOpen, setIsObservationsOpen] = useState(false);
   const [isReviewSheetOpen, setIsReviewSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -227,7 +225,8 @@ export default function ExamReviewPage() {
   const decisionFeedbackTimersRef = useRef(new Map());
   const notesSaveTimerRef = useRef(null);
   const moreInformationCardRef = useRef(null);
-  const moreInformationRevealFrameRef = useRef(0);
+  const observationsCardRef = useRef(null);
+  const panelRevealFrameRef = useRef(0);
   const latestNotesRef = useRef("");
   const [diagnosisReviewDrafts, setDiagnosisReviewDrafts] = useState({});
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
@@ -294,6 +293,7 @@ export default function ExamReviewPage() {
       setSelectedRegion(null);
       setIsSecondaryPanelOpen(true);
       setIsMoreInformationOpen(readExamDataOpen());
+      setIsObservationsOpen(false);
       setIsReviewSheetOpen(false);
       setDiagnosisReviewDrafts({});
       setIsExitConfirmOpen(false);
@@ -326,7 +326,7 @@ export default function ExamReviewPage() {
     decisionFeedbackTimersRef.current.clear();
     ecgImageRequestRef.current?.abort();
     clearNotesSaveTimer();
-    window.cancelAnimationFrame(moreInformationRevealFrameRef.current);
+    window.cancelAnimationFrame(panelRevealFrameRef.current);
   }, [clearNotesSaveTimer]);
 
   useEffect(() => {
@@ -385,9 +385,10 @@ export default function ExamReviewPage() {
         minimumSidebarWidth: usesIntermediateLayout
           ? 300
           : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), REVIEW_SIDEBAR_FLOOR_CAP),
-        // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo + 8px de vão + 98px das observações.
+        // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo. As observações saíram de baixo do ECG para o
+        // fim do painel (eram mais 8px de vão + 98px).
         viewerHorizontalChrome: 24,
-        viewerVerticalChrome: 138,
+        viewerVerticalChrome: 32,
       });
 
       setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
@@ -669,21 +670,29 @@ export default function ExamReviewPage() {
       return true;
     } catch {
       setNotesSaveState({ status: "error", message: "Não foi possível salvar as observações. Tente novamente." });
+      // O erro fica no próprio cartão: abre-o, mesmo quando a falha veio do "Salvar e próximo" com ele recolhido.
+      setIsObservationsOpen(true);
+      revealPanelCard(observationsCardRef);
       return false;
     } finally {
       releaseBusy();
     }
   }
 
-  async function handleSave() {
-    await saveCurrentDraft();
+  function handleSave() {
+    return saveCurrentDraft();
   }
 
-  // Ctrl/Cmd+Enter salva as observações (como nos comentários do GitHub); Enter sozinho continua quebrando linha.
-  function handleNotesKeyDown(event) {
-    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
-    event.preventDefault();
-    if (usesDailyFlow && hasUnsavedNotes) handleSave();
+  function handleNotesChange(value) {
+    clearNotesSaveTimer();
+    latestNotesRef.current = value;
+    setNotes(value);
+    setNotesSaveState({ status: "idle", message: "" });
+  }
+
+  // Cancelar volta ao texto salvo; o cartão continua aberto.
+  function handleNotesCancel() {
+    handleNotesChange(exam?.draft_notes || "");
   }
 
   function handleReturnHome() {
@@ -911,19 +920,16 @@ export default function ExamReviewPage() {
     setError("Salve ou cancele a justificativa antes de continuar.");
   }
 
-  // "Dados do exame" é o último cartão do painel: na tela real (1536×730) ele abria abaixo da dobra e só 16 dos ~240px
-  // apareciam — o médico via a seta virar e nada mais. Ao abrir, rola o painel só o necessário para mostrar o conteúdo
-  // (nunca esconde o título acima do topo), como scrollDiagnosisIntoView nos adicionais: o painel cresce em transição de
-  // 200ms e o viewport ainda não tem o overflow final, então o acompanhamento segue frame a frame até ela terminar.
-  function handleMoreInformationOpenChange(open) {
-    setIsMoreInformationOpen(open);
-    storeExamDataOpen(open);
-    window.cancelAnimationFrame(moreInformationRevealFrameRef.current);
-    if (!open) return;
-
+  // "Dados do exame" e "Observações gerais" ficam no fim do painel: na tela real (1536×730) abriam abaixo da dobra e só
+  // 16 dos ~240px de "Dados do exame" apareciam — o médico via a seta virar e nada mais. Ao abrir, rola o painel só o
+  // necessário para mostrar o conteúdo (nunca esconde o título acima do topo), como scrollDiagnosisIntoView nos
+  // adicionais: o painel cresce em transição de 200ms e o viewport ainda não tem o overflow final, então o acompanhamento
+  // segue frame a frame até ela terminar.
+  function revealPanelCard(cardRef) {
+    window.cancelAnimationFrame(panelRevealFrameRef.current);
     const deadline = performance.now() + 400;
     const reveal = () => {
-      const card = moreInformationCardRef.current;
+      const card = cardRef.current;
       const viewport = card?.closest('[data-slot="scroll-area-viewport"]');
       if (!card || !viewport) return;
       const panel = card.querySelector('[data-slot="collapsible-content"]');
@@ -935,10 +941,23 @@ export default function ExamReviewPage() {
         viewport.scrollTop += Math.min(target.top - bounds.top, targetBottom - bounds.bottom);
       }
       if (pendingHeight > 0.5 && performance.now() < deadline) {
-        moreInformationRevealFrameRef.current = window.requestAnimationFrame(reveal);
+        panelRevealFrameRef.current = window.requestAnimationFrame(reveal);
       }
     };
-    moreInformationRevealFrameRef.current = window.requestAnimationFrame(reveal);
+    panelRevealFrameRef.current = window.requestAnimationFrame(reveal);
+  }
+
+  function handleMoreInformationOpenChange(open) {
+    setIsMoreInformationOpen(open);
+    storeExamDataOpen(open);
+    if (open) revealPanelCard(moreInformationCardRef);
+    else window.cancelAnimationFrame(panelRevealFrameRef.current);
+  }
+
+  function handleObservationsOpenChange(open) {
+    setIsObservationsOpen(open);
+    if (open) revealPanelCard(observationsCardRef);
+    else window.cancelAnimationFrame(panelRevealFrameRef.current);
   }
 
   function handleSidebarOpenChange(open, options = {}) {
@@ -1117,6 +1136,19 @@ export default function ExamReviewPage() {
       {diagnosisPanel}
       {clinicalInformation}
       {moreInformation}
+      <GeneralObservations
+        canSave={usesDailyFlow}
+        cardRef={observationsCardRef}
+        isBusy={isBusyIndicated}
+        isOpen={isObservationsOpen}
+        notes={notes}
+        onCancel={handleNotesCancel}
+        onNotesChange={handleNotesChange}
+        onOpenChange={handleObservationsOpenChange}
+        onSave={handleSave}
+        saveState={notesSaveState}
+        savedNotes={exam.draft_notes || ""}
+      />
     </div>
   );
 
@@ -1194,8 +1226,8 @@ export default function ExamReviewPage() {
               </aside>
             ) : null}
 
-            {/* 16px em cima e embaixo, como o painel: o topo do ECG alinha com o primeiro cartão do painel e a base das
-                observações com o rodapé (com 12px ficavam 4px desencontrados nas duas pontas). Nas laterais seguem 12px. */}
+            {/* 16px em cima e embaixo, como o painel: o topo do ECG alinha com o primeiro cartão do painel (com 12px ficavam
+                4px desencontrados). Nas laterais seguem 12px. */}
             <section
               aria-label="Visualizador de ECG"
               className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:px-3 md:py-4"
@@ -1217,74 +1249,6 @@ export default function ExamReviewPage() {
                   selectionReference={activeRegionReference}
                   selectionVisual={activeRegionVisual}
                 />
-                <Field className="shrink-0 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
-                  <div
-                    className="flex flex-wrap items-center justify-between gap-2"
-                    data-testid="general-observations-header"
-                  >
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <FieldLabel className="flex items-center gap-2" htmlFor="general-observations">
-                        <NotebookPen aria-hidden="true" data-icon="inline-start" />
-                        Observações gerais{" "}
-                        <OptionalTag />
-                      </FieldLabel>
-                      {notesSaveState.status === "saving" || notesSaveState.status === "saved" ? (
-                        <span className="flex items-center gap-0.5 text-xs text-muted-foreground" role="status">
-                          {/* O "✓" é o ícone Check, não o caractere: a Source Sans 3 não o tem e ele caía numa fonte de sistema. */}
-                          {notesSaveState.status === "saved" ? <Check aria-hidden="true" className="size-3" /> : null}
-                          {notesSaveState.message}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  {/* Campo no formato de composer: começa com uma linha e cresce com o texto até duas (depois rola por
-                      dentro, com a barra dos campos de texto) — medido a 1536×730 (1080p a 125%), duas linhas não tiram
-                      nada do ECG e cada linha a mais o encolhe; o campo é largo, então duas linhas já comportam ~300
-                      caracteres. A própria ação fica no canto inferior direito — neutra sem alteração, primária com alteração;
-                      Ctrl+Enter salva e Enter quebra linha. O "Salvar" morava no rodapé, a ~1000px do campo. Só no fluxo
-                      diário, como era no rodapé: na revalidação as observações vão com "Validar exame". O nome acessível
-                      "Salvar observações" contém o rótulo visível. O InputGroup esmaece o grupo inteiro quando há algo
-                      desabilitado dentro (`has-disabled`): aqui só o botão desabilita, e o campo não pode parecer inativo. */}
-                  <InputGroup className="items-end has-disabled:bg-transparent has-disabled:opacity-100 dark:has-disabled:bg-input/30">
-                    <InputGroupTextarea
-                      aria-keyshortcuts={usesDailyFlow ? "Control+Enter Meta+Enter" : undefined}
-                      className="subtle-scrollbar max-h-15 min-h-0 overflow-y-auto px-2.5 py-2.5"
-                      id="general-observations"
-                      value={notes}
-                      onChange={(event) => {
-                        clearNotesSaveTimer();
-                        latestNotesRef.current = event.target.value;
-                        setNotes(latestNotesRef.current);
-                        setNotesSaveState({ status: "idle", message: "" });
-                      }}
-                      onKeyDown={handleNotesKeyDown}
-                      placeholder="Registre comentários gerais sobre o exame"
-                      rows={1}
-                    />
-                    {usesDailyFlow ? (
-                      // Mesmo recuo nos três lados do botão (7px: 6px + a borda): a margem negativa padrão do addon o
-                      // encostava na borda direita (4px) enquanto o topo e a base ficavam a 7px. `pl-1.5` afasta o botão da
-                      // barra de rolagem do texto, que fica no fim da coluna do texto — lida como do texto, não do botão.
-                      <InputGroupAddon align="inline-end" className="pr-1.5 pl-1.5 has-[>button]:mr-0">
-                        <Button
-                          aria-label="Salvar observações"
-                          className="disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
-                          disabled={isBusyIndicated || !hasUnsavedNotes}
-                          onClick={handleSave}
-                          size="sm"
-                          type="button"
-                        >
-                          Salvar
-                        </Button>
-                      </InputGroupAddon>
-                    ) : null}
-                  </InputGroup>
-                  {notesSaveState.status === "error" ? (
-                    <p className="text-xs text-destructive" role="alert">
-                      {notesSaveState.message}
-                    </p>
-                  ) : null}
-                </Field>
               </div>
             </section>
           </main>
