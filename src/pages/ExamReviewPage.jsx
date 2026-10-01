@@ -126,10 +126,13 @@ const BUSY_INDICATION_DELAY_MS = 300;
 const REVIEW_BODY_SCROLL_CLASS = "min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]]:[overflow-anchor:none]";
 
 // Numa tela 16:9 o ECG (~1,74:1) é limitado pela largura: o painel no piso de 30% deixava 226px de altura vazios no
-// visualizador a 1920×1080. O piso vira o menor entre 30% e 440px — a largura do painel a 1536×730 (1080p a 125%) —,
-// e a 1920×1080 o ECG passa de 1263×724 para ~1380×791. Até ~1536px de janela nada muda.
+// visualizador a 1920×1080. O piso vira o menor entre 30% e 414px: o painel mais estreito em que o exame de títulos
+// mais longos (13) aparece igual, com nenhum título fechado cortado e os marcadores do cartão do dia numa linha, mais
+// 4px de folga (medido a 100% e a 125%: a 410px "SUGESTIVA ÁREA ELETRICAMENTE INATIVA ANTEROSSEPTAL" já quebra em 3
+// linhas; a 405px "IA concordou" desce). Com 440px, até 2026-09-30, sobravam 56px vazios abaixo do ECG a 1536×730;
+// a 414px o ECG vai de 1008×578 para 1034×593 (+5% de área). Até ~1440px de janela nada muda.
 const REVIEW_SIDEBAR_MIN_RATIO = 0.3;
-const REVIEW_SIDEBAR_FLOOR_CAP = 440;
+const REVIEW_SIDEBAR_FLOOR_CAP = 414;
 
 // "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
 // reabrir a cada exame da fila. Preferência deste navegador, como o tema; sem armazenamento, vale só a sessão.
@@ -1211,9 +1214,9 @@ export default function ExamReviewPage() {
           ref={validationWorkspaceRef}
         >
           <main
-            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(min(30%,440px),var(--review-sidebar-width))_minmax(0,1fr)]"
+            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(min(30%,414px),var(--review-sidebar-width))_minmax(0,1fr)]"
             ref={reviewLayoutRef}
-            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : "min(30%, 440px)" }}
+            style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : "min(30%, 414px)" }}
           >
             {!isCompactLayout ? (
               <aside

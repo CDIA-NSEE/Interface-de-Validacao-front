@@ -167,9 +167,9 @@ describe("ExamReviewPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Exame ECG-42" })).toBeVisible();
     const reviewLayout = container.querySelector("main");
-    expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "min(30%, 440px)" });
+    expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "min(30%, 414px)" });
     expect(reviewLayout).toHaveClass(
-      "md:grid-cols-[max(min(30%,440px),var(--review-sidebar-width))_minmax(0,1fr)]",
+      "md:grid-cols-[max(min(30%,414px),var(--review-sidebar-width))_minmax(0,1fr)]",
     );
     expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toBeVisible();
@@ -217,8 +217,8 @@ describe("ExamReviewPage", () => {
     await screen.findByRole("heading", { name: "Exame ECG-42" });
 
     const reviewLayout = container.querySelector("main");
-    // 1856px de layout: 30% seriam 557px, mas o piso para em 440px e a largura vai para o ECG.
-    await waitFor(() => expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "440px" }));
+    // 1856px de layout: 30% seriam 557px, mas o piso para em 414px e a largura vai para o ECG.
+    await waitFor(() => expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "414px" }));
     expect(observe).toHaveBeenCalledWith(reviewLayout);
 
     widthSpy.mockRestore();
