@@ -58,6 +58,12 @@ vi.mock("../src/context/ThemeContext.jsx", () => ({
   useTheme: () => ({ isDark: theme.isDark, toggleTheme: vi.fn() }),
 }));
 
+vi.mock("../src/context/TextSizeContext.jsx", async () => ({
+  ...(await vi.importActual("../src/context/TextSizeContext.jsx")),
+  useApplyTextSize: vi.fn(),
+  useTextSize: () => ({ setTextSize: vi.fn(), textSize: "default" }),
+}));
+
 vi.mock("../src/services/examsService.js", () => ({
   addDiagnosis: vi.fn(),
   addDiagnosisRegion: vi.fn(),

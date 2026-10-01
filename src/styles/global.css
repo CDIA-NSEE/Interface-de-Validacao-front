@@ -129,6 +129,33 @@
   --scrim: oklch(0.05 0.02 235);
 }
 
+/* Tamanho do texto (item "Tamanho do texto" do menu lateral), posto na raiz pela tela que o aplica — hoje só a de
+   revisão. Muda só os quatro tamanhos do Tailwind: ícones, margens, alturas e o traçado ficam como estão (W3C, Low Vision
+   Needs §3.3.1: texto maior sem dar zoom na interface inteira). Cada nível soma 2px a todos os tamanhos — o texto pequeno
+   cresce proporcionalmente mais, como na escala não linear do Android 14 — e a altura de linha é de px inteiros: com
+   25,7px os itens caíam em posições fracionárias e os filetes de 1px sumiam na tela a 125%. */
+:root[data-text-size="large"] {
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.1875rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.4375rem;
+  --text-base: 1.125rem;
+  --text-base--line-height: 1.6875rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.9375rem;
+}
+
+:root[data-text-size="extra-large"] {
+  --text-xs: 1rem;
+  --text-xs--line-height: 1.3125rem;
+  --text-sm: 1.125rem;
+  --text-sm--line-height: 1.625rem;
+  --text-base: 1.25rem;
+  --text-base--line-height: 1.875rem;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 2.125rem;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

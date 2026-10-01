@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext.jsx";
+import { useApplyTextSize } from "@/context/TextSizeContext.jsx";
 import { cn } from "@/lib/utils";
 import {
   addDiagnosis,
@@ -193,6 +194,8 @@ export default function ExamReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  // Única tela com o tamanho do texto escolhido no menu lateral, por ora (ver useApplyTextSize).
+  useApplyTextSize();
   const reviewLayoutRef = useRef(null);
   const examCardRef = useRef(null);
   const sidebarTriggerRef = useRef(null);
