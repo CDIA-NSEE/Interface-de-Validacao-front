@@ -17,6 +17,7 @@ import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
+import TextSizeModal from "../components/TextSizeModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
 import UnsavedChangesModal from "../components/UnsavedChangesModal.jsx";
 import ValidationPanelIconLabel from "../components/ValidationPanelIconLabel.jsx";
@@ -213,6 +214,7 @@ export default function ExamReviewPage() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isTextSizeOpen, setIsTextSizeOpen] = useState(false);
   const [isSecondaryPanelOpen, setIsSecondaryPanelOpen] = useState(true);
   const [isMoreInformationOpen, setIsMoreInformationOpen] = useState(readExamDataOpen);
   // "Observações gerais" nasce recolhido em cada exame, como a justificativa; com texto salvo, a barra mostra o começo.
@@ -1205,6 +1207,7 @@ export default function ExamReviewPage() {
           onOpenChange={handleSidebarOpenChange}
           onShortcuts={() => setIsShortcutsOpen(true)}
           onSupport={openSupport}
+          onTextSize={() => setIsTextSizeOpen(true)}
           onTutorial={() => setIsTutorialOpen(true)}
           triggerRef={sidebarTriggerRef}
         />
@@ -1298,6 +1301,7 @@ export default function ExamReviewPage() {
         />
         <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
         <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+        <TextSizeModal isOpen={isTextSizeOpen} onClose={() => setIsTextSizeOpen(false)} />
         <UnsavedChangesModal
           intent={exitIntent}
           isOpen={isExitConfirmOpen}

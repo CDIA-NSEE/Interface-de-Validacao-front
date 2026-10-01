@@ -19,6 +19,7 @@ import {
 const navigate = vi.fn();
 const logout = vi.fn();
 const theme = vi.hoisted(() => ({ isDark: false }));
+const textSize = vi.hoisted(() => ({ set: null, value: "default" }));
 
 beforeAll(() => {
   Object.defineProperty(Element.prototype, "getAnimations", {
@@ -61,7 +62,7 @@ vi.mock("../src/context/ThemeContext.jsx", () => ({
 vi.mock("../src/context/TextSizeContext.jsx", async () => ({
   ...(await vi.importActual("../src/context/TextSizeContext.jsx")),
   useApplyTextSize: vi.fn(),
-  useTextSize: () => ({ setTextSize: vi.fn(), textSize: "default" }),
+  useTextSize: () => ({ setTextSize: textSize.set, textSize: textSize.value }),
 }));
 
 vi.mock("../src/services/examsService.js", () => ({
@@ -141,6 +142,8 @@ beforeEach(() => {
   navigate.mockReset();
   logout.mockReset();
   theme.isDark = false;
+  textSize.set = vi.fn();
+  textSize.value = "default";
   vi.stubGlobal("ResizeObserver", class ResizeObserver {
     observe() {}
     disconnect() {}
@@ -393,7 +396,7 @@ describe("ExamReviewPage", () => {
       [...collapsedNavigation.querySelectorAll("[data-navigation-item]")].map(
         (item) => item.dataset.navigationItem,
       ),
-    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "theme", "account", "logout"]);
+    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "text-size", "theme", "account", "logout"]);
     // Sem dica no trilho: o menu abre com os nomes, e a dica só piscava antes de ser coberta.
     expect(collapsedNavigation.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
     // "Dra." é título, não nome: as iniciais de "Dra. Ana" são "A".
@@ -434,7 +437,7 @@ describe("ExamReviewPage", () => {
       [...expandedNavigation.querySelectorAll("[data-navigation-item]")].map(
         (item) => item.dataset.navigationItem,
       ),
-    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "theme", "account", "logout"]);
+    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "text-size", "theme", "account", "logout"]);
     const expandedBrand = expandedNavigation.querySelector('[data-navigation-item="brand"]');
     expect(expandedBrand).toHaveAttribute("aria-hidden", "true");
     expect(expandedBrand.tagName).toBe("DIV");
@@ -546,6 +549,34 @@ describe("ExamReviewPage", () => {
       "Salvar observações ou justificativaCtrl+Enter",
     );
     expect(shortcuts).toHaveTextContent("Ocultar ou mostrar marcaçõesV");
+  });
+
+  it("abre pelo menu lateral o tamanho do texto, no grupo de aparência, e troca na hora", async () => {
+    const user = userEvent.setup();
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    screen.getByRole("button", { name: "Tamanho do texto" }).focus();
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    // Ajuda e aparência separadas por uma linha: Contato │ Tamanho do texto, Modo escuro.
+    const textSizeItem = expandedNavigation.querySelector('[data-navigation-item="text-size"]');
+    expect(textSizeItem.previousElementSibling).toHaveAttribute("data-slot", "separator");
+    expect(textSizeItem.nextElementSibling).toHaveAttribute("data-navigation-item", "theme");
+    await user.click(within(textSizeItem).getByRole("button", { name: "Tamanho do texto" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Tamanho do texto" });
+    const options = within(dialog).getByRole("radiogroup", { name: "Tamanho do texto" });
+    expect(within(options).getAllByRole("radio").map((radio) => radio.textContent)).toEqual([
+      "AaPadrão",
+      "AaGrande",
+      "AaMuito grande",
+    ]);
+    expect(within(options).getByRole("radio", { name: "Padrão" })).toHaveAttribute("aria-checked", "true");
+
+    // Sem "Salvar": a escolha vale na hora, com o painel à vista atrás do diálogo.
+    await user.click(within(options).getByRole("radio", { name: "Grande" }));
+    expect(textSize.set).toHaveBeenCalledWith("large", expect.anything());
   });
 
   it("mantém expansão por teclado e fecha com Escape", async () => {

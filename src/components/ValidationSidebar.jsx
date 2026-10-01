@@ -1,4 +1,5 @@
 import {
+  ALargeSmall,
   Activity,
   HelpCircle,
   House,
@@ -200,6 +201,7 @@ function NavigationPanel({
   onLogout,
   onShortcuts,
   onSupport,
+  onTextSize,
   onTheme,
   onTutorial,
   pointerItemKey,
@@ -210,8 +212,9 @@ function NavigationPanel({
     <div className="group/navigation flex h-full w-72 flex-col">
       <NavigationHeader compact={compact} />
 
-      {/* Destino e ferramentas juntos no topo, separados por uma linha (grupos numa lista só, como no Material); a conta
-          fica na base. Com Início sozinho em cima e o resto embaixo, sobrava um vazio e o peso ia todo para baixo. */}
+      {/* Destino, ajuda e aparência juntos no topo, cada grupo separado por uma linha (grupos numa lista só, como no
+          Material); a conta fica na base. Com Início sozinho em cima e o resto embaixo, sobrava um vazio e o peso ia todo
+          para baixo. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         <div className="flex flex-col">
           <NavigationAction
@@ -246,6 +249,16 @@ function NavigationPanel({
             itemKey="support"
             label="Contato e suporte"
             onClick={onSupport}
+            pointerItemKey={pointerItemKey}
+          />
+          <NavigationSeparator compact={compact} />
+          {/* Aparência: preferências de exibição, depois da ajuda. Por ora o tamanho do texto vale só na tela de revisão. */}
+          <NavigationAction
+            compact={compact}
+            icon={ALargeSmall}
+            itemKey="text-size"
+            label="Tamanho do texto"
+            onClick={onTextSize}
             pointerItemKey={pointerItemKey}
           />
           {/* Nome e ícone do modo para onde o clique leva (lua no claro, sol no escuro), como no cabeçalho do dashboard: o
@@ -287,6 +300,7 @@ export default function ValidationSidebar({
   onOpenChange,
   onShortcuts,
   onSupport,
+  onTextSize,
   onTutorial,
   triggerRef,
 }) {
@@ -495,6 +509,7 @@ export default function ValidationSidebar({
           onLogout={openMenuFromRail}
           onShortcuts={actFromRail(onShortcuts)}
           onSupport={actFromRail(onSupport)}
+          onTextSize={actFromRail(onTextSize)}
           onTheme={actFromRail(toggleTheme)}
           onTutorial={actFromRail(onTutorial)}
         />
@@ -525,6 +540,7 @@ export default function ValidationSidebar({
             onLogout={confirmLogoutFromMenu}
             onShortcuts={() => closeThen(onShortcuts)}
             onSupport={() => closeThen(onSupport)}
+            onTextSize={() => closeThen(onTextSize)}
             onTheme={toggleTheme}
             onTutorial={() => closeThen(onTutorial)}
             pointerItemKey={pointerItemKey}
