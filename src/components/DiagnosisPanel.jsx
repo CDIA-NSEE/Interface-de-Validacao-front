@@ -843,9 +843,10 @@ function DiagnosisStatusSummary({ className, compact = false, diagnosis, status,
 
   const shownFeedback = feedback ?? leavingFeedback;
 
-  // pb-2 reserva só o necessário para o micro-feedback absoluto abaixo do badge sem tocar a linha do título.
+  // O respiro de baixo reserva só o necessário para o micro-feedback absoluto abaixo do badge sem tocar a linha do título:
+  // 8px no tamanho padrão, e cresce com a letra dele (texto maior, menu lateral › Tamanho do texto).
   return (
-    <span className={cn("flex shrink-0 flex-col items-end pb-2", className)}>
+    <span className={cn("flex shrink-0 flex-col items-end pb-[calc(var(--text-xs)-0.25rem)]", className)}>
       {/* A key remonta o badge a cada troca de status para repetir a entrada usada no resto do cartão. */}
       {/* `flex` tira o badge da baseline do texto (evitava um desvio de ~1px em relação ao título). */}
       <span className="relative flex animate-in fade-in-0 duration-200 motion-reduce:animate-none" key={status}>
@@ -853,7 +854,7 @@ function DiagnosisStatusSummary({ className, compact = false, diagnosis, status,
         {/* Posicionado sob o badge e centralizado na largura dele; a folga lateral evita truncar "Falha ao salvar". No
             gatilho estreito dos adicionais o status fica sob o título e, embaixo dele, o feedback encostava na divisória:
             ali ele vai ao lado do badge, na linha do status, que tem espaço livre à direita. */}
-        <span className="absolute top-full -inset-x-6 mt-0.5 h-3 truncate text-center text-xs leading-3 font-normal text-muted-foreground @max-[18rem]/item-trigger:top-1/2 @max-[18rem]/item-trigger:right-auto @max-[18rem]/item-trigger:left-full @max-[18rem]/item-trigger:mt-0 @max-[18rem]/item-trigger:ml-1.5 @max-[18rem]/item-trigger:-translate-y-1/2">
+        <span className="absolute top-full -inset-x-6 mt-0.5 truncate text-center text-xs leading-none font-normal text-muted-foreground @max-[18rem]/item-trigger:top-1/2 @max-[18rem]/item-trigger:right-auto @max-[18rem]/item-trigger:left-full @max-[18rem]/item-trigger:mt-0 @max-[18rem]/item-trigger:ml-1.5 @max-[18rem]/item-trigger:-translate-y-1/2">
           {feedback?.type === "error" ? (
             // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
             <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
