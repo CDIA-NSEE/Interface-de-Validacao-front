@@ -28,6 +28,11 @@ import { cn } from "@/lib/utils.js";
 // só passar pelo trilho a caminho do painel leva menos que isso — com 100ms, uma passagem de 120ms já abria o menu.
 const SIDEBAR_OPEN_DELAY_MS = 200;
 const SIDEBAR_CLOSE_DELAY_MS = 300;
+// "Sair da sessão" pelo trilho pede um segundo clique, no menu — mas o "Sair" do menu abre sob o cursor, e o segundo
+// clique de um clique duplo caía nele e encerrava a sessão (medido: /exams/13 → /login). Um clique no "Sair" do menu
+// até 500ms depois de o menu abrir pelo trilho é a 2ª metade do clique duplo, não a confirmação: é ignorado. 500ms é o
+// intervalo padrão de clique duplo do Windows.
+const LOGOUT_CONFIRM_GUARD_MS = 500;
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -293,6 +298,7 @@ export default function ValidationSidebar({
   const railRef = useRef(null);
   const focusedItemKeyRef = useRef(null);
   const railPointerItemRef = useRef(null);
+  const logoutMenuOpenedAtRef = useRef(-Infinity);
   const [pointerItemKey, setPointerItemKey] = useState(null);
   const doctorName = user?.full_name || "Usuário";
   const doctorRole = getUserRoleLabel(user);
@@ -429,14 +435,22 @@ export default function ValidationSidebar({
   }
 
   // Exceção: um desvio não pode encerrar a sessão — o primeiro clique só abre o menu, com "Sair da sessão" escrito sob o
-  // cursor, e o segundo confirma (NN/g: ação consequente ao lado de uma frequente pede um passo a mais). A regra nasceu
-  // quando o "Voltar" do painel, clicado a cada exame, ficava a 28px do "Sair"; ele saiu em 2026-09-30.
+  // cursor, e o segundo confirma. A 1536×730 (1080p a 125%) a barra de "Observações gerais" fica a 29px do "Sair", na
+  // mesma altura (antes de 2026-09-30 era o "Voltar", clicado a cada exame); e sair por um menu da conta é o padrão
+  // (GitHub, Google). Sai-se uma vez por sessão: o clique a mais quase não custa. O clique duplo não confirma (ver
+  // LOGOUT_CONFIRM_GUARD_MS).
   function openMenuFromRail() {
     clearOpenTimer();
     clearCloseTimer();
     rememberTrigger();
     focusedItemKeyRef.current = null;
+    logoutMenuOpenedAtRef.current = performance.now();
     openMenu();
+  }
+
+  function confirmLogoutFromMenu() {
+    if (performance.now() - logoutMenuOpenedAtRef.current < LOGOUT_CONFIRM_GUARD_MS) return;
+    closeThen(onLogout);
   }
 
   // Pelo teclado, o menu é uma parada da ordem de Tab, não um beco: Tab depois do último item fecha e segue para o
@@ -508,7 +522,7 @@ export default function ValidationSidebar({
             isBusy={isBusy}
             isDark={isDark}
             onHome={() => closeThen(onHome)}
-            onLogout={() => closeThen(onLogout)}
+            onLogout={confirmLogoutFromMenu}
             onShortcuts={() => closeThen(onShortcuts)}
             onSupport={() => closeThen(onSupport)}
             onTheme={toggleTheme}

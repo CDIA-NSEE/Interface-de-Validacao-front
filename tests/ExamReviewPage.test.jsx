@@ -731,13 +731,29 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     await screen.findByRole("button", { name: "Concordo" });
-    // Um desvio não pode encerrar a sessão (a regra nasceu quando o "Voltar" do painel ficava a 28px do "Sair").
+    // Um desvio não pode encerrar a sessão: a barra de "Observações gerais" fica a 29px do "Sair" a 1536×730.
     await user.click(screen.getByRole("button", { name: "Sair da sessão" }));
 
     const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
     expect(logout).not.toHaveBeenCalled();
+    // O segundo clique, já com o intervalo de um clique duplo passado, confirma.
+    await new Promise((resolve) => window.setTimeout(resolve, 550));
     await user.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
     await waitFor(() => expect(logout).toHaveBeenCalledOnce());
+  });
+
+  it("um clique duplo no Sair do trilho não encerra a sessão", async () => {
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    await screen.findByRole("button", { name: "Concordo" });
+    // O "Sair" do menu abre sob o cursor: a 2ª metade de um clique duplo cai nele logo depois de o menu abrir.
+    fireEvent.click(screen.getByRole("button", { name: "Sair da sessão" }));
+    const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+    fireEvent.click(expandedNavigation.querySelector('button[aria-label="Sair da sessão"]'));
+
+    expect(logout).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Revisão de ECG" })).toBeInTheDocument();
   });
 
   it("permanece recolhida após restaurar o foco ao clicar fora da navegação", async () => {
