@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -188,9 +188,16 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
     expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
-    expect(screen.getByTestId("current-status")).toHaveClass("flex-row");
-    expect(screen.getByTestId("current-status")).toHaveTextContent("Exame ECG-42");
-    expect(screen.getByTestId("current-status")).toHaveTextContent("Status atual:");
+    // Cartão do exame no topo da coluna do ECG: código (título da página), status e a ação principal. Sem rodapé no
+    // painel e sem "Voltar" — o "Início" do trilho faz o mesmo.
+    const examCard = screen.getByTestId("current-status");
+    expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toContainElement(examCard);
+    expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).not.toContainElement(examCard);
+    expect(examCard).toContainElement(screen.getByRole("heading", { level: 1, name: "Exame ECG-42" }));
+    expect(examCard).toHaveTextContent("Status atual:");
+    expect(examCard).toContainElement(screen.getByText("Iniciar"));
+    expect(examCard).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
+    expect(screen.queryByRole("button", { name: "Voltar" })).not.toBeInTheDocument();
     expect(screen.getByText("Iniciar")).toBeVisible();
   });
 
@@ -722,7 +729,7 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     await screen.findByRole("button", { name: "Concordo" });
-    // "Sair" fica a 28px do "Voltar" do painel: um desvio não pode encerrar a sessão.
+    // Um desvio não pode encerrar a sessão (a regra nasceu quando o "Voltar" do painel ficava a 28px do "Sair").
     await user.click(screen.getByRole("button", { name: "Sair da sessão" }));
 
     const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
@@ -965,10 +972,12 @@ describe("ExamReviewPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Diagnósticos e ações" }));
 
-    expect(await screen.findByRole("dialog", { name: "Diagnósticos e ações" })).toBeVisible();
+    const reviewSheet = await screen.findByRole("dialog", { name: "Diagnósticos e ações" });
+    expect(reviewSheet).toBeVisible();
     expect(screen.getAllByRole("region", { name: "Diagnóstico do dia" })).toHaveLength(1);
     expect(screen.getByText("IA concordou")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeVisible();
+    // A gaveta cobre o cartão do exame: a ação principal se repete no rodapé dela.
+    expect(within(reviewSheet).getByRole("button", { name: "Salvar e próximo" })).toBeVisible();
   });
 
   it("fecha o Sheet ao iniciar a marcação de uma área no ECG", async () => {
@@ -1110,7 +1119,7 @@ describe("ExamReviewPage", () => {
     const save = screen.getByRole("button", { name: "Salvar observações" });
     expect(save).toHaveTextContent("Salvar");
     expect(screen.getByTestId("general-observations")).toContainElement(save);
-    expect(screen.getByRole("group", { name: "Ações da validação" })).not.toContainElement(save);
+    expect(screen.getByTestId("current-status")).not.toContainElement(save);
     saveExamDraft.mockClear();
     // Enter sozinho quebra linha; Ctrl+Enter salva.
     fireEvent.keyDown(notes, { key: "Enter" });
@@ -1208,7 +1217,6 @@ describe("ExamReviewPage", () => {
     render(<ExamReviewPage />);
 
     const agree = await screen.findByRole("button", { name: "Concordo" });
-    const back = screen.getByRole("button", { name: "Voltar" });
     const home = screen.getByRole("button", { name: "Início" });
     const logoutButton = screen.getByRole("button", { name: "Sair da sessão" });
 
@@ -1216,22 +1224,18 @@ describe("ExamReviewPage", () => {
     fireEvent.click(agree);
     expect(reviewDailyDiagnosis).toHaveBeenCalledTimes(1);
     // Requisição em andamento, mas dentro do limiar: nada fica desabilitado (sem a "piscada" da página).
-    expect(back).toBeEnabled();
     expect(home).toBeEnabled();
     expect(logoutButton).toBeEnabled();
     act(() => vi.advanceTimersByTime(299));
-    expect(back).toBeEnabled();
     expect(home).toBeEnabled();
     // Passou do limiar: a página passa a indicar que está ocupada.
     act(() => vi.advanceTimersByTime(1));
-    expect(back).toBeDisabled();
     expect(home).toBeDisabled();
     expect(logoutButton).toBeDisabled();
 
     await act(async () => {
       resolveReview({ ...exam, diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }] });
     });
-    expect(back).toBeEnabled();
     expect(home).toBeEnabled();
     expect(logoutButton).toBeEnabled();
     expect(screen.getByLabelText("✓ Decisão salva")).toBeInTheDocument();
@@ -1247,15 +1251,15 @@ describe("ExamReviewPage", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Concordo" }));
     // Ainda habilitado (limiar não atingido), mas a trava impede sair no meio do salvamento.
-    const back = screen.getByRole("button", { name: "Voltar" });
-    expect(back).toBeEnabled();
-    fireEvent.click(back);
+    const home = screen.getByRole("button", { name: "Início" });
+    expect(home).toBeEnabled();
+    fireEvent.click(home);
     expect(navigate).not.toHaveBeenCalled();
 
     await act(async () => {
       resolveReview({ ...exam, diagnoses: [{ ...exam.diagnoses[0], review_status: "confirmed" }] });
     });
-    fireEvent.click(back);
+    fireEvent.click(home);
     expect(navigate).toHaveBeenCalledWith("/");
   });
 

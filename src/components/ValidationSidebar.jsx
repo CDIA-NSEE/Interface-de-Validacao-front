@@ -428,9 +428,9 @@ export default function ValidationSidebar({
     };
   }
 
-  // Exceção: "Sair da sessão" fica a 28px do "Voltar" do painel, na mesma altura, e "Voltar" é clicado a cada exame.
-  // Um desvio não pode encerrar a sessão: o primeiro clique só abre o menu, com "Sair da sessão" escrito sob o cursor, e
-  // o segundo confirma (NN/g: ação consequente ao lado de uma frequente pede um passo a mais).
+  // Exceção: um desvio não pode encerrar a sessão — o primeiro clique só abre o menu, com "Sair da sessão" escrito sob o
+  // cursor, e o segundo confirma (NN/g: ação consequente ao lado de uma frequente pede um passo a mais). A regra nasceu
+  // quando o "Voltar" do painel, clicado a cada exame, ficava a 28px do "Sair"; ele saiu em 2026-09-30.
   function openMenuFromRail() {
     clearOpenTimer();
     clearCloseTimer();

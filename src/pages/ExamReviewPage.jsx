@@ -192,6 +192,7 @@ export default function ExamReviewPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const reviewLayoutRef = useRef(null);
+  const examCardRef = useRef(null);
   const sidebarTriggerRef = useRef(null);
   const shouldRestoreSidebarFocusRef = useRef(true);
   const validationWorkspaceRef = useRef(null);
@@ -377,6 +378,8 @@ export default function ExamReviewPage() {
       }
 
       const usesIntermediateLayout = layoutWidth <= 920;
+      // Altura medida, não um número fixo: numa coluna estreita o cartão do exame quebra em duas linhas.
+      const examCardHeight = examCardRef.current?.offsetHeight || 0;
       const nextWidth = getReviewSidebarWidth({
         imageAspectRatio,
         layoutHeight,
@@ -385,10 +388,10 @@ export default function ExamReviewPage() {
         minimumSidebarWidth: usesIntermediateLayout
           ? 300
           : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), REVIEW_SIDEBAR_FLOOR_CAP),
-        // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo. As observações saíram de baixo do ECG para o
-        // fim do painel (eram mais 8px de vão + 98px).
+        // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo + o cartão do exame + 8px de vão. As observações
+        // saíram de baixo do ECG para o fim do painel (eram 8px de vão + 98px).
         viewerHorizontalChrome: 24,
-        viewerVerticalChrome: 32,
+        viewerVerticalChrome: 40 + examCardHeight,
       });
 
       setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
@@ -403,6 +406,7 @@ export default function ExamReviewPage() {
 
     const observer = new ResizeObserver(updateSidebarWidth);
     observer.observe(layout);
+    if (examCardRef.current) observer.observe(examCardRef.current);
     return () => observer.disconnect();
   }, [imageAspectRatio, isCompactLayout, isLoading]);
 
@@ -696,7 +700,7 @@ export default function ExamReviewPage() {
   }
 
   function handleReturnHome() {
-    // Voltar/Início ficam travados durante uma ação; na janela silenciosa o botão ainda não está `disabled`.
+    // Início fica travado durante uma ação; na janela silenciosa o botão ainda não está `disabled`.
     if (isBusyRef.current) return;
     if (hasUnsavedChanges) {
       setExitIntent("home");
@@ -1152,38 +1156,44 @@ export default function ExamReviewPage() {
     </div>
   );
 
-  const reviewFooter = (
-    <div className="flex flex-col gap-3">
-      <Card size="sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-3" data-testid="current-status">
-          {/* O código do exame (como na lista do início) no lugar do rótulo "Status atual": o selo já diz que é o status,
-              e o código, junto de Voltar e da primária, confirma a troca de exame e é o que o médico cita ao suporte.
-              "Status atual" segue para o leitor de tela, antes do selo. */}
-          <CardTitle className="text-sm">
-            <span className="text-muted-foreground">Exame</span>{" "}
-            <span className="font-semibold">{exam.exam_code}</span>
-          </CardTitle>
-          <div className="flex items-center">
-            <span className="sr-only">Status atual:</span>
-            <StatusBadge
-              status={exam.status_validation}
-              queueState={exam.queue_state}
-              reviewResult={exam.review_result}
-            />
-          </div>
-        </CardHeader>
-      </Card>
-      {/* "Salvar observações" mora no próprio campo (ver Observações gerais): o rodapé fica com Voltar e a primária. */}
-      <ReviewActions
-        onBack={handleReturnHome}
-        onValidate={handlePrimaryAction}
-        canValidate={requiredDecisionComplete && !isEcgUnavailable}
-        isBusy={isBusyIndicated}
-        isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
-        primaryDisabledReason={primaryDisabledReason}
-        primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
-      />
-    </div>
+  const renderPrimaryAction = (className) => (
+    <ReviewActions
+      canValidate={requiredDecisionComplete && !isEcgUnavailable}
+      className={className}
+      isBusy={isBusyIndicated}
+      isValid={!validationContext?.is_configured && exam.status_validation === "valido"}
+      onValidate={handlePrimaryAction}
+      primaryDisabledReason={primaryDisabledReason}
+      primaryLabel={usesDailyFlow ? "Salvar e próximo" : "Validar exame"}
+    />
+  );
+
+  // Cartão do exame no topo da coluna do ECG, como o cabeçalho do ECG impresso (identificação no alto, traçado embaixo):
+  // código do exame, status e a ação principal no canto direito — a ação age sobre este exame. O topo alinha com o do
+  // cartão do dia. Até 2026-09-30 o código e o status ficavam numa caixa no rodapé do painel, com "Voltar" e a primária;
+  // o "Voltar" saiu (o "Início" do trilho faz o mesmo, com a mesma confirmação). O código é o título da página (h1) e o
+  // que o médico cita ao suporte; "Status atual" segue para o leitor de tela, antes do selo.
+  const examCard = (
+    <Card
+      className="shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3"
+      data-testid="current-status"
+      ref={examCardRef}
+      size="sm"
+    >
+      <div className="flex shrink-0 items-center gap-2.5">
+        <h1 className="flex flex-col text-sm leading-5 font-semibold tabular-nums">
+          <span className="text-xs leading-4 font-medium text-muted-foreground">Exame</span>{" "}
+          {exam.exam_code}
+        </h1>
+        <span className="sr-only">Status atual:</span>
+        <StatusBadge
+          status={exam.status_validation}
+          queueState={exam.queue_state}
+          reviewResult={exam.review_result}
+        />
+      </div>
+      {renderPrimaryAction("ml-auto shrink-0")}
+    </Card>
   );
 
   return (
@@ -1208,7 +1218,6 @@ export default function ExamReviewPage() {
           onPointerDownCapture={blockValidationInteraction}
           ref={validationWorkspaceRef}
         >
-          <h1 className="sr-only">Exame {exam.exam_code}</h1>
           <main
             className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(min(30%,440px),var(--review-sidebar-width))_minmax(0,1fr)]"
             ref={reviewLayoutRef}
@@ -1222,17 +1231,17 @@ export default function ExamReviewPage() {
                 <ScrollArea className={REVIEW_BODY_SCROLL_CLASS}>
                   <div className="p-4">{reviewBody}</div>
                 </ScrollArea>
-                <div className="shrink-0 border-t bg-background p-4">{reviewFooter}</div>
               </aside>
             ) : null}
 
-            {/* 16px em cima e embaixo, como o painel: o topo do ECG alinha com o primeiro cartão do painel (com 12px ficavam
-                4px desencontrados). Nas laterais seguem 12px. */}
+            {/* 16px em cima e embaixo, como o painel: o topo do cartão do exame alinha com o primeiro cartão do painel (com
+                12px ficavam 4px desencontrados). Nas laterais seguem 12px. */}
             <section
               aria-label="Visualizador de ECG"
               className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:px-3 md:py-4"
             >
               <div className="flex min-h-full w-full flex-col gap-2">
+                {examCard}
                 <EcgViewer
                   imageError={ecgImage.error}
                   imageUrl={ecgImage.src}
@@ -1275,8 +1284,9 @@ export default function ExamReviewPage() {
                 <ScrollArea className={REVIEW_BODY_SCROLL_CLASS}>
                   <div className="p-4">{reviewBody}</div>
                 </ScrollArea>
+                {/* A gaveta cobre o cartão do exame: a ação principal se repete no rodapé dela. */}
                 <SheetFooter className="shrink-0 border-t bg-background">
-                  {reviewFooter}
+                  {renderPrimaryAction("w-full")}
                 </SheetFooter>
               </SheetContent>
             </Sheet>

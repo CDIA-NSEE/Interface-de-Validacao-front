@@ -44,7 +44,8 @@ export default function UnsavedChangesModal({ intent = "home", isOpen, onDiscard
         </AlertDialogCancel>
 
         {/* Dispensar à esquerda, confirmar à direita — a mesma ordem de "Remover diagnóstico?" (Cancelar | Remover) e do
-            rodapé da página. O foco inicial segue no X (primeiro focável), então Enter nunca descarta por engano. */}
+            cartão do exame (identificação … ação). O foco inicial segue no X (primeiro focável), então Enter nunca
+            descarta por engano. */}
         <AlertDialogFooter>
           <AlertDialogCancel>Continuar no ECG</AlertDialogCancel>
           <AlertDialogAction onClick={onDiscard} variant="destructive">

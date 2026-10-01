@@ -2,144 +2,76 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ReviewActions from "../src/components/ReviewActions.jsx";
+import { TooltipProvider } from "../src/components/ui/tooltip.jsx";
 
 describe("ReviewActions", () => {
-  it("usa o mesmo dimensionamento nos três botões e em seus ícones", () => {
-    const onBack = vi.fn();
-    const onSave = vi.fn();
+  it("mostra só a ação principal, sem Voltar", () => {
     const onValidate = vi.fn();
 
-    const { rerender } = render(
+    render(
       <ReviewActions
+        className="ml-auto"
         isBusy={false}
         isValid={false}
-        onBack={onBack}
-        onSave={onSave}
         onValidate={onValidate}
         primaryLabel="Salvar e próximo"
       />,
     );
 
-    const actions = screen.getByRole("group", { name: "Ações da validação" });
-    const buttons = screen.getAllByRole("button");
-
-    expect(buttons).toHaveLength(3);
-    expect(actions).toHaveClass("@min-[24rem]/actions:grid-cols-3");
-    buttons.forEach((button) => {
-      expect(button).toHaveClass("h-10", "w-full", "@min-[24rem]/actions:text-xs");
-      expect(button.querySelector("svg")).toBeInTheDocument();
-    });
-    expect(actions).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
-    // Com três botões, no grid de duas colunas a primária ocupa a linha inteira (e volta a uma coluna nas três).
-    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toHaveClass(
-      "@min-[18rem]/actions:col-span-2",
-      "@min-[24rem]/actions:col-span-1",
-    );
-
-    buttons.forEach((button) => fireEvent.click(button));
-
-    expect(onBack).toHaveBeenCalledOnce();
-    expect(onSave).toHaveBeenCalledOnce();
-    expect(onValidate).toHaveBeenCalledOnce();
-
-    rerender(
-      <ReviewActions
-        isBusy
-        isValid={false}
-        onBack={onBack}
-        onSave={onSave}
-        onValidate={onValidate}
-        primaryLabel="Salvar e próximo"
-      />,
-    );
-
-    screen.getAllByRole("button").forEach((button) => {
-      expect(button).toBeDisabled();
-      expect(button).toHaveClass(
-        "disabled:bg-muted",
-        "disabled:text-muted-foreground",
-        "disabled:opacity-100",
-      );
-    });
-  });
-
-  it("preserva ações, bloqueios e o rótulo alternativo", () => {
-    const onBack = vi.fn();
-    const onValidate = vi.fn();
-
-    const { rerender } = render(
-      <ReviewActions
-        canValidate
-        isBusy={false}
-        isValid={false}
-        onBack={onBack}
-        onValidate={onValidate}
-        primaryLabel="Validar exame"
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Voltar" }));
-    fireEvent.click(screen.getByRole("button", { name: "Validar exame" }));
-
-    expect(onBack).toHaveBeenCalledOnce();
-    expect(onValidate).toHaveBeenCalledOnce();
-    // Com dois botões eles dividem a linha: a primária não ocupa as duas colunas.
-    expect(screen.getByRole("button", { name: "Validar exame" })).not.toHaveClass("@min-[18rem]/actions:col-span-2");
-    // E o texto não desce para 12px: isso é só para caberem três botões numa linha.
-    screen.getAllByRole("button").forEach((button) => {
-      expect(button).not.toHaveClass("@min-[24rem]/actions:text-xs");
-    });
-
-    rerender(
-      <ReviewActions
-        canValidate={false}
-        isBusy={false}
-        isValid={false}
-        onBack={onBack}
-        onValidate={onValidate}
-        primaryLabel="Validar exame"
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Validar exame" })).toBeDisabled();
-  });
-
-  it("neutraliza visualmente as ações desabilitadas sem afetar a ação primária habilitada", () => {
-    const sharedProps = {
-      isBusy: false,
-      isValid: false,
-      onBack: vi.fn(),
-      onSave: vi.fn(),
-      onValidate: vi.fn(),
-      primaryLabel: "Salvar e próximo",
-      saveLabel: "Salvar observações",
-    };
-
-    const { rerender } = render(
-      <ReviewActions {...sharedProps} canValidate={false} saveDisabled />,
-    );
-
-    const saveButton = screen.getByRole("button", { name: "Salvar observações" });
     const primaryButton = screen.getByRole("button", { name: "Salvar e próximo" });
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Voltar" })).not.toBeInTheDocument();
+    expect(primaryButton).toHaveClass("h-10", "ml-auto", "bg-success", "text-success-foreground");
+    expect(primaryButton.querySelector("svg")).toBeInTheDocument();
 
-    [saveButton, primaryButton].forEach((button) => {
-      expect(button).toBeDisabled();
-      expect(button).toHaveClass(
-        "disabled:border-border",
-        "disabled:bg-muted",
-        "disabled:text-muted-foreground",
-        "disabled:opacity-100",
-        "disabled:shadow-none",
-      );
-    });
+    fireEvent.click(primaryButton);
+    expect(onValidate).toHaveBeenCalledOnce();
+  });
 
-    rerender(<ReviewActions {...sharedProps} canValidate saveDisabled={false} />);
+  it("desabilita com a página ocupada, com o exame já válido ou sem a decisão obrigatória", () => {
+    const sharedProps = { onValidate: vi.fn(), primaryLabel: "Validar exame" };
+    const { rerender } = render(<ReviewActions {...sharedProps} isBusy isValid={false} />);
 
-    expect(screen.getByRole("button", { name: "Salvar observações" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Salvar e próximo" })).toHaveClass(
-      "bg-success",
-      "text-success-foreground",
+    const primaryButton = screen.getByRole("button", { name: "Validar exame" });
+    expect(primaryButton).toBeDisabled();
+    expect(primaryButton).toHaveClass(
+      "disabled:border-border",
+      "disabled:bg-muted",
+      "disabled:text-muted-foreground",
+      "disabled:opacity-100",
+      "disabled:shadow-none",
     );
+
+    rerender(<ReviewActions {...sharedProps} isBusy={false} isValid />);
+    expect(screen.getByRole("button", { name: "Validar exame" })).toBeDisabled();
+
+    rerender(<ReviewActions {...sharedProps} canValidate={false} isBusy={false} isValid={false} />);
+    expect(screen.getByRole("button", { name: "Validar exame" })).toBeDisabled();
+
+    rerender(<ReviewActions {...sharedProps} canValidate isBusy={false} isValid={false} />);
+    expect(screen.getByRole("button", { name: "Validar exame" })).toBeEnabled();
+  });
+
+  it("explica o motivo quando a ação principal está desabilitada", () => {
+    render(
+      <TooltipProvider>
+        <ReviewActions
+          canValidate={false}
+          className="w-full"
+          isBusy={false}
+          isValid={false}
+          onValidate={vi.fn()}
+          primaryDisabledReason="Defina Concordo ou Discordo para continuar."
+          primaryLabel="Salvar e próximo"
+        />
+      </TooltipProvider>,
+    );
+
+    const tooltipTrigger = screen.getByRole("button", { name: "Salvar e próximo" }).parentElement;
+    expect(tooltipTrigger).toHaveAttribute(
+      "aria-label",
+      "Salvar e próximo indisponível: Defina Concordo ou Discordo para continuar.",
+    );
+    expect(tooltipTrigger).toHaveClass("w-full");
   });
 });
