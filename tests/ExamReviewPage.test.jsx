@@ -196,6 +196,8 @@ describe("ExamReviewPage", () => {
     expect(examCard).toContainElement(screen.getByRole("heading", { level: 1, name: "Exame ECG-42" }));
     expect(examCard).toHaveTextContent("Status atual:");
     expect(examCard).toContainElement(screen.getByText("Iniciar"));
+    expect(examCard).toContainElement(screen.getByText("58 anos"));
+    expect(examCard).toContainElement(screen.getByText("Feminino"));
     expect(examCard).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
     expect(screen.queryByRole("button", { name: "Voltar" })).not.toBeInTheDocument();
     expect(screen.getByText("Iniciar")).toBeVisible();
@@ -798,29 +800,25 @@ describe("ExamReviewPage", () => {
     expect(trigger).toHaveClass("rounded-xl", "aria-expanded:rounded-b-none", "hover:bg-muted/50");
     expect(trigger).not.toHaveClass("hover:bg-muted");
     expect(trigger).not.toHaveClass("aria-expanded:bg-muted");
-    const clinicalHeading = screen.getByRole("heading", { name: "Dados clínicos" });
-    expect(clinicalHeading).toBeVisible();
-    expect(
-      clinicalHeading.closest("[data-slot='card-title']").querySelector(".lucide-stethoscope"),
-    ).toBeTruthy();
+    const clinicalHeading = screen.getByRole("heading", { level: 2, name: "Dados clínicos" });
     expect(trigger.querySelector(".lucide-file-text")).toBeTruthy();
     expect(trigger.querySelector(".lucide-chevron-down")).toHaveClass("text-muted-foreground");
-    const clinicalIconLabel = clinicalHeading.querySelector('[data-slot="validation-panel-icon-label"]');
     const informationIconLabel = trigger.querySelector('[data-slot="validation-panel-icon-label"]');
-    expect(clinicalIconLabel).toHaveClass("gap-2", "items-center");
     // Ícone na altura da 1ª linha: no painel estreito a etiqueta "Notas do laudo" desce para uma 2ª linha.
     expect(informationIconLabel).toHaveClass("gap-2", "items-start");
-    expect(clinicalIconLabel.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
-      "size-5",
-      "shrink-0",
-    );
     expect(informationIconLabel.querySelector('[data-slot="validation-panel-icon"]')).toHaveClass(
       "size-5",
       "shrink-0",
     );
+    // Dados clínicos no cartão do exame, sobre o ECG, sempre à vista (não mais no fim do painel).
+    expect(clinicalHeading).toHaveClass("sr-only");
+    expect(screen.getByTestId("current-status")).toContainElement(clinicalHeading);
+    expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).not.toContainElement(
+      screen.getByText("Nascimento"),
+    );
     expect(screen.getByText("Nascimento")).toBeVisible();
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
-    expect(clinicalGrid).toHaveClass("grid-cols-2", "sm:grid-cols-3");
+    expect(clinicalGrid).toHaveClass("flex", "flex-wrap");
     expect(clinicalGrid).not.toHaveClass("bg-muted/40");
     expect(clinicalGrid.children).toHaveLength(6);
     [...clinicalGrid.children].forEach((clinicalItem) => {
@@ -909,10 +907,10 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
-    const clinicalHeading = await screen.findByRole("heading", { name: "Dados clínicos" });
-    const clinicalCard = clinicalHeading.closest("[data-slot='card']");
-    expect(clinicalCard).toContainElement(screen.getByText("Nenhum dado clínico neste exame."));
-    expect(clinicalCard.querySelector("dl")).toBeNull();
+    await screen.findByRole("heading", { name: "Dados clínicos" });
+    const clinicalData = screen.getByTestId("clinical-data");
+    expect(clinicalData).toContainElement(screen.getByText("Nenhum dado clínico neste exame."));
+    expect(clinicalData.querySelector("dl")).toBeNull();
   });
 
   it("encaminha o modo IA do contexto para o diagnóstico com concordância", async () => {

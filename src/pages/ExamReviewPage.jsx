@@ -3,7 +3,6 @@ import {
   ChevronDown,
   FileText,
   PanelRightOpen,
-  Stethoscope,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,7 +24,7 @@ import ValidationSidebar from "../components/ValidationSidebar.jsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -1018,21 +1017,6 @@ export default function ExamReviewPage() {
     />
   );
 
-  const clinicalInformation = (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>
-          <h2>
-            <ValidationPanelIconLabel icon={Stethoscope}>Dados clínicos</ValidationPanelIconLabel>
-          </h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <PatientInfo patient={exam.patient} />
-      </CardContent>
-    </Card>
-  );
-
   const moreInformation = (
     <Collapsible onOpenChange={handleMoreInformationOpenChange} open={isMoreInformationOpen}>
       <Card className="gap-0 overflow-hidden py-0" ref={moreInformationCardRef} size="sm">
@@ -1138,7 +1122,6 @@ export default function ExamReviewPage() {
         </Alert>
       ) : null}
       {diagnosisPanel}
-      {clinicalInformation}
       {moreInformation}
       <GeneralObservations
         canSave={usesDailyFlow}
@@ -1169,13 +1152,17 @@ export default function ExamReviewPage() {
   );
 
   // Cartão do exame no topo da coluna do ECG, como o cabeçalho do ECG impresso (identificação no alto, traçado embaixo):
-  // código do exame, status e a ação principal no canto direito — a ação age sobre este exame. O topo alinha com o do
-  // cartão do dia. Até 2026-09-30 o código e o status ficavam numa caixa no rodapé do painel, com "Voltar" e a primária;
-  // o "Voltar" saiu (o "Início" do trilho faz o mesmo, com a mesma confirmação). O código é o título da página (h1) e o
-  // que o médico cita ao suporte; "Status atual" segue para o leitor de tela, antes do selo.
+  // código do exame, status, dados clínicos e a ação principal no canto direito — a ação age sobre este exame. O topo
+  // alinha com o do cartão do dia. Até 2026-09-30 o código e o status ficavam numa caixa no rodapé do painel, com "Voltar"
+  // e a primária, e os dados clínicos num cartão no fim do painel (a 1536×730, abaixo da dobra); o "Voltar" saiu (o
+  // "Início" do trilho faz o mesmo, com a mesma confirmação). O código é o título da página (h1) e o que o médico cita ao
+  // suporte; "Status atual" segue para o leitor de tela, antes do selo.
+  // Coluna estreita (conteúdo do cartão até 54rem, janela abaixo de ~1360px): os dados clínicos descem para uma 2ª linha,
+  // na largura toda, e a ação fica na 1ª, à direita. O limite é fixo — o exame com os seis dados e a idade calculada pede
+  // ~844px numa linha (medido), com 40px de folga —, para o cartão não mudar de forma de um exame para o outro.
   const examCard = (
     <Card
-      className="shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3"
+      className="@container/exam-card shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3"
       data-testid="current-status"
       ref={examCardRef}
       size="sm"
@@ -1191,6 +1178,11 @@ export default function ExamReviewPage() {
           queueState={exam.queue_state}
           reviewResult={exam.review_result}
         />
+      </div>
+      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border @max-[54rem]/exam-card:hidden" />
+      <div className="min-w-0 flex-1 @max-[54rem]/exam-card:order-last @max-[54rem]/exam-card:basis-full" data-testid="clinical-data">
+        <h2 className="sr-only">Dados clínicos</h2>
+        <PatientInfo patient={exam.patient} />
       </div>
       {renderPrimaryAction("ml-auto shrink-0")}
     </Card>

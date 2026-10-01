@@ -33,22 +33,24 @@ export default function PatientInfo({ patient }) {
     ([, value]) => value !== null && value !== undefined && value !== "",
   );
 
-  // Sem nenhum dado, uma frase de status (como a lista vazia dos adicionais): sem ela o cartão ficava só com o título.
+  // Sem nenhum dado, uma frase de status (como a lista vazia dos adicionais): sem ela o espaço ficava vazio, sem dizer
+  // se faltou dado ou se não carregou.
   if (availableRows.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhum dado clínico neste exame.</p>;
   }
 
-  // Lista de pares rótulo/valor sem caixa por item: o cartão já agrupa (caixa dentro do cartão era cartão dentro de cartão).
-  // Valor em peso 400 (body): é dado de leitura; 500 é o peso dos controles e do título da seção, que assim fica acima.
+  // Pares rótulo/valor numa linha só, no cartão do exame sobre o ECG (até 2026-09-30, numa grade de 3 colunas num cartão
+  // próprio no fim do painel, fora da vista a 1536×730). Sem caixa por item: o cartão já agrupa. Valor em peso 400
+  // (body): é dado de leitura, abaixo do peso do código do exame.
   return (
-    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+    <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
       {availableRows.map(([label, value, labelNote]) => (
         <div className="min-w-0" key={label}>
-          <dt className="truncate text-xs font-medium text-muted-foreground">
+          <dt className="text-xs font-medium whitespace-nowrap text-muted-foreground">
             {label}
             {labelNote ? <span className="font-normal"> ({labelNote})</span> : null}
           </dt>
-          <dd className="mt-0.5 whitespace-nowrap text-xs text-foreground tabular-nums sm:text-sm">{value}</dd>
+          <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums">{value}</dd>
         </div>
       ))}
     </dl>
