@@ -10,6 +10,15 @@ function formatDecimal(value, options) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2, ...options }).format(number);
 }
 
+function hasValue(value) {
+  return value !== null && value !== undefined && value !== "";
+}
+
+// Peso, altura e IMC ficam sempre na linha, com "—" quando faltam (em 2026-10-01, 15 de 20 exames vinham sem eles): o
+// biotipo é, com idade e sexo, o que se considera na leitura do traçado (Diretriz SBC 2022, §1.1; muda a voltagem do
+// QRS), e omitir em silêncio não dizia se faltou o dado ou se a tela não o mostra.
+const ALWAYS_SHOWN = new Set(["Peso", "Altura", "IMC"]);
+
 function formatHeight(height) {
   const number = toNumber(height);
   if (number !== null && number <= 3) return `${formatDecimal(height, { minimumFractionDigits: 2 })} m`;
@@ -29,13 +38,11 @@ export default function PatientInfo({ patient }) {
     ["IMC", patient?.bmi ? `${formatDecimal(patient.bmi)} kg/m²` : null],
   ];
 
-  const availableRows = rows.filter(
-    ([, value]) => value !== null && value !== undefined && value !== "",
-  );
+  const visibleRows = rows.filter(([label, value]) => hasValue(value) || ALWAYS_SHOWN.has(label));
 
   // Sem nenhum dado, uma frase de status (como a lista vazia dos adicionais): sem ela o espaço ficava vazio, sem dizer
   // se faltou dado ou se não carregou.
-  if (availableRows.length === 0) {
+  if (!rows.some(([, value]) => hasValue(value))) {
     return <p className="text-sm text-muted-foreground">Nenhum dado clínico neste exame.</p>;
   }
 
@@ -44,13 +51,25 @@ export default function PatientInfo({ patient }) {
   // (body): é dado de leitura, abaixo do peso do código do exame.
   return (
     <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-      {availableRows.map(([label, value, labelNote]) => (
+      {visibleRows.map(([label, value, labelNote]) => (
         <div className="min-w-0" key={label}>
           <dt className="text-xs font-medium whitespace-nowrap text-muted-foreground">
             {label}
             {labelNote ? <span className="font-normal"> ({labelNote})</span> : null}
           </dt>
-          <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums">{value}</dd>
+          <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums">
+            {hasValue(value) ? (
+              value
+            ) : (
+              // Traço em cinza: o valor presente (em preto) é o que salta. O leitor de tela ouve "não informado".
+              <>
+                <span aria-hidden="true" className="text-muted-foreground">
+                  —
+                </span>
+                <span className="sr-only">não informado</span>
+              </>
+            )}
+          </dd>
         </div>
       ))}
     </dl>

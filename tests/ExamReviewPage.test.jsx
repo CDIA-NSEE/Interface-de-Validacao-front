@@ -972,6 +972,32 @@ describe("ExamReviewPage", () => {
     expect(ageValue.previousElementSibling).toHaveTextContent("Idade (calculada)");
   });
 
+  it("mantém peso, altura e IMC na linha com traço quando faltam", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      patient: { age: 19, birth_date: "26/10/2004", bmi: null, height: null, sex: "Masculino", weight: 91 },
+    });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByText("91 kg")).toBeVisible();
+    const clinicalGrid = screen.getByText("Nascimento").closest("dl");
+    expect([...clinicalGrid.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Idade",
+      "Sexo",
+      "Nascimento",
+      "Peso",
+      "Altura",
+      "IMC",
+    ]);
+    ["Altura", "IMC"].forEach((label) => {
+      const value = screen.getByText(label).nextElementSibling;
+      expect(value).toHaveTextContent("—não informado");
+      expect(within(value).getByText("—")).toHaveAttribute("aria-hidden", "true");
+      expect(within(value).getByText("não informado")).toHaveClass("sr-only");
+    });
+  });
+
   it("informa quando o exame não tem nenhum dado clínico", async () => {
     getExamById.mockResolvedValue({
       ...exam,
