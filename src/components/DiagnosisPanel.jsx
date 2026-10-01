@@ -1485,11 +1485,14 @@ export default function DiagnosisPanel({
                                     hifeniza pt-BR. */}
                                 <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5 @max-[18rem]/item-trigger:grid-cols-[auto_minmax(0,1fr)] @max-[18rem]/item-trigger:gap-y-1">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
-                                  {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro).
+                                  {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro);
+                                      3 com o texto maior (menu lateral › Tamanho do texto), em que o painel cresce pouco e os títulos longos
+                                      do exame 13 pedem 3 linhas — quem aumentou o texto não deveria ter de abrir o item para lê-lo.
+                                      `in-data-*` (:where, sem peso) para o aberto seguir sem clamp.
                                       Aberto: sem clamp, mesmo peso (o item aberto já se distingue pelo filete, pelo chevron e pelo que revela;
                                       engrossar o texto refluía o título e "gritava" em CAIXA ALTA). Sem `title`: repetiria o visível e o
                                       tooltip nativo cobria o que vem logo abaixo (divisória e linha "Original:"). */}
-                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
+                                  <span className="line-clamp-2 min-w-0 break-words text-left font-medium in-data-[text-size]:line-clamp-3 group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
                                   <DiagnosisStatusSummary className="pb-0 @max-[18rem]/item-trigger:col-start-2 @max-[18rem]/item-trigger:items-start" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                                 </span>
                               </AccordionTrigger>
