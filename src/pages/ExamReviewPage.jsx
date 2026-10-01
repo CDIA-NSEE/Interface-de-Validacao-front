@@ -1177,7 +1177,9 @@ export default function ExamReviewPage() {
   // suporte; "Status atual" segue para o leitor de tela, antes do selo.
   // Coluna estreita (conteúdo do cartão até 54rem, janela abaixo de ~1360px): os dados clínicos descem para uma 2ª linha,
   // na largura toda, e a ação fica na 1ª, à direita. O limite é fixo — o exame com os seis dados e a idade calculada pede
-  // ~844px numa linha (medido), com 40px de folga —, para o cartão não mudar de forma de um exame para o outro.
+  // ~844px numa linha (medido), com 40px de folga —, para o cartão não mudar de forma de um exame para o outro. Com o
+  // texto maior (menu lateral › Tamanho do texto), a parte do texto cresce em em: 54rem (864px) no padrão, 949px no Grande
+  // e 1034px no Muito grande (pedem 911 e 996px de conteúdo, medido).
   const examCard = (
     <Card
       className="@container/exam-card shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3"
@@ -1197,8 +1199,8 @@ export default function ExamReviewPage() {
           reviewResult={exam.review_result}
         />
       </div>
-      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border @max-[54rem]/exam-card:hidden" />
-      <div className="min-w-0 flex-1 @max-[54rem]/exam-card:order-last @max-[54rem]/exam-card:basis-full" data-testid="clinical-data">
+      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border @max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
+      <div className="min-w-0 flex-1 @max-[calc(16.8125rem+42.5em)]/exam-card:order-last @max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">
         <h2 className="sr-only">Dados clínicos</h2>
         <PatientInfo patient={exam.patient} />
       </div>

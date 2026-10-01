@@ -83,9 +83,12 @@ const INLINE_DECISION_CONTROL_CLASS =
 // a linha alargava o painel inteiro (rolagem horizontal). O texto segue no DOM (`sr-only`): o nome acessível e o
 // vocabulário não mudam. A query é da própria linha (`@container/action-row`), não da janela: a largura do painel sai da
 // proporção do ECG. "Marcar área" mantém o texto — o ícone sozinho não se explica — e cabe mesmo a 225px.
-const ACTION_ROW_COMPACT_LABEL_CLASS = "@max-[20.5rem]/action-row:sr-only";
+// O limite acompanha o tamanho do texto (menu lateral › Tamanho do texto): uma parte fixa (ícones, recuos, vãos) em rem e
+// a do texto em em, na letra da própria linha — 328px no padrão, 355,5px no Grande e 383px no Muito grande (a linha pede
+// 327, 354 e 382px, medido). Com 20,5rem fixos, o texto maior passava da borda dos toggles antes de virar só ícone.
+const ACTION_ROW_COMPACT_LABEL_CLASS = "@max-[calc(8.46875rem+13.75em)]/action-row:sr-only";
 // Só com o ícone, o recuo direito iguala o esquerdo (o `pl-2` de `has-data-[icon=inline-start]`) e o ícone fica no centro.
-const ACTION_ROW_COMPACT_ICON_CLASS = "@max-[20.5rem]/action-row:pr-2";
+const ACTION_ROW_COMPACT_ICON_CLASS = "@max-[calc(8.46875rem+13.75em)]/action-row:pr-2";
 const INLINE_DECISION_ROW_STYLES = {
   decisionItem: cn("gap-1.5 border-input", ACTION_ROW_COMPACT_ICON_CLASS, INLINE_DECISION_CONTROL_CLASS),
   // Utilitário secundário: borda e texto mais leves que os toggles de decisão, mesma altura para alinhar a linha.
@@ -101,7 +104,7 @@ const INLINE_DECISION_ROW_STYLES = {
   // variante (inverter a ordem quebra o dark mode em silêncio).
   // Só ícone na linha estreita: quadrado de 40px, a altura da linha.
   removeButton: cn(
-    "shrink-0 border-border text-muted-foreground @max-[20.5rem]/action-row:w-10 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive aria-expanded:bg-card aria-expanded:text-muted-foreground dark:hover:bg-destructive/20",
+    "shrink-0 border-border text-muted-foreground @max-[calc(8.46875rem+13.75em)]/action-row:w-10 hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive aria-expanded:bg-card aria-expanded:text-muted-foreground dark:hover:bg-destructive/20",
     ACTION_ROW_COMPACT_ICON_CLASS,
     INLINE_DECISION_CONTROL_CLASS,
   ),
@@ -238,7 +241,7 @@ function reviewBadgeVariant(status) {
 // Sem o recuo direito nem a borda da pílula: o texto termina na borda da coluna, onde terminam as pílulas vizinhas — com
 // eles, "Pendente" e "Adicionado" acabavam 9px antes (x 432 × 441 a 1536px) e a coluna ficava serrilhada. No gatilho
 // estreito dos adicionais o status fica abaixo do título, alinhado à esquerda: aí sai o recuo esquerdo, pelo mesmo motivo.
-const NEUTRAL_STATUS_CLASS = "border-0 border-transparent bg-transparent pr-0 font-normal text-muted-foreground @max-[18rem]/item-trigger:pl-0";
+const NEUTRAL_STATUS_CLASS = "border-0 border-transparent bg-transparent pr-0 font-normal text-muted-foreground @max-[calc(5.09375rem+14.75em)]/item-trigger:pl-0";
 
 // `compact` encurta o pendente para "Pendente" nas linhas da lista (libera ~75px para o título); o nome acessível segue completo.
 function DiagnosisStatusBadge({ compact = false, diagnosis, status, useRefinedLayout = false }) {
@@ -854,7 +857,7 @@ function DiagnosisStatusSummary({ className, compact = false, diagnosis, status,
         {/* Posicionado sob o badge e centralizado na largura dele; a folga lateral evita truncar "Falha ao salvar". No
             gatilho estreito dos adicionais o status fica sob o título e, embaixo dele, o feedback encostava na divisória:
             ali ele vai ao lado do badge, na linha do status, que tem espaço livre à direita. */}
-        <span className="absolute top-full -inset-x-6 mt-0.5 truncate text-center text-xs leading-none font-normal text-muted-foreground @max-[18rem]/item-trigger:top-1/2 @max-[18rem]/item-trigger:right-auto @max-[18rem]/item-trigger:left-full @max-[18rem]/item-trigger:mt-0 @max-[18rem]/item-trigger:ml-1.5 @max-[18rem]/item-trigger:-translate-y-1/2">
+        <span className="absolute top-full -inset-x-6 mt-0.5 truncate text-center text-xs leading-none font-normal text-muted-foreground @max-[calc(5.09375rem+14.75em)]/item-trigger:top-1/2 @max-[calc(5.09375rem+14.75em)]/item-trigger:right-auto @max-[calc(5.09375rem+14.75em)]/item-trigger:left-full @max-[calc(5.09375rem+14.75em)]/item-trigger:mt-0 @max-[calc(5.09375rem+14.75em)]/item-trigger:ml-1.5 @max-[calc(5.09375rem+14.75em)]/item-trigger:-translate-y-1/2">
           {feedback?.type === "error" ? (
             // A mensagem completa já é anunciada pelo parágrafo role="alert" abaixo das decisões.
             <span aria-hidden="true" className="text-destructive" title={feedback.message}>Falha ao salvar</span>
@@ -1481,9 +1484,10 @@ export default function DiagnosisPanel({
                                     Gatilho estreito (conteúdo < 288px, ~1220px de janela): o status desce para baixo do título (4px abaixo,
                                     alinhado a ele). Ao lado, a coluna do título caía para 73–112px e as palavras longas dos laudos
                                     (104–129px: "ATRIOVENTRICULAR", "SUPRAVENTRICULAR") quebravam no meio ("ATRIOVENT|RICULAR"); embaixo,
-                                    ela ganha a largura do status (149–209px). Custa 24px por item fechado, só nessa faixa. A hifenização (`hyphens: auto`) foi testada e não resolve: o Chrome não
+                                    ela ganha a largura do status (149–209px). Custa 24px por item fechado, só nessa faixa. Com o texto
+                                    maior o limite cresce com a letra (parte fixa em rem, a do texto em em): 288, 317,5 e 347px. A hifenização (`hyphens: auto`) foi testada e não resolve: o Chrome não
                                     hifeniza pt-BR. */}
-                                <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5 @max-[18rem]/item-trigger:grid-cols-[auto_minmax(0,1fr)] @max-[18rem]/item-trigger:gap-y-1">
+                                <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5 @max-[calc(5.09375rem+14.75em)]/item-trigger:grid-cols-[auto_minmax(0,1fr)] @max-[calc(5.09375rem+14.75em)]/item-trigger:gap-y-1">
                                   {diagnosisReference ? <Badge className="rounded-md" variant="outline">{diagnosisReference}</Badge> : null}
                                   {/* Fechado: 2 linhas (lista compacta; abrir revela tudo e o nome acessível do gatilho já é o texto inteiro);
                                       3 com o texto maior (menu lateral › Tamanho do texto), em que o painel cresce pouco e os títulos longos
@@ -1493,7 +1497,7 @@ export default function DiagnosisPanel({
                                       engrossar o texto refluía o título e "gritava" em CAIXA ALTA). Sem `title`: repetiria o visível e o
                                       tooltip nativo cobria o que vem logo abaixo (divisória e linha "Original:"). */}
                                   <span className="line-clamp-2 min-w-0 break-words text-left font-medium in-data-[text-size]:line-clamp-3 group-aria-expanded/accordion-trigger:line-clamp-none">{standardText}</span>
-                                  <DiagnosisStatusSummary className="pb-0 @max-[18rem]/item-trigger:col-start-2 @max-[18rem]/item-trigger:items-start" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
+                                  <DiagnosisStatusSummary className="pb-0 @max-[calc(5.09375rem+14.75em)]/item-trigger:col-start-2 @max-[calc(5.09375rem+14.75em)]/item-trigger:items-start" compact diagnosis={diagnosis} status={status} feedback={decisionFeedbacks[diagnosisId]} />
                                 </span>
                               </AccordionTrigger>
                               {/* Sempre montado (só o painel entra/sai) para a saída também animar: o Collapsible sem gatilho segue o item —
