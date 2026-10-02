@@ -422,9 +422,9 @@ describe("ExamReviewPage", () => {
   });
 
   it.each([
-    { size: "large", width: "416px" },
-    { size: "extra-large", width: "443px" },
-  ])("com o texto maior, o piso do painel é onde a linha de decisão cabe com texto ($size)", async ({ size, width }) => {
+    { minimum: "302", size: "large", width: "416px" },
+    { minimum: "324", size: "extra-large", width: "443px" },
+  ])("com o texto maior, o piso do painel é onde a linha de decisão cabe com texto ($size)", async ({ minimum, size, width }) => {
     textSize.value = size;
     const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);
     const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1080);
@@ -435,6 +435,8 @@ describe("ExamReviewPage", () => {
       await screen.findByRole("heading", { name: "Exame ECG-42" });
 
       await waitFor(() => expect(container.querySelector("main")).toHaveStyle({ "--review-sidebar-width": width }));
+      // A divisória não estreita o painel a ponto de partir "ELETROCARDIOGRAMA" (302px no Grande, 324 no Muito grande).
+      expect(screen.getByRole("separator", { name: "Largura do painel de diagnósticos" })).toHaveAttribute("aria-valuemin", minimum);
     } finally {
       widthSpy.mockRestore();
       heightSpy.mockRestore();
