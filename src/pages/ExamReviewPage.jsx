@@ -15,6 +15,7 @@ import KeyboardShortcutsModal from "../components/KeyboardShortcutsModal.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
+import ReviewPanelSeparator from "../components/ReviewPanelSeparator.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TextSizeModal from "../components/TextSizeModal.jsx";
@@ -71,6 +72,8 @@ import { normalizeReviewNote } from "../utils/disagreementReview.js";
 import {
   DEFAULT_ECG_ASPECT_RATIO,
   REVIEW_MOBILE_BREAKPOINT,
+  clampReviewSidebarWidth,
+  getReviewSidebarBounds,
   getReviewSidebarWidth,
 } from "../utils/reviewLayout.js";
 import {
@@ -143,6 +146,14 @@ const REVIEW_SIDEBAR_FLOOR_CAP = {
   large: 416,
   "extra-large": 443,
 };
+// Teto da largura escolhida pelo médico (divisória entre o painel e o ECG; ver getReviewSidebarBounds): onde o título
+// mais longo do banco ("RITMO COMANDADO POR MARCAPASSO ARTIFICIAL, OPERANDO EM VAT") cabe numa linha com o item
+// fechado, mais 4px de folga — medido em 2026-10-02: 620, 691 e 760px. Mais largo, o painel só ganha vazio.
+const REVIEW_SIDEBAR_MAX_CAP = {
+  default: 624,
+  large: 695,
+  "extra-large": 764,
+};
 
 // "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
 // reabrir a cada exame da fila. Preferência deste navegador, como o tema; sem armazenamento, vale só a sessão.
@@ -180,6 +191,24 @@ function useDelayedFlag(value, delayMs) {
   return value && hasSettled;
 }
 
+// Altura do cartão do exame numa linha só, mesmo quando ele está em duas: o respiro vertical mais o maior entre a
+// identificação, um par rótulo/valor dos dados clínicos e a ação principal.
+function measureSingleRowCardHeight(card) {
+  if (!card) return 0;
+  const style = window.getComputedStyle(card);
+  const verticalChrome = ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"].reduce(
+    (total, property) => total + (parseFloat(style[property]) || 0),
+    0,
+  );
+  const clinicalData = card.querySelector('[data-testid="clinical-data"]');
+  const rowParts = [
+    card.querySelector("h1")?.parentElement,
+    clinicalData?.querySelector("dl > div") ?? clinicalData,
+    card.lastElementChild,
+  ];
+  return Math.round(verticalChrome + Math.max(0, ...rowParts.map((element) => element?.offsetHeight || 0)));
+}
+
 function useCompactReviewLayout() {
   const compactMediaQuery = `(max-width: ${REVIEW_MOBILE_BREAKPOINT - 1}px)`;
   const [isCompact, setIsCompact] = useState(
@@ -207,6 +236,7 @@ export default function ExamReviewPage() {
   useApplyTextSize();
   const { textSize } = useTextSize();
   const sidebarFloorCap = REVIEW_SIDEBAR_FLOOR_CAP[textSize] ?? REVIEW_SIDEBAR_FLOOR_CAP.default;
+  const sidebarMaximumCap = REVIEW_SIDEBAR_MAX_CAP[textSize] ?? REVIEW_SIDEBAR_MAX_CAP.default;
   const reviewLayoutRef = useRef(null);
   const examCardRef = useRef(null);
   const sidebarTriggerRef = useRef(null);
@@ -253,7 +283,16 @@ export default function ExamReviewPage() {
   const [ecgImage, setEcgImage] = useState(ECG_IMAGE_LOADING);
   const ecgImageRequestRef = useRef(null);
   const loadRequestRef = useRef(0);
-  const [sidebarWidth, setSidebarWidth] = useState(null);
+  // Largura automática do painel (o ECG inteiro na altura) e os limites da divisória, medidos no layout; `null` até a
+  // primeira medida. `userSidebarWidth` é a largura que o médico escolheu na divisória (`null` = automática), sempre
+  // aplicada dentro dos limites do layout atual.
+  const [sidebarLayout, setSidebarLayout] = useState(null);
+  const [userSidebarWidth, setUserSidebarWidth] = useState(null);
+  const sidebarWidth = sidebarLayout
+    ? userSidebarWidth === null
+      ? sidebarLayout.automaticWidth
+      : clampReviewSidebarWidth(userSidebarWidth, sidebarLayout)
+    : null;
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const clearNotesSaveTimer = useCallback(() => {
@@ -396,8 +435,9 @@ export default function ExamReviewPage() {
 
       const usesIntermediateLayout = layoutWidth <= 920;
       // Altura medida, não um número fixo: numa coluna estreita o cartão do exame quebra em duas linhas.
-      const examCardHeight = examCardRef.current?.offsetHeight || 0;
-      const nextWidth = getReviewSidebarWidth({
+      const examCard = examCardRef.current;
+      const examCardHeight = examCard?.offsetHeight || 0;
+      const automaticWidth = getReviewSidebarWidth({
         imageAspectRatio,
         layoutHeight,
         layoutWidth,
@@ -410,8 +450,25 @@ export default function ExamReviewPage() {
         viewerHorizontalChrome: 24,
         viewerVerticalChrome: 40 + examCardHeight,
       });
+      // Os limites da divisória contam o cartão numa linha só: é como ele fica no lado estreito do painel, onde o ECG
+      // deixa de crescer. Com a altura atual, um painel largo (cartão em duas linhas) subia o mínimo até soltar.
+      const bounds = getReviewSidebarBounds({
+        automaticWidth,
+        imageAspectRatio,
+        layoutHeight,
+        layoutWidth,
+        maximumSidebarCap: sidebarMaximumCap,
+        viewerHorizontalChrome: 24,
+        viewerVerticalChrome: 40 + measureSingleRowCardHeight(examCard),
+      });
 
-      setSidebarWidth((current) => (current === nextWidth ? current : nextWidth));
+      setSidebarLayout((current) =>
+        current?.automaticWidth === automaticWidth &&
+        current.minimum === bounds.minimum &&
+        current.maximum === bounds.maximum
+          ? current
+          : { automaticWidth, ...bounds },
+      );
     }
 
     updateSidebarWidth();
@@ -425,7 +482,7 @@ export default function ExamReviewPage() {
     observer.observe(layout);
     if (examCardRef.current) observer.observe(examCardRef.current);
     return () => observer.disconnect();
-  }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap]);
+  }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap, sidebarMaximumCap]);
 
   const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
@@ -1231,8 +1288,10 @@ export default function ExamReviewPage() {
           onPointerDownCapture={blockValidationInteraction}
           ref={validationWorkspaceRef}
         >
+          {/* Sem piso no CSS: antes da primeira medida vale o da largura automática (o menor entre 30% e o piso); depois,
+              a largura medida ou a escolhida na divisória, que pode ficar abaixo dele. */}
           <main
-            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[max(min(30%,414px),var(--review-sidebar-width))_minmax(0,1fr)]"
+            className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]"
             ref={reviewLayoutRef}
             style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : `min(30%, ${sidebarFloorCap}px)` }}
           >
@@ -1240,11 +1299,22 @@ export default function ExamReviewPage() {
               <aside
                 aria-label="Diagnósticos e ações"
                 className="flex min-h-0 min-w-0 flex-col border-r bg-background"
+                id="review-panel"
               >
                 <ScrollArea className={REVIEW_BODY_SCROLL_CLASS}>
                   <div className="p-4">{reviewBody}</div>
                 </ScrollArea>
               </aside>
+            ) : null}
+            {!isCompactLayout && sidebarLayout ? (
+              <ReviewPanelSeparator
+                controlsId="review-panel"
+                layoutRef={reviewLayoutRef}
+                maximum={sidebarLayout.maximum}
+                minimum={sidebarLayout.minimum}
+                onChange={setUserSidebarWidth}
+                width={sidebarWidth}
+              />
             ) : null}
 
             {/* 16px em cima e embaixo, como o painel: o topo do cartão do exame alinha com o primeiro cartão do painel (com

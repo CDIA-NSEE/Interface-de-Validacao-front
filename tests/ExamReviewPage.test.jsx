@@ -177,9 +177,7 @@ describe("ExamReviewPage", () => {
     expect(await screen.findByRole("heading", { name: "Exame ECG-42" })).toBeVisible();
     const reviewLayout = container.querySelector("main");
     expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "min(30%, 414px)" });
-    expect(reviewLayout).toHaveClass(
-      "md:grid-cols-[max(min(30%,414px),var(--review-sidebar-width))_minmax(0,1fr)]",
-    );
+    expect(reviewLayout).toHaveClass("md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]");
     expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toBeVisible();
     expect(screen.getByRole("region", { name: "Diagnóstico do dia" })).toBeVisible();
@@ -232,6 +230,42 @@ describe("ExamReviewPage", () => {
 
     widthSpy.mockRestore();
     heightSpy.mockRestore();
+  });
+
+  it("ajusta a largura do painel pela divisória, dentro dos limites", async () => {
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1080);
+    stubViewport(false);
+
+    try {
+      const { container } = render(<ExamReviewPage />);
+      await screen.findByRole("heading", { name: "Exame ECG-42" });
+      const reviewLayout = container.querySelector("main");
+
+      // 1856×1080: o ECG é limitado pela largura, então o painel vai de 282px ao teto do título numa linha (624px).
+      const separator = await screen.findByRole("separator", { name: "Largura do painel de diagnósticos" });
+      expect(separator).toHaveAttribute("aria-controls", "review-panel");
+      expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).toHaveAttribute("id", "review-panel");
+      expect(separator).toHaveAttribute("aria-orientation", "vertical");
+      expect(separator).toHaveAttribute("aria-valuemin", "282");
+      expect(separator).toHaveAttribute("aria-valuemax", "624");
+      expect(separator).toHaveAttribute("aria-valuenow", "414");
+
+      fireEvent.keyDown(separator, { key: "ArrowRight" });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "430px" });
+      fireEvent.keyDown(separator, { key: "ArrowLeft", shiftKey: true });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "366px" });
+      fireEvent.keyDown(separator, { key: "End" });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "624px" });
+      fireEvent.keyDown(separator, { key: "ArrowRight" });
+      expect(separator).toHaveAttribute("aria-valuenow", "624");
+      fireEvent.keyDown(separator, { key: "Home" });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "282px" });
+      expect(separator).toHaveAttribute("aria-valuenow", "282");
+    } finally {
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+    }
   });
 
   it.each([

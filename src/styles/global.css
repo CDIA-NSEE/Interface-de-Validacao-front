@@ -355,6 +355,23 @@
   transition-duration: 120ms, 0ms, 120ms;
 }
 
+/* Largura do painel de revisão, na grade do `main` da tela de revisão. Não herdada: a divisória a muda a cada quadro do
+   arrasto, e uma variável herdada no `main` refazia o estilo da página inteira (painel e ECG) a cada mudança. */
+@property --review-sidebar-width {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* Arrastando a divisória do painel (ReviewPanelSeparator): o cursor de redimensionar vale na página toda — o ponteiro
+   passa sobre o ECG, que tem cursor próprio (mira, mão) — e nada é selecionado no caminho. `data-panel-resizing` fica na
+   raiz, posto pela divisória. */
+:root[data-panel-resizing],
+:root[data-panel-resizing] * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 /* Com o ponteiro sobre uma caixa, só ela fica em hover: o `is-hovered` da caixa anterior só sai quando a página
    re-renderiza (1 quadro em produção), e ao passar de uma caixa para a vizinha as duas ficavam acesas. */
 .ecg-image-stage:has(.saved-region-box:hover) .saved-region-box.is-hovered:not(:hover, :focus-visible, .is-selected) {

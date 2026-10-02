@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  DEFAULT_ECG_ASPECT_RATIO,
+  clampReviewSidebarWidth,
+  getReviewSidebarBounds,
   getReviewSidebarWidth,
 } from "../src/utils/reviewLayout.js";
 
@@ -115,4 +118,56 @@ test("keeps the sidebar functional at intermediate and narrow widths", () => {
     }),
     250,
   );
+});
+
+test("limits the doctor's sidebar width between 282px and the one-line title cap", () => {
+  // 1920×1080: o ECG é limitado pela largura, então o painel pode ir ao mínimo absoluto.
+  assert.deepEqual(
+    getReviewSidebarBounds({
+      automaticWidth: 414,
+      imageAspectRatio: DEFAULT_ECG_ASPECT_RATIO,
+      layoutHeight: 1080,
+      layoutWidth: 1856,
+      maximumSidebarCap: 624,
+      viewerHorizontalChrome: 24,
+      viewerVerticalChrome: 96,
+    }),
+    { maximum: 624, minimum: 282 },
+  );
+});
+
+test("does not shrink the sidebar past the point where the ECG stops growing", () => {
+  // 1536×730: abaixo de 342px o ECG já é limitado pela altura.
+  assert.deepEqual(
+    getReviewSidebarBounds({
+      automaticWidth: 414,
+      imageAspectRatio: DEFAULT_ECG_ASPECT_RATIO,
+      layoutHeight: 730,
+      layoutWidth: 1472,
+      maximumSidebarCap: 624,
+      viewerHorizontalChrome: 24,
+      viewerVerticalChrome: 96,
+    }),
+    { maximum: 624, minimum: 342 },
+  );
+});
+
+test("keeps the ECG at least as wide as the sidebar and the automatic width inside the limits", () => {
+  // Janela de 1002px: metade da área é menor que o teto; a largura automática (281px) fica abaixo do mínimo absoluto.
+  assert.deepEqual(
+    getReviewSidebarBounds({
+      automaticWidth: 281,
+      imageAspectRatio: DEFAULT_ECG_ASPECT_RATIO,
+      layoutHeight: 700,
+      layoutWidth: 938,
+      maximumSidebarCap: 624,
+      viewerHorizontalChrome: 24,
+      viewerVerticalChrome: 142,
+    }),
+    { maximum: 469, minimum: 281 },
+  );
+
+  assert.equal(clampReviewSidebarWidth(200, { maximum: 624, minimum: 282 }), 282);
+  assert.equal(clampReviewSidebarWidth(700.4, { maximum: 624, minimum: 282 }), 624);
+  assert.equal(clampReviewSidebarWidth(500.4, { maximum: 624, minimum: 282 }), 500);
 });
