@@ -202,19 +202,24 @@ function readReviewPanelWidth() {
   }
 }
 
-// "Estreito" só vale quando muda alguma coisa: com menos de 24px (cerca de 2% da largura do ECG) de diferença para a
-// largura automática, o ECG não cresce de modo que se veja (13px na 1ª versão, a 1534×701) — a opção fica indisponível
-// no menu e uma escolha guardada vale como a automática nesta tela (em outra, volta a valer).
+// "Estreito" e "Largo" só valem quando mudam alguma coisa: com menos de 24px (cerca de 2% da largura do ECG) de
+// diferença para a largura automática, o ECG não cresce de modo que se veja (13px na 1ª versão, a 1534×701), e numa tela
+// ultralarga o máximo coincide com a automática — a opção fica indisponível no menu e uma escolha guardada vale como a
+// automática nesta tela (em outra, volta a valer).
 const PANEL_PRESET_MIN_CHANGE = 24;
 
 function isNarrowPresetUseful(layout) {
   return !layout || layout.automaticWidth - layout.minimum >= PANEL_PRESET_MIN_CHANGE;
 }
 
+function isWidePresetUseful(layout) {
+  return !layout || layout.maximum - layout.automaticWidth >= PANEL_PRESET_MIN_CHANGE;
+}
+
 function resolveSidebarWidth(layout, choice) {
   if (!layout) return null;
   if (choice === "narrow") return isNarrowPresetUseful(layout) ? layout.minimum : layout.automaticWidth;
-  if (choice === "wide") return layout.maximum;
+  if (choice === "wide") return isWidePresetUseful(layout) ? layout.maximum : layout.automaticWidth;
   if (typeof choice === "number") return clampReviewSidebarWidth(choice, layout);
   return layout.automaticWidth;
 }
@@ -224,10 +229,11 @@ function resolveSidebarWidth(layout, choice) {
 function getPanelWidthMode(layout, choice, width) {
   if (choice === null) return "automatic";
   if (choice === "narrow" && !isNarrowPresetUseful(layout)) return "automatic";
+  if (choice === "wide" && !isWidePresetUseful(layout)) return "automatic";
   if (PANEL_WIDTH_PRESETS.has(choice)) return choice;
   if (layout && width === layout.automaticWidth) return "automatic";
   if (layout && width === layout.minimum && isNarrowPresetUseful(layout)) return "narrow";
-  if (layout && width === layout.maximum) return "wide";
+  if (layout && width === layout.maximum && isWidePresetUseful(layout)) return "wide";
   return null;
 }
 
@@ -1494,6 +1500,7 @@ export default function ExamReviewPage() {
           onClose={() => setIsPanelWidthOpen(false)}
           onValueChange={handlePanelWidthModeChange}
           value={getPanelWidthMode(sidebarLayout, userSidebarWidth, sidebarWidth)}
+          wideDisabled={!isWidePresetUseful(sidebarLayout)}
         />
         <UnsavedChangesModal
           intent={exitIntent}

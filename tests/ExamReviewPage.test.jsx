@@ -312,7 +312,7 @@ describe("ExamReviewPage", () => {
     }
   });
 
-  it("deixa o Estreito indisponível quando ele não aumentaria o ECG", async () => {
+  it("deixa o Estreito e o Largo indisponíveis quando não mudariam o painel", async () => {
     // Janela larga e baixa (2330×700): a largura automática já é onde o ECG para de crescer, mesmo com a barra compacta.
     window.localStorage.setItem("medpage.reviewPanelWidth", "narrow");
     const user = userEvent.setup();
@@ -338,6 +338,10 @@ describe("ExamReviewPage", () => {
         "Nesta janela o ECG já ocupa toda a altura; um painel mais estreito não o aumentaria.",
       );
       expect(within(dialog).getByRole("radio", { name: "Automático" })).toBeChecked();
+      // Ali o máximo também coincide com a largura automática (32% da largura): o Largo fica indisponível do mesmo jeito.
+      const wide = within(dialog).getByRole("radio", { name: "Largo" });
+      expect(wide).toBeDisabled();
+      expect(wide).toHaveAccessibleDescription("Nesta janela o painel já está na largura máxima.");
     } finally {
       widthSpy.mockRestore();
       heightSpy.mockRestore();
