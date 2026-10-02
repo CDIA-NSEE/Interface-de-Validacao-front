@@ -1511,9 +1511,11 @@ export default function DiagnosisPanel({
                                 <CollapsibleContent className={COLLAPSIBLE_PANEL_CLASS}>
                                   {/* Tudo o que a abertura revela na barra, abaixo da divisória: marcadores, "Original:" e a linha de ações. A
                                       divisória fecha a zona clicável (o hover do gatilho termina nela) e daqui para baixo é conteúdo — passar o
-                                      mouse ou clicar no texto original não mexe no item, como em qualquer outro conteúdo revelado. Ordem igual à
-                                      do Diagnóstico do dia (marcadores → título → Original → ações): o contexto vem antes da decisão — "Agrupado"
-                                      explica por que o título difere do Original e ficava abaixo de Concordo/Discordo. Sem marcadores,
+                                      mouse ou clicar no texto original não mexe no item, como em qualquer outro conteúdo revelado. Como no
+                                      Diagnóstico do dia, os marcadores vêm antes do Original e das ações: o contexto vem antes da decisão — "Agrupado"
+                                      explica por que o título difere do Original e ficava abaixo de Concordo/Discordo. A ordem não é a mesma: no
+                                      cartão do dia eles ficam acima do título (marcadores → título → Original → ações); aqui o título é o gatilho,
+                                      então eles ficam abaixo da divisória, entre o título e o Original (título → marcadores → Original → ações). Sem marcadores,
                                       DiagnosisBadges não renderiza nada. Respiro: divisória → 8px → Original → 12px → ações (pt-2 + gap-2 + mt-1),
                                       como o Original → 12px → ações do cartão do dia — o Original é o par do título e fica mais perto dele do que
                                       dos botões (com 12px em cima e 8px embaixo, se lia como parte da linha de decisão). pb-3: os 12px sob a
