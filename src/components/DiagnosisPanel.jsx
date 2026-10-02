@@ -927,9 +927,12 @@ function DiagnosisCard({
     // ECG): só com `transition-shadow` o anel entrava em 150ms e o fundo "info" trocava num quadro.
     <Card className={cn("gap-2.5 overflow-visible transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none", isPrimaryDaily && "-mx-px gap-3 border border-t-[3px] border-foreground/10 border-t-primary shadow-md shadow-elevation ring-0", (isRegionTarget || isRegionConnected) && "ring-2 ring-ring/60")} data-diagnosis-id={diagnosis.id} data-testid="diagnosis-card" size="sm" variant={cardVariant}>
       <CardHeader className="gap-1.5">
-        <div className="flex min-w-0 items-start justify-between gap-3">
+        {/* Quebra quando os selos e o status não cabem lado a lado (painel estreito, texto maior): o status desce para a
+            linha de baixo, ainda à direita. Sem a quebra, o selo "Diagnóstico do dia" (que não encolhe) passava da caixa
+            dele e invadia "Aguardando decisão" — 7px a 282px de painel. */}
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
           <DiagnosisBadges aiModeEnabled={aiModeEnabled} diagnosis={diagnosis} isRequired={isRequired} />
-          {isPrimaryDaily ? <DiagnosisStatusSummary diagnosis={diagnosis} status={status} feedback={decisionFeedback} /> : null}
+          {isPrimaryDaily ? <DiagnosisStatusSummary className="ml-auto" diagnosis={diagnosis} status={status} feedback={decisionFeedback} /> : null}
         </div>
         <CardTitle className={cn(
           "grid min-w-0 gap-2",
