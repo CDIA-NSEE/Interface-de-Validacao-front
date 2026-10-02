@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 function toNumber(value) {
   const number = typeof value === "string" ? Number(value.replace(",", ".")) : value;
   return Number.isFinite(number) ? number : null;
@@ -61,18 +63,35 @@ export default function PatientInfo({ patient }) {
   // `text-sm` (14px) — é o cabeçalho do traçado, lido a cada diagnóstico, e com 14 e 12px ficava miúdo. No Grande e no
   // Muito grande (`data-text-size` na raiz) os valores já têm 16 e 18px e seguem no corpo: o passo a mais levava a barra a
   // duas linhas a 1536×730 e tirava 5% e 3% da largura do ECG.
+  // Na barra compacta (`data-compact-bar`, painel estreito; ver ExamReviewPage) os dados vão numa linha só, sem as
+  // colunas, e só com os valores: cada um já diz o que é ("64 anos", "Masculino", a data, "107 kg", "174 cm"). O rótulo
+  // fica à vista no IMC (o número sozinho não diz o que é) e nos dados ausentes ("Peso —"); os outros seguem para o
+  // leitor de tela. Com o rótulo ao lado de cada valor a linha não cabia no exame 16, nem no Padrão. A idade calculada
+  // ganha "calc." depois do valor. Se ainda assim faltar largura, os dados quebram em mais uma linha, sem se sobrepor.
   return (
     <div className="@container/clinical-data text-base in-data-[text-size]:text-sm">
-      <dl className={`grid gap-x-6 gap-y-2 ${COLUMN_TEMPLATE}`}>
+      <dl className={`grid gap-x-6 gap-y-2 ${COLUMN_TEMPLATE} in-data-[compact-bar]:flex in-data-[compact-bar]:flex-wrap in-data-[compact-bar]:gap-x-4 in-data-[compact-bar]:gap-y-0`}>
         {rows.map(([label, value, labelNote]) => (
-          <div className="min-w-0" key={label}>
-            <dt className="text-sm font-medium whitespace-nowrap text-muted-foreground in-data-[text-size]:text-xs">
+          <div className="min-w-0 in-data-[compact-bar]:flex in-data-[compact-bar]:shrink-0 in-data-[compact-bar]:items-baseline in-data-[compact-bar]:gap-1" key={label}>
+            <dt
+              className={cn(
+                "text-sm font-medium whitespace-nowrap text-muted-foreground in-data-[text-size]:text-xs",
+                label !== "IMC" && hasValue(value) && "in-data-[compact-bar]:sr-only",
+              )}
+            >
               {label}
               {labelNote ? <span className="font-normal"> ({labelNote})</span> : null}
             </dt>
-            <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums">
+            <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums in-data-[compact-bar]:mt-0">
               {hasValue(value) ? (
-                value
+                <>
+                  {value}
+                  {labelNote ? (
+                    <span aria-hidden="true" className="hidden text-sm text-muted-foreground in-data-[text-size]:text-xs in-data-[compact-bar]:inline">
+                      {" "}calc.
+                    </span>
+                  ) : null}
+                </>
               ) : (
                 // Traço em cinza: o valor presente (em preto) é o que salta. O leitor de tela ouve "não informado".
                 <>

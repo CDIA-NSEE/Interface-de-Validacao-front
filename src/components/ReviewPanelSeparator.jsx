@@ -22,6 +22,7 @@ function separatorLeft(width) {
 // react-resizable-panels. A área de pegar tem 10px: 2px sobre o painel (a barra de rolagem dele fica logo antes do
 // filete) e 8px sobre a margem de 12px da coluna do ECG.
 export default function ReviewPanelSeparator({
+  compactBelow,
   controlsId,
   isAutomatic,
   layoutRef,
@@ -54,7 +55,10 @@ export default function ReviewPanelSeparator({
   const bounds = { maximum, minimum };
 
   function writeLiveWidth(nextWidth) {
-    layoutRef.current?.style.setProperty("--review-sidebar-width", `${nextWidth}px`);
+    const layout = layoutRef.current;
+    layout?.style.setProperty("--review-sidebar-width", `${nextWidth}px`);
+    // A barra do exame compacta entra e sai no meio do arrasto, como no fim dele (ver ExamReviewPage).
+    layout?.toggleAttribute("data-compact-bar", nextWidth < compactBelow);
     const separator = separatorRef.current;
     if (!separator) return;
     separator.style.left = separatorLeft(nextWidth);

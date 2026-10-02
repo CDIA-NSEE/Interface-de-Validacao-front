@@ -276,6 +276,42 @@ describe("ExamReviewPage", () => {
     }
   });
 
+  it("compacta a barra do exame quando o painel fica mais estreito que a barra normal permite", async () => {
+    // 1534×701 a 125% com as barras do navegador (1470×701 de layout) e a barra do exame com 62px: o ECG para de crescer
+    // com o painel em 401px; com a barra compacta (48px, margens de 8px), só em 349px.
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1470);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(701);
+    const offsetSpy = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(62);
+    stubViewport(false);
+
+    try {
+      const { container } = render(<ExamReviewPage />);
+      await screen.findByRole("heading", { name: "Exame ECG-42" });
+      const reviewLayout = container.querySelector("main");
+      const separator = await screen.findByRole("separator", { name: "Largura do painel de diagnósticos" });
+      expect(separator).toHaveAttribute("aria-valuemin", "349");
+      expect(separator).toHaveAttribute("aria-valuenow", "414");
+      expect(reviewLayout).not.toHaveAttribute("data-compact-bar");
+
+      fireEvent.keyDown(separator, { key: "Home" });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "349px" });
+      expect(reviewLayout).toHaveAttribute("data-compact-bar");
+      fireEvent.keyDown(separator, { key: "ArrowRight", shiftKey: true });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "413px" });
+      expect(reviewLayout).not.toHaveAttribute("data-compact-bar");
+
+      // Na linha compacta só os valores ficam à vista; o rótulo segue para o leitor de tela, menos no IMC.
+      const ageLabel = screen.getByText("Idade", { selector: "dt" });
+      expect(ageLabel).toHaveClass("in-data-[compact-bar]:sr-only");
+      expect(screen.getByText("IMC", { selector: "dt" })).not.toHaveClass("in-data-[compact-bar]:sr-only");
+    } finally {
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+      offsetSpy.mockRestore();
+      window.localStorage.removeItem("medpage.reviewPanelWidth");
+    }
+  });
+
   it("ajusta a largura do painel pelo menu lateral, sem arrastar", async () => {
     const user = userEvent.setup();
     const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);

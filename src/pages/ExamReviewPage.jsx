@@ -155,6 +155,14 @@ const REVIEW_SIDEBAR_MAX_CAP = {
   large: 695,
   "extra-large": 764,
 };
+// Barra do exame compacta (desde 2026-10-02): numa janela em que o ECG já é limitado pela altura (a maioria: 1536×864 a
+// 125%, com as barras do navegador, dá ~1534×701 CSS), estreitar o painel não aumentava o traçado — o mínimo da
+// divisória era o ponto em que ele parava de crescer, e o "Estreito" tirava 13px. Abaixo desse ponto a barra do exame
+// passa a uma linha só (48px: a ação de 40px + 4px em cima e embaixo) e a coluna do ECG, a 8px de margem em cima e
+// embaixo: 8 + 48 + 8 de vão + 8 = 72px em volta do papel, contra 40 + 62 = 102 com a barra normal. Na janela acima o
+// mínimo vai de 401 para 349px e o ECG, de 1045×599 para 1097×629.
+const COMPACT_EXAM_CARD_HEIGHT = 48;
+const COMPACT_VIEWER_VERTICAL_CHROME = 24 + COMPACT_EXAM_CARD_HEIGHT;
 
 // "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
 // reabrir a cada exame da fila. Preferência deste navegador, como o tema; sem armazenamento, vale só a sessão.
@@ -285,6 +293,9 @@ export default function ExamReviewPage() {
   const sidebarMaximumCap = REVIEW_SIDEBAR_MAX_CAP[textSize] ?? REVIEW_SIDEBAR_MAX_CAP.default;
   const reviewLayoutRef = useRef(null);
   const examCardRef = useRef(null);
+  // Alturas do cartão do exame na forma normal, guardadas da última medida sem a barra compacta: com ela, a largura
+  // automática e o ponto em que a barra compacta entra seguem contando a barra normal (senão o ponto mudaria ao entrar).
+  const normalExamCardHeightRef = useRef({ full: 0, singleRow: 0 });
   const sidebarTriggerRef = useRef(null);
   const shouldRestoreSidebarFocusRef = useRef(true);
   const validationWorkspaceRef = useRef(null);
@@ -335,6 +346,8 @@ export default function ExamReviewPage() {
   const [sidebarLayout, setSidebarLayout] = useState(null);
   const [userSidebarWidth, setUserSidebarWidth] = useState(readReviewPanelWidth);
   const sidebarWidth = resolveSidebarWidth(sidebarLayout, userSidebarWidth);
+  // Mais estreito que o ponto em que o ECG para de crescer com a barra normal, a barra do exame fica compacta.
+  const isExamBarCompact = Boolean(sidebarLayout && sidebarWidth < sidebarLayout.compactBelow);
   const [isPanelWidthOpen, setIsPanelWidthOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -479,7 +492,13 @@ export default function ExamReviewPage() {
       const usesIntermediateLayout = layoutWidth <= 920;
       // Altura medida, não um número fixo: numa coluna estreita o cartão do exame quebra em duas linhas.
       const examCard = examCardRef.current;
-      const examCardHeight = examCard?.offsetHeight || 0;
+      if (!layout.hasAttribute("data-compact-bar")) {
+        normalExamCardHeightRef.current = {
+          full: examCard?.offsetHeight || 0,
+          singleRow: measureSingleRowCardHeight(examCard),
+        };
+      }
+      const { full: examCardHeight, singleRow: singleRowCardHeight } = normalExamCardHeightRef.current;
       const automaticWidth = getReviewSidebarWidth({
         imageAspectRatio,
         layoutHeight,
@@ -495,22 +514,30 @@ export default function ExamReviewPage() {
       });
       // Os limites da divisória contam o cartão numa linha só: é como ele fica no lado estreito do painel, onde o ECG
       // deixa de crescer. Com a altura atual, um painel largo (cartão em duas linhas) subia o mínimo até soltar.
-      const bounds = getReviewSidebarBounds({
+      const sidebarBoundsInput = {
         automaticWidth,
         imageAspectRatio,
         layoutHeight,
         layoutWidth,
         maximumSidebarCap: sidebarMaximumCap,
         viewerHorizontalChrome: 24,
-        viewerVerticalChrome: 40 + measureSingleRowCardHeight(examCard),
-      });
+      };
+      const bounds = getReviewSidebarBounds({ ...sidebarBoundsInput, viewerVerticalChrome: 40 + singleRowCardHeight });
+      // Com a barra compacta o ECG ainda cresce abaixo do mínimo da barra normal: a divisória vai até onde ele para com
+      // ela, e a barra compacta entra abaixo do mínimo de antes (`compactBelow`).
+      const compactMinimum = Math.min(
+        bounds.minimum,
+        getReviewSidebarBounds({ ...sidebarBoundsInput, viewerVerticalChrome: COMPACT_VIEWER_VERTICAL_CHROME }).minimum,
+      );
+      const next = { automaticWidth, compactBelow: bounds.minimum, maximum: bounds.maximum, minimum: compactMinimum };
 
       setSidebarLayout((current) =>
-        current?.automaticWidth === automaticWidth &&
-        current.minimum === bounds.minimum &&
-        current.maximum === bounds.maximum
+        current?.automaticWidth === next.automaticWidth &&
+        current.compactBelow === next.compactBelow &&
+        current.minimum === next.minimum &&
+        current.maximum === next.maximum
           ? current
-          : { automaticWidth, ...bounds },
+          : next,
       );
     }
 
@@ -1294,21 +1321,22 @@ export default function ExamReviewPage() {
   // dados viram uma grade de 3×2. No Padrão a barra tem a letra um passo acima do corpo (ver PatientInfo) e pede 918px:
   // limite de 934px (`calc(20.5rem+43.25em)`); no Grande e no Muito grande segue no corpo, com os limites de antes.
   const examCard = (
+    // Barra compacta (`data-compact-bar` no layout, ver COMPACT_EXAM_CARD_HEIGHT): uma linha de 48px, "Exame" ao lado do
+    // código, e a coluna estreita não vale — a barra compacta só existe com a coluna do ECG larga.
     <Card
-      className="@container/exam-card shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3"
+      className="@container/exam-card shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3 in-data-[compact-bar]:flex-nowrap in-data-[compact-bar]:py-1"
       data-testid="current-status"
       ref={examCardRef}
       size="sm"
     >
       {/* "Exame" sobre o código com a mesma anatomia de cada dado clínico (rótulo, 2px, valor — um passo acima do corpo
           no Padrão, ver PatientInfo —, nas alturas de linha dos tokens): as linhas de base batem com as dos dados em todo
-          tamanho de texto. Com `leading-4`
-          e `leading-5` fixos (até 2026-10-02), "Exame" ficava 1/2/4,5px abaixo dos rótulos (Padrão/Grande/Muito grande)
-          e, no Muito grande, a letra de 16px ocupava uma linha de 16px. */}
+          tamanho de texto. Com `leading-4` e `leading-5` fixos (até 2026-10-02), "Exame" ficava 1/2/4,5px abaixo dos
+          rótulos (Padrão/Grande/Muito grande) e, no Muito grande, a letra de 16px ocupava uma linha de 16px. */}
       <div className="flex shrink-0 items-center gap-2.5">
-        <h1 className="flex flex-col text-base font-semibold tabular-nums in-data-[text-size]:text-sm">
+        <h1 className="flex flex-col text-base font-semibold tabular-nums in-data-[text-size]:text-sm in-data-[compact-bar]:flex-row in-data-[compact-bar]:items-baseline in-data-[compact-bar]:gap-1.5">
           <span className="text-sm font-medium text-muted-foreground in-data-[text-size]:text-xs">Exame</span>{" "}
-          <span className="mt-0.5">{exam.exam_code}</span>
+          <span className="mt-0.5 in-data-[compact-bar]:mt-0">{exam.exam_code}</span>
         </h1>
         <span className="sr-only">Status atual:</span>
         <StatusBadge
@@ -1317,8 +1345,8 @@ export default function ExamReviewPage() {
           reviewResult={exam.review_result}
         />
       </div>
-      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:hidden in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
-      <div className="min-w-0 flex-1 not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:order-last not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:basis-full in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:order-last in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">
+      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:hidden not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
+      <div className="min-w-0 flex-1 not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:order-last not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:basis-full not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:order-last not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">
         <h2 className="sr-only">Dados clínicos</h2>
         <PatientInfo patient={exam.patient} />
       </div>
@@ -1354,6 +1382,7 @@ export default function ExamReviewPage() {
               a largura medida ou a escolhida na divisória, que pode ficar abaixo dele. */}
           <main
             className="relative flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[var(--review-sidebar-width)_minmax(0,1fr)]"
+            data-compact-bar={isExamBarCompact ? "" : undefined}
             ref={reviewLayoutRef}
             style={{ "--review-sidebar-width": sidebarWidth ? `${sidebarWidth}px` : `min(30%, ${sidebarFloorCap}px)` }}
           >
@@ -1371,6 +1400,7 @@ export default function ExamReviewPage() {
             {!isCompactLayout && sidebarLayout ? (
               <ReviewPanelSeparator
                 controlsId="review-panel"
+                compactBelow={sidebarLayout.compactBelow}
                 isAutomatic={userSidebarWidth === null}
                 layoutRef={reviewLayoutRef}
                 maximum={sidebarLayout.maximum}
@@ -1384,7 +1414,7 @@ export default function ExamReviewPage() {
                 12px ficavam 4px desencontrados). Nas laterais seguem 12px. */}
             <section
               aria-label="Visualizador de ECG"
-              className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:px-3 md:py-4"
+              className="flex min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-20 md:px-3 md:py-4 md:in-data-[compact-bar]:py-2"
             >
               <div className="flex min-h-full w-full flex-col gap-2">
                 {examCard}
