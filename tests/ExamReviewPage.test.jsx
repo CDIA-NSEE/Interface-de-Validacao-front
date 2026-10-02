@@ -255,14 +255,18 @@ describe("ExamReviewPage", () => {
       expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "430px" });
       fireEvent.keyDown(separator, { key: "ArrowLeft", shiftKey: true });
       expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "366px" });
+      expect(separator).not.toHaveAttribute("data-limit");
       fireEvent.keyDown(separator, { key: "End" });
       expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "624px" });
+      // Na ponta, o cursor mostra só a direção em que ela ainda anda (global.css, pelo `data-limit`).
+      expect(separator).toHaveAttribute("data-limit", "max");
       fireEvent.keyDown(separator, { key: "ArrowRight" });
       expect(separator).toHaveAttribute("aria-valuenow", "624");
       fireEvent.keyDown(separator, { key: "Home" });
       expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "282px" });
       expect(separator).toHaveAttribute("aria-valuenow", "282");
       expect(separator).toHaveAttribute("aria-valuetext", "282 pixels");
+      expect(separator).toHaveAttribute("data-limit", "min");
       // A escolha fica no navegador; o clique duplo volta à largura automática e a esquece.
       expect(window.localStorage.getItem("medpage.reviewPanelWidth")).toBe("282");
       fireEvent.doubleClick(separator);

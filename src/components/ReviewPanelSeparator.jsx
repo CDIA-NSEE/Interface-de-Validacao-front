@@ -7,6 +7,15 @@ import { clampReviewSidebarWidth } from "../utils/reviewLayout.js";
 const KEYBOARD_STEP = 16;
 const KEYBOARD_STEP_LARGE = 64;
 
+// Na ponta, o cursor mostra só a direção em que a divisória ainda anda (ver global.css): "min" só alarga, "max" só
+// estreita e "fixed" (mínimo = máximo) não anda. Também na raiz durante o arrasto, quando o cursor vale na página toda.
+function getLimit(width, minimum, maximum) {
+  if (width <= minimum && width >= maximum) return "fixed";
+  if (width <= minimum) return "min";
+  if (width >= maximum) return "max";
+  return "";
+}
+
 // Posição pela largura, não pela variável do layout: ela não é herdada (ver global.css), então não chega aqui.
 function separatorLeft(width) {
   return `${width - 2}px`;
@@ -63,6 +72,10 @@ export default function ReviewPanelSeparator({
     if (!separator) return;
     separator.style.left = separatorLeft(nextWidth);
     separator.setAttribute("aria-valuenow", String(nextWidth));
+    const limit = getLimit(nextWidth, minimum, maximum);
+    separator.toggleAttribute("data-limit", Boolean(limit));
+    if (limit) separator.setAttribute("data-limit", limit);
+    if (dragRef.current) document.documentElement.setAttribute("data-panel-resizing", limit);
   }
 
   function handlePointerDown(event) {
@@ -71,7 +84,7 @@ export default function ReviewPanelSeparator({
     // continuam dali. A seleção de texto no caminho fica bloqueada pelo `data-panel-resizing` na raiz.
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = { frame: 0, lastWidth: width, pointerId: event.pointerId, startWidth: width, startX: event.clientX };
-    document.documentElement.setAttribute("data-panel-resizing", "");
+    document.documentElement.setAttribute("data-panel-resizing", getLimit(width, minimum, maximum));
     setIsDragging(true);
   }
 
@@ -124,6 +137,8 @@ export default function ReviewPanelSeparator({
       aria-valuetext={isAutomatic ? `${width} pixels, automática` : `${width} pixels`}
       className="group/separator absolute inset-y-0 z-20 w-2.5 cursor-col-resize touch-none outline-none select-none"
       data-dragging={isDragging ? "" : undefined}
+      data-limit={getLimit(width, minimum, maximum) || undefined}
+      data-panel-separator=""
       onDoubleClick={() => {
         if (!isAutomatic) onChange(null);
       }}

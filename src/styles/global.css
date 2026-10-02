@@ -372,6 +372,29 @@
   user-select: none !important;
 }
 
+/* Divisória na ponta: o cursor mostra só a direção em que ela ainda anda — no mínimo, só alarga (seta para a direita,
+   barra à esquerda); no máximo, só estreita. Parada (mínimo = máximo), cursor comum. No Windows o Chrome desenha
+   `e-resize` e `w-resize` com a mesma seta dupla do `col-resize`, por isso o cursor é um SVG próprio (traço preto com
+   contorno branco, legível sobre o ECG e o painel), com eles de reserva. Vale em repouso (`data-limit`, posto pela
+   divisória) e durante o arrasto, na página toda (o valor de `data-panel-resizing`). */
+[data-panel-separator][data-limit="min"],
+:root[data-panel-resizing="min"],
+:root[data-panel-resizing="min"] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 5v14M10 12h9M15 8l4 4-4 4' stroke='%23fff' stroke-width='4'/%3E%3Cpath d='M6 5v14M10 12h9M15 8l4 4-4 4' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") 12 12, e-resize !important;
+}
+
+[data-panel-separator][data-limit="max"],
+:root[data-panel-resizing="max"],
+:root[data-panel-resizing="max"] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 5v14M14 12H5M9 8l-4 4 4 4' stroke='%23fff' stroke-width='4'/%3E%3Cpath d='M18 5v14M14 12H5M9 8l-4 4 4 4' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") 12 12, w-resize !important;
+}
+
+[data-panel-separator][data-limit="fixed"],
+:root[data-panel-resizing="fixed"],
+:root[data-panel-resizing="fixed"] * {
+  cursor: default !important;
+}
+
 /* Com o ponteiro sobre uma caixa, só ela fica em hover: o `is-hovered` da caixa anterior só sai quando a página
    re-renderiza (1 quadro em produção), e ao passar de uma caixa para a vizinha as duas ficavam acesas. */
 .ecg-image-stage:has(.saved-region-box:hover) .saved-region-box.is-hovered:not(:hover, :focus-visible, .is-selected) {
