@@ -175,6 +175,29 @@ function storeExamDataOpen(open) {
   }
 }
 
+// Largura do painel escolhida na divisória, guardada como o "Dados do exame": vale para os próximos exames e sessões
+// deste navegador, sempre dentro dos limites da tela atual. Sem valor (ou depois do clique duplo na divisória), a
+// largura volta a ser a automática.
+const REVIEW_PANEL_WIDTH_KEY = "medpage.reviewPanelWidth";
+
+function readReviewPanelWidth() {
+  try {
+    const width = Number.parseInt(window.localStorage.getItem(REVIEW_PANEL_WIDTH_KEY), 10);
+    return Number.isFinite(width) && width > 0 ? width : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeReviewPanelWidth(width) {
+  try {
+    if (width === null) window.localStorage.removeItem(REVIEW_PANEL_WIDTH_KEY);
+    else window.localStorage.setItem(REVIEW_PANEL_WIDTH_KEY, String(width));
+  } catch {
+    // Armazenamento indisponível (janela privada, bloqueio): a largura vale só até recarregar.
+  }
+}
+
 function useDelayedFlag(value, delayMs) {
   const [hasSettled, setHasSettled] = useState(false);
 
@@ -287,7 +310,7 @@ export default function ExamReviewPage() {
   // primeira medida. `userSidebarWidth` é a largura que o médico escolheu na divisória (`null` = automática), sempre
   // aplicada dentro dos limites do layout atual.
   const [sidebarLayout, setSidebarLayout] = useState(null);
-  const [userSidebarWidth, setUserSidebarWidth] = useState(null);
+  const [userSidebarWidth, setUserSidebarWidth] = useState(readReviewPanelWidth);
   const sidebarWidth = sidebarLayout
     ? userSidebarWidth === null
       ? sidebarLayout.automaticWidth
@@ -483,6 +506,12 @@ export default function ExamReviewPage() {
     if (examCardRef.current) observer.observe(examCardRef.current);
     return () => observer.disconnect();
   }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap, sidebarMaximumCap]);
+
+  // `null` volta à largura automática (clique duplo na divisória).
+  const handleSidebarWidthChange = useCallback((width) => {
+    setUserSidebarWidth(width);
+    storeReviewPanelWidth(width);
+  }, []);
 
   const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
@@ -1309,10 +1338,11 @@ export default function ExamReviewPage() {
             {!isCompactLayout && sidebarLayout ? (
               <ReviewPanelSeparator
                 controlsId="review-panel"
+                isAutomatic={userSidebarWidth === null}
                 layoutRef={reviewLayoutRef}
                 maximum={sidebarLayout.maximum}
                 minimum={sidebarLayout.minimum}
-                onChange={setUserSidebarWidth}
+                onChange={handleSidebarWidthChange}
                 width={sidebarWidth}
               />
             ) : null}

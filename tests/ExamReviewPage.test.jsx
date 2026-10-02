@@ -262,9 +262,38 @@ describe("ExamReviewPage", () => {
       fireEvent.keyDown(separator, { key: "Home" });
       expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "282px" });
       expect(separator).toHaveAttribute("aria-valuenow", "282");
+      expect(separator).toHaveAttribute("aria-valuetext", "282 pixels");
+      // A escolha fica no navegador; o clique duplo volta à largura automática e a esquece.
+      expect(window.localStorage.getItem("medpage.reviewPanelWidth")).toBe("282");
+      fireEvent.doubleClick(separator);
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "414px" });
+      expect(separator).toHaveAttribute("aria-valuetext", "414 pixels, automática");
+      expect(window.localStorage.getItem("medpage.reviewPanelWidth")).toBeNull();
     } finally {
       widthSpy.mockRestore();
       heightSpy.mockRestore();
+      window.localStorage.removeItem("medpage.reviewPanelWidth");
+    }
+  });
+
+  it.each([
+    { stored: "500", width: "500px" },
+    { stored: "900", width: "624px" },
+    { stored: "100", width: "282px" },
+  ])("abre com a largura guardada, dentro dos limites da tela ($stored)", async ({ stored, width }) => {
+    window.localStorage.setItem("medpage.reviewPanelWidth", stored);
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1080);
+    stubViewport(false);
+
+    try {
+      const { container } = render(<ExamReviewPage />);
+      await screen.findByRole("heading", { name: "Exame ECG-42" });
+      await waitFor(() => expect(container.querySelector("main")).toHaveStyle({ "--review-sidebar-width": width }));
+    } finally {
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+      window.localStorage.removeItem("medpage.reviewPanelWidth");
     }
   });
 

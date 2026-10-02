@@ -7,20 +7,29 @@ import { clampReviewSidebarWidth } from "../utils/reviewLayout.js";
 const KEYBOARD_STEP = 16;
 const KEYBOARD_STEP_LARGE = 64;
 
+// Posição pela largura, não pela variável do layout: ela não é herdada (ver global.css), então não chega aqui.
+function separatorLeft(width) {
+  return `${width - 2}px`;
+}
+
 // Divisória entre o painel de diagnósticos e o ECG (padrão Window Splitter do WAI-ARIA APG): arrastar ajusta a largura
 // do painel entre `minimum` e `maximum`; com o foco nela, as setas movem 16px (64px com Shift) e Home/End levam ao
 // mínimo e ao máximo. Em repouso só existe o filete de 1px do painel (Apple HIG: divisória fina); passando o ponteiro,
 // em foco pelo teclado ou arrastando, uma linha de 3px na cor do foco marca o que se move.
 // O arrasto escreve a largura direto na variável CSS do layout, quadro a quadro, sem renderizar a página: o painel e o
 // ECG reagem pelo CSS, e a largura só vai para o estado (`onChange`) ao soltar.
-// A área de pegar tem 10px: 2px sobre o painel (a barra de rolagem dele fica logo antes do filete) e 8px sobre a
-// margem de 12px da coluna do ECG.
-// Posição pela largura, não pela variável do layout: ela não é herdada (ver global.css), então não chega aqui.
-function separatorLeft(width) {
-  return `${width - 2}px`;
-}
-
-export default function ReviewPanelSeparator({ controlsId, layoutRef, maximum, minimum, onChange, width }) {
+// Clique duplo volta à largura automática (`onChange(null)`), como nos painéis do GitHub (Primer) e no
+// react-resizable-panels. A área de pegar tem 10px: 2px sobre o painel (a barra de rolagem dele fica logo antes do
+// filete) e 8px sobre a margem de 12px da coluna do ECG.
+export default function ReviewPanelSeparator({
+  controlsId,
+  isAutomatic,
+  layoutRef,
+  maximum,
+  minimum,
+  onChange,
+  width,
+}) {
   const separatorRef = useRef(null);
   const dragRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -108,8 +117,12 @@ export default function ReviewPanelSeparator({ controlsId, layoutRef, maximum, m
       aria-valuemax={maximum}
       aria-valuemin={minimum}
       aria-valuenow={width}
+      aria-valuetext={isAutomatic ? `${width} pixels, automática` : `${width} pixels`}
       className="group/separator absolute inset-y-0 z-20 w-2.5 cursor-col-resize touch-none outline-none select-none"
       data-dragging={isDragging ? "" : undefined}
+      onDoubleClick={() => {
+        if (!isAutomatic) onChange(null);
+      }}
       onKeyDown={handleKeyDown}
       onLostPointerCapture={finishDrag}
       onPointerCancel={finishDrag}
