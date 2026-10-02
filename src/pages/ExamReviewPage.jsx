@@ -1298,10 +1298,14 @@ export default function ExamReviewPage() {
       ref={examCardRef}
       size="sm"
     >
+      {/* "Exame" sobre o código com a mesma anatomia de cada dado clínico (rótulo `text-xs`, 2px, valor `text-sm`, nas
+          alturas de linha dos tokens): as linhas de base batem com as dos dados em todo tamanho de texto. Com `leading-4`
+          e `leading-5` fixos (até 2026-10-02), "Exame" ficava 1/2/4,5px abaixo dos rótulos (Padrão/Grande/Muito grande)
+          e, no Muito grande, a letra de 16px ocupava uma linha de 16px. */}
       <div className="flex shrink-0 items-center gap-2.5">
-        <h1 className="flex flex-col text-sm leading-5 font-semibold tabular-nums">
-          <span className="text-xs leading-4 font-medium text-muted-foreground">Exame</span>{" "}
-          {exam.exam_code}
+        <h1 className="flex flex-col text-sm font-semibold tabular-nums">
+          <span className="text-xs font-medium text-muted-foreground">Exame</span>{" "}
+          <span className="mt-0.5">{exam.exam_code}</span>
         </h1>
         <span className="sr-only">Status atual:</span>
         <StatusBadge
