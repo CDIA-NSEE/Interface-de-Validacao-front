@@ -162,6 +162,15 @@ const REVIEW_SIDEBAR_MAX_CAP = {
 // embaixo: 8 + 48 + 8 de vão + 8 = 72px em volta do papel, contra 40 + 62 = 102 com a barra normal. Na janela acima o
 // mínimo vai de 401 para 349px e o ECG, de 1045×599 para 1097×629.
 const COMPACT_EXAM_CARD_HEIGHT = 48;
+// Painel mais estreito em que a maior palavra dos títulos do banco ("ELETROCARDIOGRAMA") cabe inteira na coluna do
+// título, mais 4px de folga — medido em 2026-10-02 nos 20 exames: 282px basta no Padrão, 298 no Grande e 320 no Muito
+// grande. Mais estreito, `break-words` partia a palavra no meio ("ELETROCARDIOG|RAMA"); a hifenização do navegador não
+// vale para pt-BR no Chrome. Vale para a divisória e para a largura automática nas janelas de 921 a 1002px.
+const REVIEW_SIDEBAR_WORD_FIT_MIN = {
+  default: 282,
+  large: 302,
+  "extra-large": 324,
+};
 const COMPACT_VIEWER_VERTICAL_CHROME = 24 + COMPACT_EXAM_CARD_HEIGHT;
 
 // "Dados do exame" abre como o médico deixou no último exame (padrão: fechado): quem o quer aberto não precisa
@@ -262,22 +271,46 @@ function useDelayedFlag(value, delayMs) {
   return value && hasSettled;
 }
 
-// Altura do cartão do exame numa linha só, mesmo quando ele está em duas: o respiro vertical mais o maior entre a
-// identificação, um par rótulo/valor dos dados clínicos e a ação principal.
-function measureSingleRowCardHeight(card) {
-  if (!card) return 0;
+// Altura do cartão do exame na forma normal em uma linha e em duas, medida em qualquer das duas formas: o respiro
+// vertical mais o maior entre a identificação, um par rótulo/valor dos dados clínicos e a ação principal (uma linha)
+// e, para saber em que largura ele passa a duas linhas, a letra e o respiro lateral dele. Em duas linhas: identificação
+// e ação na 1ª, os dados na 2ª.
+function measureNormalExamCard(card) {
+  if (!card) return { fontSize: 0, full: 0, paddingX: 0, singleRow: 0, twoRow: 0 };
   const style = window.getComputedStyle(card);
-  const verticalChrome = ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"].reduce(
-    (total, property) => total + (parseFloat(style[property]) || 0),
-    0,
-  );
+  const sum = (properties) => properties.reduce((total, property) => total + (parseFloat(style[property]) || 0), 0);
+  const verticalChrome = sum(["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"]);
   const clinicalData = card.querySelector('[data-testid="clinical-data"]');
-  const rowParts = [
-    card.querySelector("h1")?.parentElement,
-    clinicalData?.querySelector("dl > div") ?? clinicalData,
-    card.lastElementChild,
-  ];
-  return Math.round(verticalChrome + Math.max(0, ...rowParts.map((element) => element?.offsetHeight || 0)));
+  const identityHeight = card.querySelector("h1")?.parentElement?.offsetHeight || 0;
+  const dataHeight = (clinicalData?.querySelector("dl > div") ?? clinicalData)?.offsetHeight || 0;
+  const actionHeight = card.lastElementChild?.offsetHeight || 0;
+  return {
+    fontSize: parseFloat(style.fontSize) || 0,
+    full: card.offsetHeight || 0,
+    paddingX: sum(["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]),
+    singleRow: Math.round(verticalChrome + Math.max(identityHeight, dataHeight, actionHeight)),
+    twoRow: Math.round(
+      verticalChrome + Math.max(identityHeight, actionHeight) + (parseFloat(style.rowGap) || 0) + dataHeight,
+    ),
+  };
+}
+
+// Limite de conteúdo em que o cartão do exame passa a duas linhas — o mesmo das container queries do cartão (ver o
+// comentário de `examCard`): `calc(20.5rem+43.25em)` no Padrão e `calc(16.8125rem+42.5em)` no texto maior, em `em` da
+// letra do cartão. Sem medida (jsdom), nunca.
+function getExamCardTwoRowLimit(textSize, cardFontSize) {
+  const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  if (!cardFontSize) return Infinity;
+  return textSize === "default" ? 20.5 * rem + 43.25 * cardFontSize : 16.8125 * rem + 42.5 * cardFontSize;
+}
+
+// Barra compacta numa largura de painel: só quando, com a barra normal — numa linha até `twoRowFrom` e em duas a partir
+// dela —, o ECG já estaria limitado pela altura; aí a altura que a barra compacta libera vira ECG. Contar só a barra em
+// uma linha falhava no texto Muito grande a 1366×768, onde ela já tem duas no painel estreito: a barra compacta não
+// entrava e o "Estreito" não aumentava o ECG.
+function isExamBarCompactAt(layout, width) {
+  if (!layout || width == null) return false;
+  return width < (width >= layout.twoRowFrom ? layout.twoRowCompactBelow : layout.singleRowCompactBelow);
 }
 
 function useCompactReviewLayout() {
@@ -308,11 +341,12 @@ export default function ExamReviewPage() {
   const { textSize } = useTextSize();
   const sidebarFloorCap = REVIEW_SIDEBAR_FLOOR_CAP[textSize] ?? REVIEW_SIDEBAR_FLOOR_CAP.default;
   const sidebarMaximumCap = REVIEW_SIDEBAR_MAX_CAP[textSize] ?? REVIEW_SIDEBAR_MAX_CAP.default;
+  const sidebarWordFitMin = REVIEW_SIDEBAR_WORD_FIT_MIN[textSize] ?? REVIEW_SIDEBAR_WORD_FIT_MIN.default;
   const reviewLayoutRef = useRef(null);
   const examCardRef = useRef(null);
   // Alturas do cartão do exame na forma normal, guardadas da última medida sem a barra compacta: com ela, a largura
   // automática e o ponto em que a barra compacta entra seguem contando a barra normal (senão o ponto mudaria ao entrar).
-  const normalExamCardHeightRef = useRef({ full: 0, singleRow: 0 });
+  const normalExamCardHeightRef = useRef(measureNormalExamCard(null));
   const sidebarTriggerRef = useRef(null);
   const shouldRestoreSidebarFocusRef = useRef(true);
   const validationWorkspaceRef = useRef(null);
@@ -364,7 +398,7 @@ export default function ExamReviewPage() {
   const [userSidebarWidth, setUserSidebarWidth] = useState(readReviewPanelWidth);
   const sidebarWidth = resolveSidebarWidth(sidebarLayout, userSidebarWidth);
   // Mais estreito que o ponto em que o ECG para de crescer com a barra normal, a barra do exame fica compacta.
-  const isExamBarCompact = Boolean(sidebarLayout && sidebarWidth < sidebarLayout.compactBelow);
+  const isExamBarCompact = isExamBarCompactAt(sidebarLayout, sidebarWidth);
   const [isPanelWidthOpen, setIsPanelWidthOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -510,20 +544,19 @@ export default function ExamReviewPage() {
       // Altura medida, não um número fixo: numa coluna estreita o cartão do exame quebra em duas linhas.
       const examCard = examCardRef.current;
       if (!layout.hasAttribute("data-compact-bar")) {
-        normalExamCardHeightRef.current = {
-          full: examCard?.offsetHeight || 0,
-          singleRow: measureSingleRowCardHeight(examCard),
-        };
+        normalExamCardHeightRef.current = measureNormalExamCard(examCard);
       }
-      const { full: examCardHeight, singleRow: singleRowCardHeight } = normalExamCardHeightRef.current;
+      const normalCard = normalExamCardHeightRef.current;
+      const { full: examCardHeight, singleRow: singleRowCardHeight } = normalCard;
       const automaticWidth = getReviewSidebarWidth({
         imageAspectRatio,
         layoutHeight,
         layoutWidth,
         maximumSidebarRatio: usesIntermediateLayout ? 0.42 : 0.32,
-        minimumSidebarWidth: usesIntermediateLayout
-          ? 300
-          : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), sidebarFloorCap),
+        minimumSidebarWidth: Math.max(
+          sidebarWordFitMin,
+          usesIntermediateLayout ? 300 : Math.min(Math.round(layoutWidth * REVIEW_SIDEBAR_MIN_RATIO), sidebarFloorCap),
+        ),
         // O que cerca o papel: 12px de cada lado; 16px em cima e embaixo + o cartão do exame + 8px de vão. As observações
         // saíram de baixo do ECG para o fim do painel (eram 8px de vão + 98px).
         viewerHorizontalChrome: 24,
@@ -532,6 +565,7 @@ export default function ExamReviewPage() {
       // Os limites da divisória contam o cartão numa linha só: é como ele fica no lado estreito do painel, onde o ECG
       // deixa de crescer. Com a altura atual, um painel largo (cartão em duas linhas) subia o mínimo até soltar.
       const sidebarBoundsInput = {
+        absoluteMinimum: sidebarWordFitMin,
         automaticWidth,
         imageAspectRatio,
         layoutHeight,
@@ -541,20 +575,27 @@ export default function ExamReviewPage() {
       };
       const bounds = getReviewSidebarBounds({ ...sidebarBoundsInput, viewerVerticalChrome: 40 + singleRowCardHeight });
       // Com a barra compacta o ECG ainda cresce abaixo do mínimo da barra normal: a divisória vai até onde ele para com
-      // ela, e a barra compacta entra abaixo do mínimo de antes (`compactBelow`).
+      // ela, e a barra compacta entra onde a barra normal já limitaria o ECG pela altura (ver isExamBarCompactAt).
       const compactMinimum = Math.min(
         bounds.minimum,
         getReviewSidebarBounds({ ...sidebarBoundsInput, viewerVerticalChrome: COMPACT_VIEWER_VERTICAL_CHROME }).minimum,
       );
-      const next = { automaticWidth, compactBelow: bounds.minimum, maximum: bounds.maximum, minimum: compactMinimum };
+      const heightLimitedWidth = (cardHeight) =>
+        Math.round(layoutWidth - ((layoutHeight - 40 - cardHeight) * imageAspectRatio + 24));
+      const twoRowFrom = Math.round(
+        layoutWidth - 24 - normalCard.paddingX - getExamCardTwoRowLimit(textSize, normalCard.fontSize),
+      );
+      const next = {
+        automaticWidth,
+        maximum: bounds.maximum,
+        minimum: compactMinimum,
+        singleRowCompactBelow: heightLimitedWidth(singleRowCardHeight),
+        twoRowCompactBelow: heightLimitedWidth(normalCard.twoRow),
+        twoRowFrom: Number.isFinite(twoRowFrom) ? twoRowFrom : Infinity,
+      };
 
       setSidebarLayout((current) =>
-        current?.automaticWidth === next.automaticWidth &&
-        current.compactBelow === next.compactBelow &&
-        current.minimum === next.minimum &&
-        current.maximum === next.maximum
-          ? current
-          : next,
+        current && Object.keys(next).every((key) => current[key] === next[key]) ? current : next,
       );
     }
 
@@ -569,7 +610,7 @@ export default function ExamReviewPage() {
     observer.observe(layout);
     if (examCardRef.current) observer.observe(examCardRef.current);
     return () => observer.disconnect();
-  }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap, sidebarMaximumCap]);
+  }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap, sidebarMaximumCap, sidebarWordFitMin, textSize]);
 
   // `null` volta à largura automática (clique duplo na divisória, "Automático" no menu).
   const handleSidebarWidthChange = useCallback((width) => {
@@ -1417,7 +1458,7 @@ export default function ExamReviewPage() {
             {!isCompactLayout && sidebarLayout ? (
               <ReviewPanelSeparator
                 controlsId="review-panel"
-                compactBelow={sidebarLayout.compactBelow}
+                isCompactAt={(width) => isExamBarCompactAt(sidebarLayout, width)}
                 isAutomatic={userSidebarWidth === null}
                 layoutRef={reviewLayoutRef}
                 maximum={sidebarLayout.maximum}

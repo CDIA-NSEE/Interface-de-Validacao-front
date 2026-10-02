@@ -171,3 +171,20 @@ test("keeps the ECG at least as wide as the sidebar and the automatic width insi
   assert.equal(clampReviewSidebarWidth(700.4, { maximum: 624, minimum: 282 }), 624);
   assert.equal(clampReviewSidebarWidth(500.4, { maximum: 624, minimum: 282 }), 500);
 });
+
+test("raises the absolute minimum when a larger text size needs it to keep words whole", () => {
+  // 1920×1080 no Muito grande: o ECG continua limitado pela largura, e o mínimo vem da palavra mais longa (324px).
+  assert.deepEqual(
+    getReviewSidebarBounds({
+      absoluteMinimum: 324,
+      automaticWidth: 443,
+      imageAspectRatio: DEFAULT_ECG_ASPECT_RATIO,
+      layoutHeight: 1080,
+      layoutWidth: 1856,
+      maximumSidebarCap: 764,
+      viewerHorizontalChrome: 24,
+      viewerVerticalChrome: 105,
+    }),
+    { maximum: 764, minimum: 324 },
+  );
+});

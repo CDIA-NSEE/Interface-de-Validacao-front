@@ -31,11 +31,13 @@ export function getReviewSidebarWidth({
 // ser limitado pela altura — dali para baixo encolher o painel só abriria faixas vazias ao lado do traçado (342px a
 // 1536×730). Máximo onde o título mais longo do banco cabe numa linha (`maximumSidebarCap`; mais largo, o painel só
 // ganha vazio), e nunca mais que metade da área: o ECG não fica menor que o painel. A largura automática fica sempre
-// dentro dos limites (numa tela ultralarga ela passa do teto).
+// dentro dos limites (numa tela ultralarga ela passa do teto). Com o texto maior o mínimo absoluto sobe
+// (`absoluteMinimum`, por tamanho de texto em ExamReviewPage): abaixo dele uma palavra de título não cabe na coluna e se parte.
 export const REVIEW_SIDEBAR_USER_MIN = 282;
 const REVIEW_SIDEBAR_USER_MAX_RATIO = 0.5;
 
 export function getReviewSidebarBounds({
+  absoluteMinimum = REVIEW_SIDEBAR_USER_MIN,
   automaticWidth,
   imageAspectRatio,
   layoutHeight,
@@ -48,7 +50,7 @@ export function getReviewSidebarBounds({
   const heightLimitedSidebarWidth = layoutWidth - (imageHeight * imageAspectRatio + viewerHorizontalChrome);
   const minimum = Math.min(
     automaticWidth,
-    Math.round(Math.max(REVIEW_SIDEBAR_USER_MIN, heightLimitedSidebarWidth)),
+    Math.round(Math.max(absoluteMinimum, heightLimitedSidebarWidth)),
   );
   const maximum = Math.max(
     automaticWidth,
