@@ -632,6 +632,10 @@ describe("ExamReviewPage", () => {
       "Salvar observações ou justificativaCtrl+Enter",
     );
     expect(shortcuts).toHaveTextContent("Ocultar ou mostrar marcaçõesV");
+    expect(screen.getByRole("region", { name: "Divisória do painel" })).toHaveTextContent(
+      "Estreitar ou alargar o painel← →",
+    );
+    expect(screen.getByRole("region", { name: "Divisória do painel" })).toHaveTextContent("Painel na largura mínima ou máximaHome/End");
   });
 
   it("abre pelo menu lateral o tamanho do texto, no grupo de aparência, e troca na hora", async () => {
