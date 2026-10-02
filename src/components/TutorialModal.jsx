@@ -62,8 +62,8 @@ export default function TutorialModal({ isOpen, onClose }) {
         {/* Dica fora dos passos: ajustar o painel não é parte da revisão, mas sem ela a divisória só se descobre pelo
             cursor ao passar sobre o filete. */}
         <p className="text-sm text-muted-foreground">
-          Na revisão, arraste a divisória entre o painel e o ECG para ajustar a largura do painel; clique duplo nela
-          volta à largura automática.
+          Na revisão, arraste a divisória entre o painel e o ECG para ajustar a largura do painel (ou escolha em
+          "Largura do painel", no menu); clique duplo nela volta à largura automática.
         </p>
       </DialogContent>
     </Dialog>

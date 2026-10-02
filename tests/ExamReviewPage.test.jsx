@@ -276,6 +276,52 @@ describe("ExamReviewPage", () => {
     }
   });
 
+  it("ajusta a largura do painel pelo menu lateral, sem arrastar", async () => {
+    const user = userEvent.setup();
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1080);
+    stubViewport(false);
+
+    try {
+      const { container } = render(<ExamReviewPage />);
+      await screen.findByRole("button", { name: "Concordo" });
+      const reviewLayout = container.querySelector("main");
+      const separator = await screen.findByRole("separator", { name: "Largura do painel de diagnósticos" });
+      // Uma largura ajustada na divisória fora do mínimo e do máximo não marca nenhuma das três opções.
+      fireEvent.keyDown(separator, { key: "ArrowRight" });
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "430px" });
+
+      // No grupo de aparência, entre o tamanho do texto e o tema.
+      screen.getByRole("button", { name: "Largura do painel" }).focus();
+      const expandedNavigation = await screen.findByRole("dialog", { name: "Revisão de ECG" });
+      const panelWidthItem = expandedNavigation.querySelector('[data-navigation-item="panel-width"]');
+      expect(panelWidthItem.previousElementSibling).toHaveAttribute("data-navigation-item", "text-size");
+      expect(panelWidthItem.nextElementSibling).toHaveAttribute("data-navigation-item", "theme");
+      await user.click(within(panelWidthItem).getByRole("button", { name: "Largura do painel" }));
+
+      const dialog = await screen.findByRole("dialog", { name: "Largura do painel" });
+      for (const name of ["Estreito", "Automático", "Largo"]) {
+        expect(within(dialog).getByRole("radio", { name })).not.toBeChecked();
+      }
+      expect(within(dialog).getByText("Agora: largura ajustada na divisória.")).toBeVisible();
+      await user.click(within(dialog).getByRole("radio", { name: "Largo" }));
+      expect(within(dialog).getByRole("radio", { name: "Largo" })).toBeChecked();
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "624px" });
+      expect(window.localStorage.getItem("medpage.reviewPanelWidth")).toBe("wide");
+      await user.click(within(dialog).getByRole("radio", { name: "Estreito" }));
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "282px" });
+      expect(within(dialog).queryByText("Agora: largura ajustada na divisória.")).not.toBeInTheDocument();
+      await user.click(within(dialog).getByRole("radio", { name: "Automático" }));
+      expect(reviewLayout).toHaveStyle({ "--review-sidebar-width": "414px" });
+      expect(within(dialog).getByRole("radio", { name: "Automático" })).toBeChecked();
+      expect(window.localStorage.getItem("medpage.reviewPanelWidth")).toBeNull();
+    } finally {
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+      window.localStorage.removeItem("medpage.reviewPanelWidth");
+    }
+  });
+
   it.each([
     { stored: "500", width: "500px" },
     { stored: "900", width: "624px" },
@@ -479,7 +525,7 @@ describe("ExamReviewPage", () => {
       [...collapsedNavigation.querySelectorAll("[data-navigation-item]")].map(
         (item) => item.dataset.navigationItem,
       ),
-    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "text-size", "theme", "account", "logout"]);
+    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "text-size", "panel-width", "theme", "account", "logout"]);
     // Sem dica no trilho: o menu abre com os nomes, e a dica só piscava antes de ser coberta.
     expect(collapsedNavigation.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
     // "Dra." é título, não nome: as iniciais de "Dra. Ana" são "A".
@@ -520,7 +566,7 @@ describe("ExamReviewPage", () => {
       [...expandedNavigation.querySelectorAll("[data-navigation-item]")].map(
         (item) => item.dataset.navigationItem,
       ),
-    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "text-size", "theme", "account", "logout"]);
+    ).toEqual(["brand", "home", "tutorial", "shortcuts", "support", "text-size", "panel-width", "theme", "account", "logout"]);
     const expandedBrand = expandedNavigation.querySelector('[data-navigation-item="brand"]');
     expect(expandedBrand).toHaveAttribute("aria-hidden", "true");
     expect(expandedBrand.tagName).toBe("DIV");
@@ -649,7 +695,7 @@ describe("ExamReviewPage", () => {
     // Ajuda e aparência separadas por uma linha: Contato │ Tamanho do texto, Modo escuro.
     const textSizeItem = expandedNavigation.querySelector('[data-navigation-item="text-size"]');
     expect(textSizeItem.previousElementSibling).toHaveAttribute("data-slot", "separator");
-    expect(textSizeItem.nextElementSibling).toHaveAttribute("data-navigation-item", "theme");
+    expect(textSizeItem.nextElementSibling).toHaveAttribute("data-navigation-item", "panel-width");
     await user.click(within(textSizeItem).getByRole("button", { name: "Tamanho do texto" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Tamanho do texto" });

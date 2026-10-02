@@ -13,6 +13,7 @@ import EmptyState from "../components/EmptyState.jsx";
 import GeneralObservations from "../components/GeneralObservations.jsx";
 import KeyboardShortcutsModal from "../components/KeyboardShortcutsModal.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import PanelWidthModal from "../components/PanelWidthModal.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
 import ReviewPanelSeparator from "../components/ReviewPanelSeparator.jsx";
@@ -175,18 +176,40 @@ function storeExamDataOpen(open) {
   }
 }
 
-// Largura do painel escolhida na divisória, guardada como o "Dados do exame": vale para os próximos exames e sessões
-// deste navegador, sempre dentro dos limites da tela atual. Sem valor (ou depois do clique duplo na divisória), a
-// largura volta a ser a automática.
+// Largura do painel escolhida na divisória (px) ou no menu ("narrow"/"wide": o mínimo e o máximo de cada tela),
+// guardada como o "Dados do exame": vale para os próximos exames e sessões deste navegador, sempre dentro dos limites
+// da tela atual. Sem valor (ou depois do clique duplo na divisória, ou de "Automático" no menu), a largura volta a ser
+// a automática.
 const REVIEW_PANEL_WIDTH_KEY = "medpage.reviewPanelWidth";
+const PANEL_WIDTH_PRESETS = new Set(["narrow", "wide"]);
 
 function readReviewPanelWidth() {
   try {
-    const width = Number.parseInt(window.localStorage.getItem(REVIEW_PANEL_WIDTH_KEY), 10);
+    const stored = window.localStorage.getItem(REVIEW_PANEL_WIDTH_KEY);
+    if (PANEL_WIDTH_PRESETS.has(stored)) return stored;
+    const width = Number.parseInt(stored, 10);
     return Number.isFinite(width) && width > 0 ? width : null;
   } catch {
     return null;
   }
+}
+
+function resolveSidebarWidth(layout, choice) {
+  if (!layout) return null;
+  if (choice === "narrow") return layout.minimum;
+  if (choice === "wide") return layout.maximum;
+  if (typeof choice === "number") return clampReviewSidebarWidth(choice, layout);
+  return layout.automaticWidth;
+}
+
+// Opção do menu "Largura do painel" que corresponde à largura atual; `null` quando ela foi ajustada na divisória e não
+// cai no mínimo nem no máximo.
+function getPanelWidthMode(layout, choice, width) {
+  if (choice === null) return "automatic";
+  if (PANEL_WIDTH_PRESETS.has(choice)) return choice;
+  if (layout && width === layout.minimum) return "narrow";
+  if (layout && width === layout.maximum) return "wide";
+  return null;
 }
 
 function storeReviewPanelWidth(width) {
@@ -307,15 +330,12 @@ export default function ExamReviewPage() {
   const ecgImageRequestRef = useRef(null);
   const loadRequestRef = useRef(0);
   // Largura automática do painel (o ECG inteiro na altura) e os limites da divisória, medidos no layout; `null` até a
-  // primeira medida. `userSidebarWidth` é a largura que o médico escolheu na divisória (`null` = automática), sempre
-  // aplicada dentro dos limites do layout atual.
+  // primeira medida. `userSidebarWidth` é a largura que o médico escolheu na divisória (px) ou no menu ("narrow"/
+  // "wide"); `null` = automática. Vale sempre dentro dos limites do layout atual.
   const [sidebarLayout, setSidebarLayout] = useState(null);
   const [userSidebarWidth, setUserSidebarWidth] = useState(readReviewPanelWidth);
-  const sidebarWidth = sidebarLayout
-    ? userSidebarWidth === null
-      ? sidebarLayout.automaticWidth
-      : clampReviewSidebarWidth(userSidebarWidth, sidebarLayout)
-    : null;
+  const sidebarWidth = resolveSidebarWidth(sidebarLayout, userSidebarWidth);
+  const [isPanelWidthOpen, setIsPanelWidthOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const clearNotesSaveTimer = useCallback(() => {
@@ -507,11 +527,16 @@ export default function ExamReviewPage() {
     return () => observer.disconnect();
   }, [imageAspectRatio, isCompactLayout, isLoading, sidebarFloorCap, sidebarMaximumCap]);
 
-  // `null` volta à largura automática (clique duplo na divisória).
+  // `null` volta à largura automática (clique duplo na divisória, "Automático" no menu).
   const handleSidebarWidthChange = useCallback((width) => {
     setUserSidebarWidth(width);
     storeReviewPanelWidth(width);
   }, []);
+
+  const handlePanelWidthModeChange = useCallback(
+    (mode) => handleSidebarWidthChange(mode === "automatic" ? null : mode),
+    [handleSidebarWidthChange],
+  );
 
   const handleDiagnosisReviewDraftChange = useCallback((diagnosisId, draft) => {
     const key = String(diagnosisId);
@@ -1303,6 +1328,7 @@ export default function ExamReviewPage() {
           onHome={handleReturnHome}
           onLogout={handleLogout}
           onOpenChange={handleSidebarOpenChange}
+          onPanelWidth={isCompactLayout ? undefined : () => setIsPanelWidthOpen(true)}
           onShortcuts={() => setIsShortcutsOpen(true)}
           onSupport={openSupport}
           onTextSize={() => setIsTextSizeOpen(true)}
@@ -1414,6 +1440,12 @@ export default function ExamReviewPage() {
         <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
         <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
         <TextSizeModal isOpen={isTextSizeOpen} onClose={() => setIsTextSizeOpen(false)} />
+        <PanelWidthModal
+          isOpen={isPanelWidthOpen && !isCompactLayout}
+          onClose={() => setIsPanelWidthOpen(false)}
+          onValueChange={handlePanelWidthModeChange}
+          value={getPanelWidthMode(sidebarLayout, userSidebarWidth, sidebarWidth)}
+        />
         <UnsavedChangesModal
           intent={exitIntent}
           isOpen={isExitConfirmOpen}

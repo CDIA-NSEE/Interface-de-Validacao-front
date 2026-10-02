@@ -7,6 +7,7 @@ import {
   LifeBuoy,
   LogOut,
   Moon,
+  PanelLeft,
   Sun,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -199,6 +200,7 @@ function NavigationPanel({
   isDark,
   onHome,
   onLogout,
+  onPanelWidth,
   onShortcuts,
   onSupport,
   onTextSize,
@@ -261,6 +263,18 @@ function NavigationPanel({
             onClick={onTextSize}
             pointerItemKey={pointerItemKey}
           />
+          {/* Largura do painel sem arrastar a divisória (WCAG 2.5.7). Só com o painel lateral: na gaveta (< 768px) não há
+              divisória. */}
+          {onPanelWidth ? (
+            <NavigationAction
+              compact={compact}
+              icon={PanelLeft}
+              itemKey="panel-width"
+              label="Largura do painel"
+              onClick={onPanelWidth}
+              pointerItemKey={pointerItemKey}
+            />
+          ) : null}
           {/* Nome e ícone do modo para onde o clique leva (lua no claro, sol no escuro), como no cabeçalho do dashboard: o
               estado atual já está na tela inteira. O leitor de tela, sem essa pista, ouve o verbo ("Ativar modo escuro"). */}
           <NavigationAction
@@ -298,6 +312,7 @@ export default function ValidationSidebar({
   onHome,
   onLogout,
   onOpenChange,
+  onPanelWidth,
   onShortcuts,
   onSupport,
   onTextSize,
@@ -507,6 +522,7 @@ export default function ValidationSidebar({
           isDark={isDark}
           onHome={actFromRail(onHome)}
           onLogout={openMenuFromRail}
+          onPanelWidth={onPanelWidth ? actFromRail(onPanelWidth) : undefined}
           onShortcuts={actFromRail(onShortcuts)}
           onSupport={actFromRail(onSupport)}
           onTextSize={actFromRail(onTextSize)}
@@ -538,6 +554,7 @@ export default function ValidationSidebar({
             isDark={isDark}
             onHome={() => closeThen(onHome)}
             onLogout={confirmLogoutFromMenu}
+            onPanelWidth={onPanelWidth ? () => closeThen(onPanelWidth) : undefined}
             onShortcuts={() => closeThen(onShortcuts)}
             onSupport={() => closeThen(onSupport)}
             onTextSize={() => closeThen(onTextSize)}
