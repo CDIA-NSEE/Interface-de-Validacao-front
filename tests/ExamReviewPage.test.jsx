@@ -1004,7 +1004,10 @@ describe("ExamReviewPage", () => {
     );
     expect(screen.getByText("Nascimento")).toBeVisible();
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
-    expect(clinicalGrid).toHaveClass("flex", "flex-wrap");
+    // Colunas fixas (cada dado no mesmo lugar em todo exame), num contêiner próprio para a grade de 3×2 quando estreito.
+    expect(clinicalGrid).toHaveClass("grid");
+    expect(clinicalGrid.className).toContain("grid-cols-[minmax(6.75em,max-content)_");
+    expect(clinicalGrid.parentElement).toHaveClass("@container/clinical-data");
     expect(clinicalGrid).not.toHaveClass("bg-muted/40");
     expect(clinicalGrid.children).toHaveLength(6);
     [...clinicalGrid.children].forEach((clinicalItem) => {
@@ -1108,6 +1111,29 @@ describe("ExamReviewPage", () => {
       expect(value).toHaveTextContent("—não informado");
       expect(within(value).getByText("—")).toHaveAttribute("aria-hidden", "true");
       expect(within(value).getByText("não informado")).toHaveClass("sr-only");
+    });
+  });
+
+  it("mantém os seis dados no lugar, com traço, quando idade, sexo ou nascimento faltam", async () => {
+    getExamById.mockResolvedValue({
+      ...exam,
+      patient: { age: null, birth_date: null, bmi: null, height: null, sex: "", weight: 91 },
+    });
+    stubViewport(false);
+    render(<ExamReviewPage />);
+
+    expect(await screen.findByText("91 kg")).toBeVisible();
+    const clinicalGrid = screen.getByText("Nascimento").closest("dl");
+    expect([...clinicalGrid.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Idade",
+      "Sexo",
+      "Nascimento",
+      "Peso",
+      "Altura",
+      "IMC",
+    ]);
+    ["Idade", "Sexo", "Nascimento"].forEach((label) => {
+      expect(screen.getByText(label).nextElementSibling).toHaveTextContent("—não informado");
     });
   });
 

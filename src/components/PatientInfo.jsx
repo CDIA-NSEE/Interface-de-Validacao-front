@@ -14,10 +14,19 @@ function hasValue(value) {
   return value !== null && value !== undefined && value !== "";
 }
 
-// Peso, altura e IMC ficam sempre na linha, com "—" quando faltam (em 2026-10-01, 15 de 20 exames vinham sem eles): o
-// biotipo é, com idade e sexo, o que se considera na leitura do traçado (Diretriz SBC 2022, §1.1; muda a voltagem do
-// QRS), e omitir em silêncio não dizia se faltou o dado ou se a tela não o mostra.
-const ALWAYS_SHOWN = new Set(["Peso", "Altura", "IMC"]);
+// Todos os dados ficam sempre na linha, com "—" quando faltam: peso, altura e IMC desde 2026-10-01 (15 de 20 exames
+// vinham sem eles; o biotipo é, com idade e sexo, o que se considera na leitura do traçado — Diretriz SBC 2022, §1.1 —, e
+// omitir em silêncio não dizia se faltou o dado ou se a tela não o mostra) e idade, sexo e nascimento desde 2026-10-02,
+// para cada dado ter um lugar fixo (ver COLUMN_TEMPLATE).
+
+// Colunas de largura mínima fixa, na ordem dos dados: cada um cai no mesmo lugar em todo exame — antes, numa linha
+// corrida, "Sexo" andava 44px do exame 13 para o 16 conforme a idade era "calculada" ou não. Mínimos em `em` da letra
+// dos valores (crescem com o tamanho do texto), pelo maior conteúdo de cada coluna nos 20 exames do banco: "Idade
+// (calculada)", "Masculino", "11/03/1961", "107 kg", "174 cm", "35,3 kg/m²". Um valor mais longo alarga a coluna em vez
+// de ser cortado. Estreito (menos que as seis colunas), vira uma grade de 3×2 — Idade, Sexo, Nascimento sobre Peso,
+// Altura, IMC —, em vez de quebrar a linha onde der e deixar um dado sozinho embaixo.
+const COLUMN_TEMPLATE =
+  "grid-cols-[minmax(6.75em,max-content)_minmax(4.5em,max-content)_minmax(5em,max-content)_minmax(3.75em,max-content)_minmax(3.5em,max-content)_minmax(4.75em,max-content)] @max-[calc(28.25em+7.5rem)]/clinical-data:grid-cols-[minmax(6.75em,max-content)_minmax(4.5em,max-content)_minmax(5em,max-content)]";
 
 function formatHeight(height) {
   const number = toNumber(height);
@@ -38,40 +47,41 @@ export default function PatientInfo({ patient }) {
     ["IMC", patient?.bmi ? `${formatDecimal(patient.bmi)} kg/m²` : null],
   ];
 
-  const visibleRows = rows.filter(([label, value]) => hasValue(value) || ALWAYS_SHOWN.has(label));
-
   // Sem nenhum dado, uma frase de status (como a lista vazia dos adicionais): sem ela o espaço ficava vazio, sem dizer
   // se faltou dado ou se não carregou.
   if (!rows.some(([, value]) => hasValue(value))) {
     return <p className="text-sm text-muted-foreground">Nenhum dado clínico neste exame.</p>;
   }
 
-  // Pares rótulo/valor numa linha só, no cartão do exame sobre o ECG (até 2026-09-30, numa grade de 3 colunas num cartão
-  // próprio no fim do painel, fora da vista a 1536×730). Sem caixa por item: o cartão já agrupa. Valor em peso 400
-  // (body): é dado de leitura, abaixo do peso do código do exame.
+  // Pares rótulo/valor no cartão do exame sobre o ECG (até 2026-09-30, numa grade de 3 colunas num cartão próprio no fim
+  // do painel, fora da vista a 1536×730). Sem caixa por item: o cartão já agrupa. Valor em peso 400 (body): é dado de
+  // leitura, abaixo do peso do código do exame. O contêiner é o próprio bloco dos dados (a largura que sobra para eles
+  // no cartão), e a letra fica nele para o `em` da consulta ser o mesmo das colunas.
   return (
-    <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-      {visibleRows.map(([label, value, labelNote]) => (
-        <div className="min-w-0" key={label}>
-          <dt className="text-xs font-medium whitespace-nowrap text-muted-foreground">
-            {label}
-            {labelNote ? <span className="font-normal"> ({labelNote})</span> : null}
-          </dt>
-          <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums">
-            {hasValue(value) ? (
-              value
-            ) : (
-              // Traço em cinza: o valor presente (em preto) é o que salta. O leitor de tela ouve "não informado".
-              <>
-                <span aria-hidden="true" className="text-muted-foreground">
-                  —
-                </span>
-                <span className="sr-only">não informado</span>
-              </>
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <div className="@container/clinical-data text-sm">
+      <dl className={`grid gap-x-6 gap-y-2 ${COLUMN_TEMPLATE}`}>
+        {rows.map(([label, value, labelNote]) => (
+          <div className="min-w-0" key={label}>
+            <dt className="text-xs font-medium whitespace-nowrap text-muted-foreground">
+              {label}
+              {labelNote ? <span className="font-normal"> ({labelNote})</span> : null}
+            </dt>
+            <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums">
+              {hasValue(value) ? (
+                value
+              ) : (
+                // Traço em cinza: o valor presente (em preto) é o que salta. O leitor de tela ouve "não informado".
+                <>
+                  <span aria-hidden="true" className="text-muted-foreground">
+                    —
+                  </span>
+                  <span className="sr-only">não informado</span>
+                </>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
