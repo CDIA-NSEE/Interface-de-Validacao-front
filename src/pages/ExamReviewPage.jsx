@@ -1291,7 +1291,8 @@ export default function ExamReviewPage() {
   // não mudar de forma de um exame para o outro; desde 2026-10-02 os dados ficam em colunas fixas (PatientInfo) e todo
   // exame pede o mesmo numa linha: 848, 934 e 1020px de conteúdo (Padrão, Grande, Muito grande; medido), sob os limites
   // de 864, 949 e 1034px — a parte do texto cresce em em com o tamanho do texto. Mais estreito que as seis colunas, os
-  // dados viram uma grade de 3×2.
+  // dados viram uma grade de 3×2. No Padrão a barra tem a letra um passo acima do corpo (ver PatientInfo) e pede 918px:
+  // limite de 934px (`calc(20.5rem+43.25em)`); no Grande e no Muito grande segue no corpo, com os limites de antes.
   const examCard = (
     <Card
       className="@container/exam-card shrink-0 flex-row flex-wrap items-center gap-x-5 gap-y-2 py-2 pr-2 pl-3"
@@ -1299,13 +1300,14 @@ export default function ExamReviewPage() {
       ref={examCardRef}
       size="sm"
     >
-      {/* "Exame" sobre o código com a mesma anatomia de cada dado clínico (rótulo `text-xs`, 2px, valor `text-sm`, nas
-          alturas de linha dos tokens): as linhas de base batem com as dos dados em todo tamanho de texto. Com `leading-4`
+      {/* "Exame" sobre o código com a mesma anatomia de cada dado clínico (rótulo, 2px, valor — um passo acima do corpo
+          no Padrão, ver PatientInfo —, nas alturas de linha dos tokens): as linhas de base batem com as dos dados em todo
+          tamanho de texto. Com `leading-4`
           e `leading-5` fixos (até 2026-10-02), "Exame" ficava 1/2/4,5px abaixo dos rótulos (Padrão/Grande/Muito grande)
           e, no Muito grande, a letra de 16px ocupava uma linha de 16px. */}
       <div className="flex shrink-0 items-center gap-2.5">
-        <h1 className="flex flex-col text-sm font-semibold tabular-nums">
-          <span className="text-xs font-medium text-muted-foreground">Exame</span>{" "}
+        <h1 className="flex flex-col text-base font-semibold tabular-nums in-data-[text-size]:text-sm">
+          <span className="text-sm font-medium text-muted-foreground in-data-[text-size]:text-xs">Exame</span>{" "}
           <span className="mt-0.5">{exam.exam_code}</span>
         </h1>
         <span className="sr-only">Status atual:</span>
@@ -1315,8 +1317,8 @@ export default function ExamReviewPage() {
           reviewResult={exam.review_result}
         />
       </div>
-      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border @max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
-      <div className="min-w-0 flex-1 @max-[calc(16.8125rem+42.5em)]/exam-card:order-last @max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">
+      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:hidden in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
+      <div className="min-w-0 flex-1 not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:order-last not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:basis-full in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:order-last in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">
         <h2 className="sr-only">Dados clínicos</h2>
         <PatientInfo patient={exam.patient} />
       </div>
