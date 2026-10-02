@@ -312,6 +312,40 @@ describe("ExamReviewPage", () => {
     }
   });
 
+  it("deixa o Estreito indisponível quando ele não aumentaria o ECG", async () => {
+    // Janela larga e baixa (2330×700): a largura automática já é onde o ECG para de crescer, mesmo com a barra compacta.
+    window.localStorage.setItem("medpage.reviewPanelWidth", "narrow");
+    const user = userEvent.setup();
+    const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(2330);
+    const heightSpy = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(700);
+    const offsetSpy = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(62);
+    stubViewport(false);
+
+    try {
+      const { container } = render(<ExamReviewPage />);
+      await screen.findByRole("button", { name: "Concordo" });
+      const separator = await screen.findByRole("separator", { name: "Largura do painel de diagnósticos" });
+      // A escolha guardada vale como a automática nesta tela, e fica guardada para as outras.
+      expect(separator).toHaveAttribute("aria-valuenow", "746");
+      expect(container.querySelector("main")).toHaveStyle({ "--review-sidebar-width": "746px" });
+      expect(window.localStorage.getItem("medpage.reviewPanelWidth")).toBe("narrow");
+
+      await user.click(screen.getByRole("button", { name: "Largura do painel" }));
+      const dialog = await screen.findByRole("dialog", { name: "Largura do painel" });
+      const narrow = within(dialog).getByRole("radio", { name: "Estreito" });
+      expect(narrow).toBeDisabled();
+      expect(narrow).toHaveAccessibleDescription(
+        "Nesta janela o ECG já ocupa toda a altura; um painel mais estreito não o aumentaria.",
+      );
+      expect(within(dialog).getByRole("radio", { name: "Automático" })).toBeChecked();
+    } finally {
+      widthSpy.mockRestore();
+      heightSpy.mockRestore();
+      offsetSpy.mockRestore();
+      window.localStorage.removeItem("medpage.reviewPanelWidth");
+    }
+  });
+
   it("ajusta a largura do painel pelo menu lateral, sem arrastar", async () => {
     const user = userEvent.setup();
     const widthSpy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1856);

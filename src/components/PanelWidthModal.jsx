@@ -18,8 +18,12 @@ export const PANEL_WIDTH_OPTIONS = [
 ];
 
 // Vale na hora, sem "Salvar", como o Tamanho do texto: o fundo só escurece 10% e o painel muda à vista. `value` é
-// `null` quando a largura atual foi ajustada na divisória e não coincide com nenhuma das três.
-export default function PanelWidthModal({ isOpen, onClose, onValueChange, value }) {
+// `null` quando a largura atual foi ajustada na divisória e não coincide com nenhuma das três. `narrowDisabled`: nesta
+// janela o "Estreito" não aumentaria o ECG (ver PANEL_PRESET_MIN_CHANGE em ExamReviewPage) — fica indisponível, com o
+// motivo abaixo das opções e ligado a ela pelo `aria-describedby`.
+const NARROW_DISABLED_ID = "panel-width-narrow-disabled";
+
+export default function PanelWidthModal({ isOpen, narrowDisabled = false, onClose, onValueChange, value }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -38,7 +42,9 @@ export default function PanelWidthModal({ isOpen, onClose, onValueChange, value 
         >
           {PANEL_WIDTH_OPTIONS.map((option) => (
             <Radio.Root
-              className="flex min-w-0 flex-col items-center justify-end gap-2 rounded-lg border border-input bg-card px-2 pt-3 pb-2 text-sm font-medium text-foreground outline-none transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-primary data-checked:inset-ring-1 data-checked:inset-ring-primary motion-reduce:transition-none"
+              aria-describedby={option.value === "narrow" && narrowDisabled ? NARROW_DISABLED_ID : undefined}
+              className="flex min-w-0 flex-col items-center justify-end gap-2 rounded-lg border border-input bg-card px-2 pt-3 pb-2 text-sm font-medium text-foreground outline-none transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-primary data-checked:inset-ring-1 data-checked:inset-ring-primary data-disabled:cursor-not-allowed data-disabled:bg-muted/40 data-disabled:text-muted-foreground data-disabled:hover:bg-muted/40 motion-reduce:transition-none"
+              disabled={option.value === "narrow" && narrowDisabled}
               key={option.value}
               nativeButton
               render={<button type="button" />}
@@ -55,6 +61,11 @@ export default function PanelWidthModal({ isOpen, onClose, onValueChange, value 
         </RadioGroup>
         {value === null ? (
           <p className="text-sm text-muted-foreground">Agora: largura ajustada na divisória.</p>
+        ) : null}
+        {narrowDisabled ? (
+          <p className="text-sm text-muted-foreground" id={NARROW_DISABLED_ID}>
+            Nesta janela o ECG já ocupa toda a altura; um painel mais estreito não o aumentaria.
+          </p>
         ) : null}
       </DialogContent>
     </Dialog>

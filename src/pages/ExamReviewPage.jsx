@@ -202,9 +202,18 @@ function readReviewPanelWidth() {
   }
 }
 
+// "Estreito" só vale quando muda alguma coisa: com menos de 24px (cerca de 2% da largura do ECG) de diferença para a
+// largura automática, o ECG não cresce de modo que se veja (13px na 1ª versão, a 1534×701) — a opção fica indisponível
+// no menu e uma escolha guardada vale como a automática nesta tela (em outra, volta a valer).
+const PANEL_PRESET_MIN_CHANGE = 24;
+
+function isNarrowPresetUseful(layout) {
+  return !layout || layout.automaticWidth - layout.minimum >= PANEL_PRESET_MIN_CHANGE;
+}
+
 function resolveSidebarWidth(layout, choice) {
   if (!layout) return null;
-  if (choice === "narrow") return layout.minimum;
+  if (choice === "narrow") return isNarrowPresetUseful(layout) ? layout.minimum : layout.automaticWidth;
   if (choice === "wide") return layout.maximum;
   if (typeof choice === "number") return clampReviewSidebarWidth(choice, layout);
   return layout.automaticWidth;
@@ -214,8 +223,10 @@ function resolveSidebarWidth(layout, choice) {
 // cai no mínimo nem no máximo.
 function getPanelWidthMode(layout, choice, width) {
   if (choice === null) return "automatic";
+  if (choice === "narrow" && !isNarrowPresetUseful(layout)) return "automatic";
   if (PANEL_WIDTH_PRESETS.has(choice)) return choice;
-  if (layout && width === layout.minimum) return "narrow";
+  if (layout && width === layout.automaticWidth) return "automatic";
+  if (layout && width === layout.minimum && isNarrowPresetUseful(layout)) return "narrow";
   if (layout && width === layout.maximum) return "wide";
   return null;
 }
@@ -1479,6 +1490,7 @@ export default function ExamReviewPage() {
         <TextSizeModal isOpen={isTextSizeOpen} onClose={() => setIsTextSizeOpen(false)} />
         <PanelWidthModal
           isOpen={isPanelWidthOpen && !isCompactLayout}
+          narrowDisabled={!isNarrowPresetUseful(sidebarLayout)}
           onClose={() => setIsPanelWidthOpen(false)}
           onValueChange={handlePanelWidthModeChange}
           value={getPanelWidthMode(sidebarLayout, userSidebarWidth, sidebarWidth)}
