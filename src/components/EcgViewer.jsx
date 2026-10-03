@@ -32,12 +32,20 @@ const CLICK_TOLERANCE = 3;
 const TOOLBAR_TOOLTIP_OFFSET = { left: 8, right: 48 };
 const CONTROLS_GRIP_WIDTH = 16;
 // A barra nasce no canto inferior direito, sobre a tarja preta do traçado (área morta), e o médico pode arrastá-la
-// para onde preferir. A posição é a fração do espaço livre (0 = encostada à esquerda/no topo, 1 = à direita/na base),
-// então acompanha o visualizador quando a janela muda; fica guardada neste navegador.
+// para onde preferir. A posição arrastada é a fração do espaço livre (0 = encostada à esquerda/no topo, 1 = à
+// direita/na base), então acompanha o visualizador quando a janela muda; fica guardada neste navegador.
 const CONTROLS_POSITION_KEY = "medpage.ecgControlsPosition";
+// A posição inicial (e a do clique duplo) não é uma fração: é o canto a CONTROLS_HOME_INSET das bordas. Reconhecida
+// pela identidade — um extremo arrastado também é { x: 1, y: 1 }, mas a 4px.
 const DEFAULT_CONTROLS_POSITION = { x: 1, y: 1 };
-// Margem da barra até a borda do visualizador (a do antigo right-3/bottom-3).
-const CONTROLS_INSET = 12;
+// Nos extremos a barra para a 4px da borda do visualizador — o vão da própria grade —, com o canto quase concêntrico
+// ao do cartão (8,4px de raio − 4px = 4,4px; o da barra é 6px). Encostada, o canto do cartão cortaria a borda dela.
+// Antes eram 12px em todo lado, e a barra não chegava aos cantos.
+const CONTROLS_EDGE = 4;
+// A posição inicial fica a 12px (a do antigo right-3/bottom-3): sobre a tarja, que termina a 10–15px da borda do
+// papel, e livre das barras de rolagem de 10px que o zoom acende. Num extremo escolhido pelo médico a barra cobre a
+// ponta delas; recuá-la quando o zoom liga a faria pular sob o ponteiro (o segundo "+" cairia no "−").
+const CONTROLS_HOME_INSET = 12;
 // Setas na alça: 16px por toque, 64px com Shift.
 const CONTROLS_KEY_STEP = 16;
 
@@ -55,7 +63,7 @@ function readControlsPosition() {
 
 function saveControlsPosition(position) {
   try {
-    if (position.x === DEFAULT_CONTROLS_POSITION.x && position.y === DEFAULT_CONTROLS_POSITION.y) {
+    if (position === DEFAULT_CONTROLS_POSITION) {
       window.localStorage.removeItem(CONTROLS_POSITION_KEY);
     } else {
       window.localStorage.setItem(CONTROLS_POSITION_KEY, JSON.stringify(position));
@@ -643,12 +651,17 @@ export default function EcgViewer({
   function moveControls(from, deltaX, deltaY) {
     const viewer = viewerRef.current;
     const toolbar = controlsRef.current;
-    if (!viewer || !toolbar) return from;
-    const freeWidth = viewer.clientWidth - CONTROLS_INSET * 2 - toolbar.offsetWidth;
-    const freeHeight = viewer.clientHeight - CONTROLS_INSET * 2 - toolbar.offsetHeight;
+    if (!viewer || !toolbar || (!deltaX && !deltaY)) return from;
+    const freeWidth = viewer.clientWidth - CONTROLS_EDGE * 2 - toolbar.offsetWidth;
+    const freeHeight = viewer.clientHeight - CONTROLS_EDGE * 2 - toolbar.offsetHeight;
+    // Da posição inicial, parte de onde ela está neste tamanho: 8px antes do extremo direito e do de baixo.
+    const homeOffset = CONTROLS_HOME_INSET - CONTROLS_EDGE;
+    const isHome = from === DEFAULT_CONTROLS_POSITION;
+    const startX = isHome ? freeWidth - homeOffset : from.x * freeWidth;
+    const startY = isHome ? freeHeight - homeOffset : from.y * freeHeight;
     return {
-      x: freeWidth > 0 ? clamp(from.x + deltaX / freeWidth, 0, 1) : from.x,
-      y: freeHeight > 0 ? clamp(from.y + deltaY / freeHeight, 0, 1) : from.y,
+      x: freeWidth > 0 ? clamp((startX + deltaX) / freeWidth, 0, 1) : from.x,
+      y: freeHeight > 0 ? clamp((startY + deltaY) / freeHeight, 0, 1) : from.y,
     };
   }
 
@@ -688,11 +701,14 @@ export default function EcgViewer({
   const leftColumnTooltipProps = { side: "left", sideOffset: TOOLBAR_TOOLTIP_OFFSET.left + tooltipGripAllowance };
   const rightColumnTooltipProps = { side: "left", sideOffset: TOOLBAR_TOOLTIP_OFFSET.right + tooltipGripAllowance };
   // `left` perto da borda direita encolheria a barra ao espaço que sobra à direita dela; `w-max` a mantém inteira.
-  const controlsStyle = {
-    left: `calc(${CONTROLS_INSET}px + (100% - ${CONTROLS_INSET * 2}px) * ${controlsPosition.x})`,
-    top: `calc(${CONTROLS_INSET}px + (100% - ${CONTROLS_INSET * 2}px) * ${controlsPosition.y})`,
-    transform: `translate(${-controlsPosition.x * 100}%, ${-controlsPosition.y * 100}%)`,
-  };
+  const controlsStyle =
+    controlsPosition === DEFAULT_CONTROLS_POSITION
+      ? { right: `${CONTROLS_HOME_INSET}px`, bottom: `${CONTROLS_HOME_INSET}px` }
+      : {
+          left: `calc(${CONTROLS_EDGE}px + (100% - ${CONTROLS_EDGE * 2}px) * ${controlsPosition.x})`,
+          top: `calc(${CONTROLS_EDGE}px + (100% - ${CONTROLS_EDGE * 2}px) * ${controlsPosition.y})`,
+          transform: `translate(${-controlsPosition.x * 100}%, ${-controlsPosition.y * 100}%)`,
+        };
 
   let stageCursorClass = "";
   if (isImageReady) {

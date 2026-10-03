@@ -39,30 +39,36 @@ describe("EcgViewer", () => {
     const toolbar = screen.getByRole("toolbar", { name: "Controles do ECG" });
     const grip = screen.getByRole("button", { name: "Mover controles" });
     grip.setPointerCapture = vi.fn();
-    // left/top = calc(12px + fração × (100% − 24px)): a fração é a posição no espaço livre.
+    // left/top = calc(4px + fração × (100% − 8px)): a fração é a posição no espaço livre.
     const fraction = (value) => Number(value.match(/\+ ([\d.]+) \*/)[1]);
-    // Visualizador de 924×424 e barra de 100×100: sobram 800×300 para mover (12px de margem de cada lado).
-    Object.defineProperty(viewer, "clientWidth", { configurable: true, value: 924 });
-    Object.defineProperty(viewer, "clientHeight", { configurable: true, value: 424 });
+    const expectHome = (element) => {
+      expect(element.style.right).toBe("12px");
+      expect(element.style.bottom).toBe("12px");
+      expect(element.style.left).toBe("");
+    };
+    // Visualizador de 908×508 e barra de 100×100: sobram 800×400 para mover (4px de margem de cada lado).
+    Object.defineProperty(viewer, "clientWidth", { configurable: true, value: 908 });
+    Object.defineProperty(viewer, "clientHeight", { configurable: true, value: 508 });
     Object.defineProperty(toolbar, "offsetWidth", { configurable: true, value: 100 });
     Object.defineProperty(toolbar, "offsetHeight", { configurable: true, value: 100 });
 
-    // Nasce no canto inferior direito.
-    expect(fraction(toolbar.style.left)).toBe(1);
-    expect(fraction(toolbar.style.top)).toBe(1);
+    // Nasce no canto inferior direito, a 12px das bordas (sobre a tarja), e não a 4px do extremo.
+    expectHome(toolbar);
 
+    // Parte de onde está: 8px antes do extremo (792 de 800, 392 de 400).
     fireEvent.pointerDown(grip, { button: 0, clientX: 900, clientY: 450, pointerId: 1 });
-    fireEvent.pointerMove(grip, { clientX: 500, clientY: 300, pointerId: 1 });
-    fireEvent.pointerUp(grip, { clientX: 500, clientY: 300, pointerId: 1 });
+    fireEvent.pointerMove(grip, { clientX: 508, clientY: 258, pointerId: 1 });
+    fireEvent.pointerUp(grip, { clientX: 508, clientY: 258, pointerId: 1 });
     expect(fraction(toolbar.style.left)).toBe(0.5);
     expect(fraction(toolbar.style.top)).toBe(0.5);
     expect(JSON.parse(window.localStorage.getItem("medpage.ecgControlsPosition"))).toEqual({ x: 0.5, y: 0.5 });
 
-    // Não sai do visualizador.
+    // Não sai do visualizador, mas chega a 4px da borda.
     fireEvent.pointerDown(grip, { button: 0, clientX: 500, clientY: 300, pointerId: 2 });
     fireEvent.pointerMove(grip, { clientX: -2000, clientY: -2000, pointerId: 2 });
     fireEvent.pointerUp(grip, { clientX: -2000, clientY: -2000, pointerId: 2 });
     expect(fraction(toolbar.style.left)).toBe(0);
+    expect(toolbar.style.left).toMatch(/^calc\(4px/);
 
     // Pelo teclado, setas na alça movem a barra (e não o traçado).
     fireEvent.keyDown(grip, { key: "ArrowRight", shiftKey: true });
@@ -75,9 +81,23 @@ describe("EcgViewer", () => {
     expect(fraction(nextToolbar.style.left)).toBe(0.08);
     expect(fraction(nextToolbar.style.top)).toBe(0);
 
-    fireEvent.doubleClick(screen.getByRole("button", { name: "Mover controles" }));
+    // O extremo inferior direito (a 4px) é guardado; a posição inicial (a 12px) não.
+    const nextGrip = screen.getByRole("button", { name: "Mover controles" });
+    nextGrip.setPointerCapture = vi.fn();
+    const nextViewer = screen.getByRole("region", { name: "Visualizador do traçado de ECG" });
+    Object.defineProperty(nextViewer, "clientWidth", { configurable: true, value: 908 });
+    Object.defineProperty(nextViewer, "clientHeight", { configurable: true, value: 508 });
+    Object.defineProperty(nextToolbar, "offsetWidth", { configurable: true, value: 100 });
+    Object.defineProperty(nextToolbar, "offsetHeight", { configurable: true, value: 100 });
+    fireEvent.pointerDown(nextGrip, { button: 0, clientX: 0, clientY: 0, pointerId: 3 });
+    fireEvent.pointerMove(nextGrip, { clientX: 2000, clientY: 2000, pointerId: 3 });
+    fireEvent.pointerUp(nextGrip, { clientX: 2000, clientY: 2000, pointerId: 3 });
     expect(fraction(nextToolbar.style.left)).toBe(1);
     expect(fraction(nextToolbar.style.top)).toBe(1);
+    expect(JSON.parse(window.localStorage.getItem("medpage.ecgControlsPosition"))).toEqual({ x: 1, y: 1 });
+
+    fireEvent.doubleClick(nextGrip);
+    expectHome(nextToolbar);
     expect(window.localStorage.getItem("medpage.ecgControlsPosition")).toBeNull();
   });
 
