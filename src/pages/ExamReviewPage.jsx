@@ -70,6 +70,7 @@ import {
 import { formatDate } from "../utils/dateUtils.js";
 import { getDiagnosisRegionVisual, getDiagnosisReviewStatus } from "../utils/diagnosisRegionVisuals.js";
 import { normalizeReviewNote } from "../utils/disagreementReview.js";
+import { getQueueStateKey } from "../utils/queueSemantics.js";
 import {
   DEFAULT_ECG_ASPECT_RATIO,
   REVIEW_MOBILE_BREAKPOINT,
@@ -1114,6 +1115,7 @@ export default function ExamReviewPage() {
   const hasUnsavedNotes = notes !== (exam?.draft_notes || "");
   const hasUnsavedChanges = hasUnsavedNotes || hasUnsavedDiagnosisReview;
   const usesDailyFlow = Boolean(validationContext?.is_configured && !validationContext.is_general_review_day);
+  const isExamCompleted = getQueueStateKey(exam?.queue_state, exam?.status_validation) === "completed";
   // Sem o traçado na tela não há decisão: o painel e a ação primária ficam travados até ele aparecer.
   const isEcgUnavailable = !ecgImage.src;
   const primaryDisabledReason = isEcgUnavailable
@@ -1384,11 +1386,11 @@ export default function ExamReviewPage() {
   );
 
   // Cartão do exame no topo da coluna do ECG, como o cabeçalho do ECG impresso (identificação no alto, traçado embaixo):
-  // código do exame, status, dados clínicos e a ação principal no canto direito — a ação age sobre este exame. O topo
-  // alinha com o do cartão do dia. Até 2026-09-30 o código e o status ficavam numa caixa no rodapé do painel, com "Voltar"
+  // código do exame (com o selo, se concluído), dados clínicos e a ação principal no canto direito — a ação age sobre
+  // este exame. O topo alinha com o do cartão do dia. Até 2026-09-30 o código e o status ficavam numa caixa no rodapé do painel, com "Voltar"
   // e a primária, e os dados clínicos num cartão no fim do painel (a 1536×730, abaixo da dobra); o "Voltar" saiu (o
   // "Início" do trilho faz o mesmo, com a mesma confirmação). O código é o título da página (h1) e o que o médico cita ao
-  // suporte; "Status atual" segue para o leitor de tela, antes do selo.
+  // suporte; "Status atual" segue para o leitor de tela, antes do selo, quando ele aparece.
   // Coluna estreita (conteúdo do cartão até 54rem, janela abaixo de ~1360px ou painel alargado na divisória): os dados
   // clínicos descem para uma 2ª linha, na largura toda, e a ação fica na 1ª, à direita. O limite é fixo, para o cartão
   // não mudar de forma de um exame para o outro; desde 2026-10-02 os dados ficam em colunas fixas (PatientInfo) e todo
@@ -1414,12 +1416,19 @@ export default function ExamReviewPage() {
           <span className="text-sm font-medium text-muted-foreground in-data-[text-size]:text-xs">Exame</span>{" "}
           <span className="mt-0.5 in-data-[compact-bar]:mt-0">{exam.exam_code}</span>
         </h1>
-        <span className="sr-only">Status atual:</span>
-        <StatusBadge
-          status={exam.status_validation}
-          queueState={exam.queue_state}
-          reviewResult={exam.review_result}
-        />
+        {/* Selo só no exame concluído (desde 2026-10-03). "Iniciar" e "Em Validação" são os grupos da fila no início e,
+            aqui, repetiam o "Aguardando decisão" do cartão do dia e o estado da ação primária (mudavam os três juntos no
+            Concordo); o mais largo, "Em Validação", ainda passava do limite de quebra e levava a barra de 62 a 116px. */}
+        {isExamCompleted ? (
+          <>
+            <span className="sr-only">Status atual:</span>
+            <StatusBadge
+              status={exam.status_validation}
+              queueState={exam.queue_state}
+              reviewResult={exam.review_result}
+            />
+          </>
+        ) : null}
       </div>
       <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:hidden not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
       <div className="min-w-0 flex-1 not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:order-last not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:basis-full not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:order-last not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">

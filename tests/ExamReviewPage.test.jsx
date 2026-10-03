@@ -195,19 +195,42 @@ describe("ExamReviewPage", () => {
     expect(screen.getByRole("region", { name: "Visualizador do traçado de ECG" })).toContainElement(ecgToolbar);
     expect(ecgToolbar).not.toHaveTextContent("Controles do ECG");
     expect(screen.queryByTestId("ecg-controls-dock")).not.toBeInTheDocument();
-    // Cartão do exame no topo da coluna do ECG: código (título da página), status e a ação principal. Sem rodapé no
-    // painel e sem "Voltar" — o "Início" do trilho faz o mesmo.
+    // Cartão do exame no topo da coluna do ECG: código (título da página), dados clínicos e a ação principal. Sem rodapé
+    // no painel e sem "Voltar" — o "Início" do trilho faz o mesmo. Sem selo de estado fora do exame concluído: "Iniciar"
+    // repetia o "Aguardando decisão" do cartão do dia e o estado da ação primária.
     const examCard = screen.getByTestId("current-status");
     expect(screen.getByRole("region", { name: "Visualizador de ECG" })).toContainElement(examCard);
     expect(screen.getByRole("complementary", { name: "Diagnósticos e ações" })).not.toContainElement(examCard);
     expect(examCard).toContainElement(screen.getByRole("heading", { level: 1, name: "Exame ECG-42" }));
-    expect(examCard).toHaveTextContent("Status atual:");
-    expect(examCard).toContainElement(screen.getByText("Iniciar"));
+    expect(examCard).not.toHaveTextContent("Status atual:");
+    expect(screen.queryByText("Iniciar")).not.toBeInTheDocument();
     expect(examCard).toContainElement(screen.getByText("58 anos"));
     expect(examCard).toContainElement(screen.getByText("Feminino"));
     expect(examCard).toContainElement(screen.getByRole("button", { name: "Salvar e próximo" }));
     expect(screen.queryByRole("button", { name: "Voltar" })).not.toBeInTheDocument();
-    expect(screen.getByText("Iniciar")).toBeVisible();
+  });
+
+  it("mostra o selo de estado no cartão do exame só quando o exame está concluído", async () => {
+    stubViewport(false);
+    getExamById.mockResolvedValue({ ...exam, queue_state: "validated" });
+    const { unmount } = render(<ExamReviewPage />);
+
+    const examCard = await screen.findByTestId("current-status");
+    expect(examCard).not.toHaveTextContent("Status atual:");
+    expect(screen.queryByText("Em Validação")).not.toBeInTheDocument();
+    unmount();
+
+    getExamById.mockResolvedValue({
+      ...exam,
+      queue_state: "completed",
+      review_result: "sem_alteracao",
+      status_validation: "valido",
+    });
+    render(<ExamReviewPage />);
+
+    const completedCard = await screen.findByTestId("current-status");
+    expect(completedCard).toHaveTextContent("Status atual:");
+    expect(completedCard).toContainElement(screen.getByText("Concluídos"));
   });
 
   it("mede o painel quando o layout surge depois do carregamento", async () => {
