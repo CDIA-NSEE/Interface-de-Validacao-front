@@ -1113,7 +1113,7 @@ describe("ExamReviewPage", () => {
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
     // Colunas fixas (cada dado no mesmo lugar em todo exame), num contêiner próprio para a grade de 3×2 quando estreito.
     expect(clinicalGrid).toHaveClass("grid");
-    expect(clinicalGrid.className).toContain("grid-cols-[minmax(5.5em,max-content)_");
+    expect(clinicalGrid.className).toContain("grid-cols-[max-content_minmax(4.5em,max-content)_");
     // Letra um passo acima do corpo só no tamanho Padrão.
     expect(clinicalGrid.parentElement).toHaveClass("text-base", "in-data-[text-size]:text-sm");
     expect(clinicalGrid.parentElement).toHaveClass("@container/clinical-data");
