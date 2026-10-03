@@ -465,6 +465,31 @@ describe("EcgViewer", () => {
     expect(onRegionCancel).toHaveBeenCalledOnce();
   });
 
+  it("passa o selo de marcação para a direita quando a barra está embaixo à esquerda", () => {
+    const badgeOf = () => screen.getByText("Marcando área para D2").closest('[data-slot="badge"]');
+    window.localStorage.removeItem("medpage.ecgControlsPosition");
+    const { unmount } = renderWithTooltips(
+      <EcgViewer imageUrl="/ecg-real.png" selectionLabel="Marcando área para D2" />,
+    );
+    // Barra no canto inferior direito: estado à esquerda, controles à direita.
+    expect(badgeOf()).toHaveClass("left-3");
+    unmount();
+
+    window.localStorage.setItem("medpage.ecgControlsPosition", JSON.stringify({ x: 0, y: 1 }));
+    const { unmount: unmountBottomLeft } = renderWithTooltips(
+      <EcgViewer imageUrl="/ecg-real.png" selectionLabel="Marcando área para D2" />,
+    );
+    expect(badgeOf()).toHaveClass("right-3");
+    expect(badgeOf()).not.toHaveClass("left-3");
+    unmountBottomLeft();
+
+    // No alto à esquerda a barra não chega ao selo: ele fica onde sempre esteve.
+    window.localStorage.setItem("medpage.ecgControlsPosition", JSON.stringify({ x: 0, y: 0 }));
+    renderWithTooltips(<EcgViewer imageUrl="/ecg-real.png" selectionLabel="Marcando área para D2" />);
+    expect(badgeOf()).toHaveClass("left-3");
+    window.localStorage.removeItem("medpage.ecgControlsPosition");
+  });
+
   it("cancela marcação e edição com Escape sem alterar a região persistida", () => {
     const onRegionCancel = vi.fn();
     const onRegionChange = vi.fn();

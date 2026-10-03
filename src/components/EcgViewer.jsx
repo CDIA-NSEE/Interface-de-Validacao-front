@@ -696,7 +696,11 @@ export default function EcgViewer({
   // A alça é uma aba presa à lateral da barra, fora dela: em repouso a barra ocupa só os 78×78px de sempre (sobre a
   // tarja preta). Fica do lado que tem espaço — à esquerda com a barra na metade direita, à direita na outra metade.
   // Durante o arrasto, o lado é o do início: a alça não troca de lado embaixo do ponteiro ao cruzar o meio.
-  const isGripOnLeft = (controlsDragStart || controlsPosition).x > 0.5;
+  const settledControlsPosition = controlsDragStart || controlsPosition;
+  const isGripOnLeft = settledControlsPosition.x > 0.5;
+  // O selo de marcação fica embaixo à esquerda; com a barra no quarto de baixo à esquerda ele ficava coberto, e então
+  // passa para a direita (sobre a tarja). Também pela posição do início do arrasto: não pula enquanto a barra passa.
+  const isSelectionBadgeOnRight = settledControlsPosition.x < 0.5 && settledControlsPosition.y > 0.5;
   const tooltipGripAllowance = isGripOnLeft ? CONTROLS_GRIP_WIDTH : 0;
   const leftColumnTooltipProps = { side: "left", sideOffset: TOOLBAR_TOOLTIP_OFFSET.left + tooltipGripAllowance };
   const rightColumnTooltipProps = { side: "left", sideOffset: TOOLBAR_TOOLTIP_OFFSET.right + tooltipGripAllowance };
@@ -916,11 +920,15 @@ export default function EcgViewer({
           </div>
           {/* No canto inferior esquerdo, sobre a faixa de papel sem traçado abaixo da tira longa de DII (y 591–639 de 645 em
               todos os exames da fonte); no alto ele cobria o rótulo "DI". A largura deixa livre o canto da barra de
-              controles (78px + margens): estado à esquerda, controles à direita. O fundo é a tinta info a 14% sobre o fundo
-              do tema, opaca: translúcido, no escuro ele pegava o branco do papel e o texto claro ficava a 1,8:1. */}
+              controles (78px + margens): estado à esquerda, controles à direita — ou o inverso, com a barra arrastada para
+              baixo à esquerda. O fundo é a tinta info a 14% sobre o fundo do tema, opaca: translúcido, no escuro ele pegava
+              o branco do papel e o texto claro ficava a 1,8:1. */}
           {isSelectionActive ? (
             <Badge
-              className="absolute bottom-3 left-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 bg-[color-mix(in_oklab,var(--info)_14%,var(--background))] pr-1 pl-2"
+              className={cn(
+                "absolute bottom-3 z-10 h-7 max-w-[calc(100%-7rem)] gap-1 bg-[color-mix(in_oklab,var(--info)_14%,var(--background))] pr-1 pl-2",
+                isSelectionBadgeOnRight ? "right-3" : "left-3",
+              )}
               variant="info"
             >
               {isEditing
