@@ -1113,7 +1113,7 @@ describe("ExamReviewPage", () => {
     const clinicalGrid = screen.getByText("Nascimento").closest("dl");
     // Colunas fixas (cada dado no mesmo lugar em todo exame), num contêiner próprio para a grade de 3×2 quando estreito.
     expect(clinicalGrid).toHaveClass("grid");
-    expect(clinicalGrid.className).toContain("grid-cols-[minmax(7em,max-content)_");
+    expect(clinicalGrid.className).toContain("grid-cols-[minmax(5.5em,max-content)_");
     // Letra um passo acima do corpo só no tamanho Padrão.
     expect(clinicalGrid.parentElement).toHaveClass("text-base", "in-data-[text-size]:text-sm");
     expect(clinicalGrid.parentElement).toHaveClass("@container/clinical-data");
@@ -1185,7 +1185,7 @@ describe("ExamReviewPage", () => {
     expect(window.localStorage.getItem("medpage.examDataOpen")).toBe("true");
   });
 
-  it("avisa no rótulo quando a idade foi calculada pela API", async () => {
+  it("avisa depois do valor quando a idade foi calculada pela API", async () => {
     getExamById.mockResolvedValue({
       ...exam,
       patient: { age: 89, age_calculated: true, birth_date: "06/07/1935", sex: "Masculino" },
@@ -1193,8 +1193,12 @@ describe("ExamReviewPage", () => {
     stubViewport(false);
     render(<ExamReviewPage />);
 
+    // "calc." depois do valor; o rótulo à vista é só "Idade" (com "(calculada)" no rótulo, a coluna da idade ficava larga
+    // por ele em todo exame) e o leitor de tela segue ouvindo "Idade (calculada)".
     const ageValue = await screen.findByText("89 anos");
+    expect(ageValue).toHaveTextContent("89 anos calc.");
     expect(ageValue.previousElementSibling).toHaveTextContent("Idade (calculada)");
+    expect(within(ageValue.previousElementSibling).getByText("(calculada)", { exact: false })).toHaveClass("sr-only");
   });
 
   it("mantém peso, altura e IMC na linha com traço quando faltam", async () => {

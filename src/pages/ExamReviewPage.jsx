@@ -1401,14 +1401,15 @@ export default function ExamReviewPage() {
   // Coluna estreita (conteúdo do cartão até ~872px no Padrão, janela abaixo de ~1380px ou painel alargado na divisória):
   // os dados clínicos descem para uma 2ª linha, na largura toda, e a ação fica na 1ª, à direita. O limite é fixo, para o
   // cartão não mudar de forma de um exame para o outro; desde 2026-10-02 os dados ficam em colunas fixas (PatientInfo) e
-  // todo exame pede o mesmo numa linha. Sem o selo de estado (desde 2026-10-03, só no concluído), a barra pede 857, 872 e
+  // todo exame pede o mesmo numa linha. Sem o selo de estado (desde 2026-10-03, só no concluído), a barra pedia 857, 872 e
   // 953px de conteúdo (Padrão, Grande, Muito grande; medido nos exames 1, 5, 11, 13, 16 e 20), sob os limites de 871,5,
   // 887 e 968px: `calc(16.625rem+43.25em)` no Padrão (letra um passo acima do corpo, ver PatientInfo) e
   // `calc(14.9375rem+40.5em)` no Grande e no Muito grande — a parte do texto cresce em em com o tamanho do texto. Até
-  // 2026-10-03 os limites contavam o selo "Iniciar" (934, 949 e 1034px) e a barra ia a duas linhas a 1440px de janela. O
-  // exame concluído pede 939, 963 e 1053px (o selo "Concluído" ao lado do código): entre os dois, só ele fica com os dados
-  // numa grade de 3×2 — o caso raro, e não o de todo exame, é o que paga a largura. Mais estreito que as seis colunas, os
-  // dados viram uma grade de 3×2.
+  // 2026-10-03 os limites contavam o selo "Iniciar" (934, 949 e 1034px) e a barra ia a duas linhas a 1440px de janela.
+  // Com a coluna da idade mais estreita ("calc." depois do valor, ver PatientInfo), pede 833, 848 e 926px — os limites
+  // ficaram, com ~40px de folga. O exame concluído pede 915, 939 e 1026px (o selo "Concluído" ao lado do código): entre
+  // os dois, só ele fica com os dados numa grade de 3×2 — o caso raro, e não o de todo exame, é o que paga a largura.
+  // Mais estreito que as seis colunas, os dados viram uma grade de 3×2.
   const examCard = (
     // Barra compacta (`data-compact-bar` no layout, ver COMPACT_EXAM_CARD_HEIGHT): uma linha de 48px, "Exame" ao lado do
     // código, e a coluna estreita não vale — a barra compacta só existe com a coluna do ECG larga.

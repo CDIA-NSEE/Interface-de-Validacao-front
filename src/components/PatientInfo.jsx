@@ -23,12 +23,13 @@ function hasValue(value) {
 
 // Colunas de largura mínima fixa, na ordem dos dados: cada um cai no mesmo lugar em todo exame — antes, numa linha
 // corrida, "Sexo" andava 44px do exame 13 para o 16 conforme a idade era "calculada" ou não. Mínimos em `em` da letra
-// dos valores (crescem com o tamanho do texto), pelo maior conteúdo de cada coluna nos 20 exames do banco: "Idade
-// (calculada)", "Masculino", "11/03/1961", "107 kg", "174 cm", "35,3 kg/m²" (a da idade é a do rótulo, uma letra menor
-// que o valor: 7em para caber nos três tamanhos de texto). Um valor mais longo alarga a coluna em vez de ser cortado. Estreito (menos que as seis colunas), vira uma grade de 3×2 — Idade, Sexo, Nascimento sobre Peso,
+// dos valores (crescem com o tamanho do texto), pelo maior conteúdo de cada coluna nos 20 exames do banco: "64 anos
+// calc." (5,33em nos três tamanhos de texto; até 2026-10-03, o rótulo "Idade (calculada)", 7em), "Masculino",
+// "11/03/1961", "107 kg", "174 cm", "35,3 kg/m²". Um valor mais longo alarga a coluna em vez de ser cortado. Estreito
+// (menos que as seis colunas), vira uma grade de 3×2 — Idade, Sexo, Nascimento sobre Peso,
 // Altura, IMC —, em vez de quebrar a linha onde der e deixar um dado sozinho embaixo.
 const COLUMN_TEMPLATE =
-  "grid-cols-[minmax(7em,max-content)_minmax(4.5em,max-content)_minmax(5em,max-content)_minmax(3.75em,max-content)_minmax(3.5em,max-content)_minmax(4.75em,max-content)] @max-[calc(28.5em+7.5rem)]/clinical-data:grid-cols-[minmax(7em,max-content)_minmax(4.5em,max-content)_minmax(5em,max-content)]";
+  "grid-cols-[minmax(5.5em,max-content)_minmax(4.5em,max-content)_minmax(5em,max-content)_minmax(3.75em,max-content)_minmax(3.5em,max-content)_minmax(4.75em,max-content)] @max-[calc(27em+7.5rem)]/clinical-data:grid-cols-[minmax(5.5em,max-content)_minmax(4.5em,max-content)_minmax(5em,max-content)]";
 
 function formatHeight(height) {
   const number = toNumber(height);
@@ -38,8 +39,11 @@ function formatHeight(height) {
 
 export default function PatientInfo({ patient }) {
   // Idade e sexo primeiro: são os dados que mudam a leitura do traçado (limites de QTc e de voltagem).
-  // Terceiro item: nota do rótulo. "calculada" quando a API calculou a idade pela data do exame (a origem não a trouxe)
-  // — no rótulo, não no valor, para não alargar a coluna; a da origem e a calculada podem divergir.
+  // Terceiro item: nota da idade. "calculada" quando a API calculou a idade pela data do exame (a origem não a trouxe);
+  // a da origem e a calculada podem divergir. Na tela, "calc." depois do valor ("64 anos calc."); o rótulo fica "Idade"
+  // e o leitor de tela ouve "Idade (calculada)". Até 2026-10-03 a nota ficava no rótulo, "Idade (calculada)" (106px),
+  // e a coluna da idade era larga por ele em todo exame: nos 16 de 20 sem idade calculada, "21 anos" (54px) terminava
+  // 82px antes de "Sexo", com 25–30px entre os outros dados.
   const rows = [
     ["Idade", patient?.age ? `${patient.age} anos` : null, patient?.age_calculated ? "calculada" : null],
     ["Sexo", patient?.sex],
@@ -67,7 +71,8 @@ export default function PatientInfo({ patient }) {
   // colunas, e só com os valores: cada um já diz o que é ("64 anos", "Masculino", a data, "107 kg", "174 cm"). O rótulo
   // fica à vista no IMC (o número sozinho não diz o que é) e nos dados ausentes ("Peso —"); os outros seguem para o
   // leitor de tela. Com o rótulo ao lado de cada valor a linha não cabia no exame 16, nem no Padrão. A idade calculada
-  // ganha "calc." depois do valor. Se ainda assim faltar largura, os dados quebram em mais uma linha, sem se sobrepor.
+  // tem "calc." depois do valor, como na barra normal. Se ainda assim faltar largura, os dados quebram em mais uma linha,
+  // sem se sobrepor.
   return (
     <div className="@container/clinical-data text-base in-data-[text-size]:text-sm">
       <dl className={`grid gap-x-6 gap-y-2 ${COLUMN_TEMPLATE} in-data-[compact-bar]:flex in-data-[compact-bar]:flex-wrap in-data-[compact-bar]:gap-x-4 in-data-[compact-bar]:gap-y-0`}>
@@ -80,14 +85,14 @@ export default function PatientInfo({ patient }) {
               )}
             >
               {label}
-              {labelNote ? <span className="font-normal"> ({labelNote})</span> : null}
+              {labelNote ? <span className="sr-only"> ({labelNote})</span> : null}
             </dt>
             <dd className="mt-0.5 whitespace-nowrap text-foreground tabular-nums in-data-[compact-bar]:mt-0">
               {hasValue(value) ? (
                 <>
                   {value}
                   {labelNote ? (
-                    <span aria-hidden="true" className="hidden text-sm text-muted-foreground in-data-[text-size]:text-xs in-data-[compact-bar]:inline">
+                    <span aria-hidden="true" className="text-sm text-muted-foreground in-data-[text-size]:text-xs">
                       {" "}calc.
                     </span>
                   ) : null}
