@@ -274,20 +274,24 @@ function useDelayedFlag(value, delayMs) {
 // Altura do cartão do exame na forma normal em uma linha e em duas, medida em qualquer das duas formas: o respiro
 // vertical mais o maior entre a identificação, um par rótulo/valor dos dados clínicos e a ação principal (uma linha)
 // e, para saber em que largura ele passa a duas linhas, a letra e o respiro lateral dele. Em duas linhas: identificação
-// e ação na 1ª, os dados na 2ª.
+// e ação na 1ª, os dados na 2ª. `statusWidth`: o que o selo "Concluído" soma à identificação (selo + vão), que os limites
+// das container queries não contam (ver `examCard`).
 function measureNormalExamCard(card) {
-  if (!card) return { fontSize: 0, paddingX: 0, singleRow: 0, twoRow: 0 };
+  if (!card) return { fontSize: 0, paddingX: 0, singleRow: 0, statusWidth: 0, twoRow: 0 };
   const style = window.getComputedStyle(card);
   const sum = (properties) => properties.reduce((total, property) => total + (parseFloat(style[property]) || 0), 0);
   const verticalChrome = sum(["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"]);
   const clinicalData = card.querySelector('[data-testid="clinical-data"]');
-  const identityHeight = card.querySelector("h1")?.parentElement?.offsetHeight || 0;
+  const identity = card.querySelector("h1")?.parentElement;
+  const identityHeight = identity?.offsetHeight || 0;
+  const status = identity?.querySelector('[data-slot="exam-status"]');
   const dataHeight = (clinicalData?.querySelector("dl > div") ?? clinicalData)?.offsetHeight || 0;
   const actionHeight = card.lastElementChild?.offsetHeight || 0;
   return {
     fontSize: parseFloat(style.fontSize) || 0,
     paddingX: sum(["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]),
     singleRow: Math.round(verticalChrome + Math.max(identityHeight, dataHeight, actionHeight)),
+    statusWidth: status ? status.offsetWidth + (parseFloat(window.getComputedStyle(identity).columnGap) || 0) : 0,
     twoRow: Math.round(
       verticalChrome + Math.max(identityHeight, actionHeight) + (parseFloat(style.rowGap) || 0) + dataHeight,
     ),
@@ -556,9 +560,13 @@ export default function ExamReviewPage() {
       }
       const normalCard = normalExamCardHeightRef.current;
       const { singleRow: singleRowCardHeight } = normalCard;
-      // Largura de painel a partir da qual o cartão do exame normal tem duas linhas (sem medida, nunca).
+      // Largura de painel a partir da qual o cartão do exame normal tem a altura de duas linhas (sem medida, nunca). No
+      // exame concluído, também logo acima do limite: o selo "Concluído" estreita os dados, que viram a grade de 3×2 na
+      // 1ª linha, com a mesma altura. Sem contar o selo, a largura automática contava 65px no Muito grande a 1536×730 e
+      // a barra tinha 122: o ECG ficava limitado pela altura, 15px mais estreito que a coluna.
       const measuredTwoRowFrom = Math.round(
-        layoutWidth - 24 - normalCard.paddingX - getExamCardTwoRowLimit(textSize, normalCard.fontSize),
+        layoutWidth - 24 - normalCard.paddingX - getExamCardTwoRowLimit(textSize, normalCard.fontSize) -
+          normalCard.statusWidth,
       );
       const twoRowFrom = Number.isFinite(measuredTwoRowFrom) ? measuredTwoRowFrom : Infinity;
       const automaticWidthFor = (cardHeight) =>
@@ -1428,7 +1436,7 @@ export default function ExamReviewPage() {
             de linha dele, no pé do bloco —, não entre "Exame" e o código, onde não alinhava com nenhuma das duas linhas. Na
             linha de base do código ele descia 2px no Padrão (letra de 12px ao lado de 16px). */}
         {isExamCompleted ? (
-          <span className="flex min-h-lh items-center self-end text-base in-data-[text-size]:text-sm">
+          <span className="flex min-h-lh items-center self-end text-base in-data-[text-size]:text-sm" data-slot="exam-status">
             <span className="sr-only">Status atual:</span>
             <Badge variant="success">Concluído</Badge>
           </span>
