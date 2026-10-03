@@ -230,7 +230,11 @@ describe("ExamReviewPage", () => {
 
     const completedCard = await screen.findByTestId("current-status");
     expect(completedCard).toHaveTextContent("Status atual:");
-    expect(completedCard).toContainElement(screen.getByText("Concluídos"));
+    // No singular (o estado deste exame) e sem o selo do resultado, que segue na lista do início.
+    expect(completedCard).toContainElement(screen.getByText("Concluído"));
+    expect(screen.queryByText("Concluídos")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sem alteração")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Exame ECG-42" })).toBeVisible();
   });
 
   it("mede o painel quando o layout surge depois do carregamento", async () => {

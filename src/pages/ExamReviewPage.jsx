@@ -17,7 +17,6 @@ import PanelWidthModal from "../components/PanelWidthModal.jsx";
 import PatientInfo from "../components/PatientInfo.jsx";
 import ReviewActions from "../components/ReviewActions.jsx";
 import ReviewPanelSeparator from "../components/ReviewPanelSeparator.jsx";
-import StatusBadge from "../components/StatusBadge.jsx";
 import SupportContactModal from "../components/SupportContactModal.jsx";
 import TextSizeModal from "../components/TextSizeModal.jsx";
 import TutorialModal from "../components/TutorialModal.jsx";
@@ -1418,16 +1417,17 @@ export default function ExamReviewPage() {
         </h1>
         {/* Selo só no exame concluído (desde 2026-10-03). "Iniciar" e "Em Validação" são os grupos da fila no início e,
             aqui, repetiam o "Aguardando decisão" do cartão do dia e o estado da ação primária (mudavam os três juntos no
-            Concordo); o mais largo, "Em Validação", ainda passava do limite de quebra e levava a barra de 62 a 116px. */}
+            Concordo); o mais largo, "Em Validação", ainda passava do limite de quebra e levava a barra de 62 a 116px.
+            "Concluído", no singular (é o estado deste exame; "Concluídos" é o nome do grupo na lista), e sem o selo do
+            resultado ("Sem alteração"/"Alterado"), que segue na lista do início e nas decisões do painel: os dois juntos
+            pediam 176px e levavam a barra a 116px a 1536×730. Centrado na linha do código — uma caixa com a letra e a altura
+            de linha dele, no pé do bloco —, não entre "Exame" e o código, onde não alinhava com nenhuma das duas linhas. Na
+            linha de base do código ele descia 2px no Padrão (letra de 12px ao lado de 16px). */}
         {isExamCompleted ? (
-          <>
+          <span className="flex min-h-lh items-center self-end text-base in-data-[text-size]:text-sm">
             <span className="sr-only">Status atual:</span>
-            <StatusBadge
-              status={exam.status_validation}
-              queueState={exam.queue_state}
-              reviewResult={exam.review_result}
-            />
-          </>
+            <Badge variant="success">Concluído</Badge>
+          </span>
         ) : null}
       </div>
       <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:hidden not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
