@@ -24,15 +24,15 @@ function hasValue(value) {
 // Colunas na ordem dos dados. A da idade fica na largura do conteúdo (desde 2026-10-03): com um mínimo pelo maior valor,
 // "64 anos calc." — só 4 dos 20 exames têm idade calculada —, nos outros "21 anos" (54px) terminava 58px antes de "Sexo"
 // (82px com a nota no rótulo), contra 25–30px entre os demais dados. Agora o espaço depois da idade é o vão, 24px, e só
-// no exame com idade calculada os dados seguintes vêm 31px mais à direita. As outras colunas têm largura mínima fixa,
-// para cada dado cair no mesmo lugar em todo exame (antes, numa linha corrida, "Sexo" andava 44px do exame 13 para o
-// 16): mínimos em `em` da letra dos valores (crescem com o tamanho do texto), pelo maior conteúdo de cada coluna nos 20
-// exames do banco — "Masculino", "11/03/1961", "107 kg", "174 cm", "35,3 kg/m²". Um valor mais longo alarga a coluna
-// em vez de ser cortado. Estreito (menos que as seis colunas, contando a idade calculada, 5,33em, para a forma não
-// depender dela), vira uma grade de 3×2 — Idade, Sexo, Nascimento sobre Peso, Altura, IMC —, em vez de quebrar a linha
-// onde der e deixar um dado sozinho embaixo.
+// no exame com idade calculada os dados seguintes vêm 31px mais à direita. Peso, altura e IMC também (desde a mesma
+// data): faltam em 15 dos 20 exames, e com o mínimo pelo maior valor ("107 kg", "174 cm", "35,3 kg/m²") cada "—" deixava
+// 54, 43 e 77px até o rótulo seguinte. Sexo e nascimento seguem com largura mínima ("Masculino", "11/03/1961", em `em`
+// da letra dos valores): sobram no máximo 6px, e eles ficam no mesmo lugar em todo exame (antes das colunas, numa linha
+// corrida, "Sexo" andava 44px do exame 13 para o 16). Estreito (menos que as seis colunas no maior conteúdo de cada uma
+// — idade calculada, 5,33em, e 3,75 · 3,5 · 4,75em —, para a forma não depender dos dados), vira uma grade de 3×2 —
+// Idade, Sexo, Nascimento sobre Peso, Altura, IMC —, em vez de quebrar a linha onde der e deixar um dado sozinho embaixo.
 const COLUMN_TEMPLATE =
-  "grid-cols-[max-content_minmax(4.5em,max-content)_minmax(5em,max-content)_minmax(3.75em,max-content)_minmax(3.5em,max-content)_minmax(4.75em,max-content)] @max-[calc(27em+7.5rem)]/clinical-data:grid-cols-[max-content_minmax(4.5em,max-content)_minmax(5em,max-content)]";
+  "grid-cols-[max-content_minmax(4.5em,max-content)_minmax(5em,max-content)_max-content_max-content_max-content] @max-[calc(27em+7.5rem)]/clinical-data:grid-cols-[max-content_minmax(4.5em,max-content)_minmax(5em,max-content)]";
 
 function formatHeight(height) {
   const number = toNumber(height);
