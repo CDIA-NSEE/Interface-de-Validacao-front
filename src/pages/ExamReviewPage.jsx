@@ -295,12 +295,12 @@ function measureNormalExamCard(card) {
 }
 
 // Limite de conteúdo em que o cartão do exame passa a duas linhas — o mesmo das container queries do cartão (ver o
-// comentário de `examCard`): `calc(20.5rem+43.25em)` no Padrão e `calc(16.8125rem+42.5em)` no texto maior, em `em` da
+// comentário de `examCard`): `calc(16.625rem+43.25em)` no Padrão e `calc(14.9375rem+40.5em)` no texto maior, em `em` da
 // letra do cartão. Sem medida (jsdom), nunca.
 function getExamCardTwoRowLimit(textSize, cardFontSize) {
   const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
   if (!cardFontSize) return Infinity;
-  return textSize === "default" ? 20.5 * rem + 43.25 * cardFontSize : 16.8125 * rem + 42.5 * cardFontSize;
+  return textSize === "default" ? 16.625 * rem + 43.25 * cardFontSize : 14.9375 * rem + 40.5 * cardFontSize;
 }
 
 // Barra compacta numa largura de painel: só abaixo da largura automática (é o modo do painel estreitado, nunca o da
@@ -1390,13 +1390,17 @@ export default function ExamReviewPage() {
   // e a primária, e os dados clínicos num cartão no fim do painel (a 1536×730, abaixo da dobra); o "Voltar" saiu (o
   // "Início" do trilho faz o mesmo, com a mesma confirmação). O código é o título da página (h1) e o que o médico cita ao
   // suporte; "Status atual" segue para o leitor de tela, antes do selo, quando ele aparece.
-  // Coluna estreita (conteúdo do cartão até 54rem, janela abaixo de ~1360px ou painel alargado na divisória): os dados
-  // clínicos descem para uma 2ª linha, na largura toda, e a ação fica na 1ª, à direita. O limite é fixo, para o cartão
-  // não mudar de forma de um exame para o outro; desde 2026-10-02 os dados ficam em colunas fixas (PatientInfo) e todo
-  // exame pede o mesmo numa linha: 848, 934 e 1020px de conteúdo (Padrão, Grande, Muito grande; medido), sob os limites
-  // de 864, 949 e 1034px — a parte do texto cresce em em com o tamanho do texto. Mais estreito que as seis colunas, os
-  // dados viram uma grade de 3×2. No Padrão a barra tem a letra um passo acima do corpo (ver PatientInfo) e pede 918px:
-  // limite de 934px (`calc(20.5rem+43.25em)`); no Grande e no Muito grande segue no corpo, com os limites de antes.
+  // Coluna estreita (conteúdo do cartão até ~872px no Padrão, janela abaixo de ~1380px ou painel alargado na divisória):
+  // os dados clínicos descem para uma 2ª linha, na largura toda, e a ação fica na 1ª, à direita. O limite é fixo, para o
+  // cartão não mudar de forma de um exame para o outro; desde 2026-10-02 os dados ficam em colunas fixas (PatientInfo) e
+  // todo exame pede o mesmo numa linha. Sem o selo de estado (desde 2026-10-03, só no concluído), a barra pede 857, 872 e
+  // 953px de conteúdo (Padrão, Grande, Muito grande; medido nos exames 1, 5, 11, 13, 16 e 20), sob os limites de 871,5,
+  // 887 e 968px: `calc(16.625rem+43.25em)` no Padrão (letra um passo acima do corpo, ver PatientInfo) e
+  // `calc(14.9375rem+40.5em)` no Grande e no Muito grande — a parte do texto cresce em em com o tamanho do texto. Até
+  // 2026-10-03 os limites contavam o selo "Iniciar" (934, 949 e 1034px) e a barra ia a duas linhas a 1440px de janela. O
+  // exame concluído pede 939, 963 e 1053px (o selo "Concluído" ao lado do código): entre os dois, só ele fica com os dados
+  // numa grade de 3×2 — o caso raro, e não o de todo exame, é o que paga a largura. Mais estreito que as seis colunas, os
+  // dados viram uma grade de 3×2.
   const examCard = (
     // Barra compacta (`data-compact-bar` no layout, ver COMPACT_EXAM_CARD_HEIGHT): uma linha de 48px, "Exame" ao lado do
     // código, e a coluna estreita não vale — a barra compacta só existe com a coluna do ECG larga.
@@ -1430,8 +1434,8 @@ export default function ExamReviewPage() {
           </span>
         ) : null}
       </div>
-      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:hidden not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:hidden" />
-      <div className="min-w-0 flex-1 not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:order-last not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(20.5rem+43.25em)]/exam-card:basis-full not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:order-last not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(16.8125rem+42.5em)]/exam-card:basis-full" data-testid="clinical-data">
+      <span aria-hidden="true" className="my-0.5 w-px self-stretch bg-border not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(16.625rem+43.25em)]/exam-card:hidden not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(14.9375rem+40.5em)]/exam-card:hidden" />
+      <div className="min-w-0 flex-1 not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(16.625rem+43.25em)]/exam-card:order-last not-in-data-[compact-bar]:not-in-data-[text-size]:@max-[calc(16.625rem+43.25em)]/exam-card:basis-full not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(14.9375rem+40.5em)]/exam-card:order-last not-in-data-[compact-bar]:in-data-[text-size]:@max-[calc(14.9375rem+40.5em)]/exam-card:basis-full" data-testid="clinical-data">
         <h2 className="sr-only">Dados clínicos</h2>
         <PatientInfo patient={exam.patient} />
       </div>
